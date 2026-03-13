@@ -1,0 +1,68 @@
+# =============================================================
+# Prometheus 설정 - #4 Monitoring 인스턴스
+# 역할: 시계열 메트릭 저장소 + PromQL 쿼리 엔진
+# 데이터 소스:
+#   1. remote_write로 Alloy가 보낸 메트릭 수신 (로컬 호스트, MySQL)
+#   2. Spring Boot Actuator 직접 scrape
+#   3. Alloy 자체 메트릭 scrape
+# =============================================================
+
+# ═══════════════════════════════════════════════════════════
+# ① 전역 설정 (Global Configuration)
+# ═══════════════════════════════════════════════════════════
+global:
+  # 메트릭 수집 주기 (scrape_configs에서 override 가능)
+  # 15초마다 모든 타겟에서 메트릭을 pull (HTTP GET)
+  scrape_interval: 15s
+
+  # 알림 규칙 평가 주기 (규칙 파일에 정의된 alert/recording 규칙 평가)
+  # 15초마다 PromQL 쿼리를 실행하여 알림 조건 확인
+  evaluation_interval: 15s
+
+# ═══════════════════════════════════════════════════════════
+# ② Scrape 설정 (데이터 수집)
+# ═══════════════════════════════════════════════════════════
+scrape_configs:
+  # ----- #1 Prometheus 자체 메트릭 -----
+  # Prometheus가 내부 상태를 모니터링 (자가 진단)
+  - job_name: "prometheus"
+    # 정적 타겟 설정 (DNS 동적 발견 없음)
+    static_configs:
+      # Prometheus 자신의 메트릭 엔드포인트
+      # 로컬 포트 9090에서 /metrics 엔드포인트 노출
+      - targets: ["localhost:9090"]
+
+  # ----- #2 Spring Boot Actuator (#2 OCI 인스턴스) -----
+  # Spring Boot 애플리케이션의 성능 메트릭 수집
+  - job_name: "spring-boot"
+    # 메트릭 경로 (기본값은 /metrics)
+    # Spring Boot는 /actuator/prometheus 엔드포인트에서 Prometheus 형식 제공
+    metrics_path: /actuator/prometheus
+    # Spring Boot 전용 scrape 주기 (15초, 기본값과 동일)
+    scrape_interval: 15s
+    # 정적 타겟 설정
+    static_configs:
+      # Spring Boot 호스트 + 포트
+      # 환경 변수로 주입: ${SPRINGBOOT_HOST:-springboot.example.com}:9090
+      # 기본값: springboot.example.com:9090 (DNS 해석)
+      # 또는 IP 주소: 168.107.15.251:9090 (Nginx 리버스 프록시)
+      - targets: ["${SPRINGBOOT_HOST:-springboot.example.com}:9090"]
+        # 메트릭에 추가할 라벨 (필터링, 그룹핑, 알림용)
+        labels:
+          # 인스턴스 식별자 (다중 인스턴스 구분)
+          instance: "springboot-oci"
+          # 애플리케이션 이름 (대시보드에서 조회)
+          app: "q-asker-api"
+
+  # ----- #3 Alloy 자체 메트릭 (로컬 모니터링 인스턴스) -----
+  # Alloy 에이전트의 수집 성능을 모니터링 (메모리, 처리량, 에러율 등)
+  - job_name: "alloy-monitoring"
+    # 정적 타겟 설정
+    static_configs:
+      # Alloy 컨테이너의 메트릭 포트 12345
+      # Docker Compose 네트워크에서 서비스명(alloy)로 DNS 해석
+      - targets: ["alloy:12345"]
+        # 메트릭 라벨
+        labels:
+          # 인스턴스 위치
+          instance: "monitoring"

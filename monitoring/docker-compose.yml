@@ -1,0 +1,211 @@
+# =============================================================
+# #4 Monitoring 인스턴스 - PLG 스택 중앙 허브
+# Loki + Grafana + Prometheus + Alloy (4개 서비스)
+# 배포 환경: OCI Always Free (ARM 1 OCPU / 6GB RAM)
+# 데이터 저장소: /mnt/monitoring (50GB 블록 볼륨, iSCSI 마운트)
+# =============================================================
+
+services:
+  # ═══════════════════════════════════════════════════════════
+  # ① Loki: 분산 로그 저장소 (라벨 기반 인덱싱)
+  # 역할: broker-1/2/3, springboot에서 전송받은 로그를 저장하고 검색 제공
+  # ═══════════════════════════════════════════════════════════
+  loki:
+    # Grafana 공식 Loki 이미지, 버전 3.6.0 (최신 안정 버전)
+    image: grafana/loki:3.6.0
+    # 컨테이너 이름 (docker logs loki 로 로그 확인)
+    container_name: loki
+    # 컨테이너 자동 재시작 (OCI 인스턴스 재부팅 시에도 자동 시작)
+    restart: unless-stopped
+
+    ports:
+      # Loki API 포트: 3100 (호스트:컨테이너)
+      # Alloy 에이전트들이 /loki/api/v1/push 로 로그를 POST
+      # Grafana에서 데이터소스로 http://loki:3100 으로 연결
+      - "3100:3100"
+
+    volumes:
+      # Loki 설정 파일 (읽기 전용 :ro)
+      # loki-config.yaml에서 저장소 경로, 로그 보관 기간 등 정의
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+
+      # 블록 볼륨 바인드 마운트: OCI에서 마운트한 /mnt/monitoring 사용
+      # 50GB 블록 스토리지에 Loki 로그 데이터 저장
+      # 초기화 명령어:
+      #   sudo mkdir -p /mnt/monitoring/loki
+      #   sudo chown 10001:10001 /mnt/monitoring/loki  # Loki 유저 권한
+      #   sudo chmod 755 /mnt/monitoring/loki
+      - /mnt/monitoring/loki:/loki
+
+    # Loki 시작 명령어
+    command: -config.file=/etc/loki/loki-config.yaml
+
+    # Loki 프로세스 실행 유저 UID=10001 (Grafana 공식 이미지 기본값)
+    # 블록 볼륨 권한과 일치해야 파일 쓰기/읽기 가능
+    user: "10001"
+
+    # Docker Compose 네트워크 (monitoring 네트워크에 연결)
+    networks:
+      - monitoring
+
+  # ═══════════════════════════════════════════════════════════
+  # ② Grafana: 대시보드 및 시각화 (Loki + Prometheus 데이터 표시)
+  # 역할: 로그/메트릭을 그래프/테이블로 시각화, 알림 설정
+  # ═══════════════════════════════════════════════════════════
+  grafana:
+    # Grafana 공식 이미지, 버전 12.4.0
+    image: grafana/grafana:12.4.0
+    # 컨테이너 이름
+    container_name: grafana
+    # 자동 재시작
+    restart: unless-stopped
+
+    ports:
+      # Grafana 웹 UI 포트: 3000 (기본 포트)
+      # 브라우저에서 http://<monitoring-ip>:3000 으로 접속
+      # 기본 로그인: admin / ${GRAFANA_ADMIN_PASSWORD}
+      - "3000:3000"
+
+    volumes:
+      # Grafana 대시보드, 데이터소스, 플러그인 등 저장할 디렉토리
+      # /mnt/monitoring/grafana에 저장하여 영구 보관
+      # 초기화 명령어:
+      #   sudo mkdir -p /mnt/monitoring/grafana
+      #   sudo chown 472:472 /mnt/monitoring/grafana  # Grafana 유저 (UID=472)
+      #   sudo chmod 755 /mnt/monitoring/grafana
+      - /mnt/monitoring/grafana:/var/lib/grafana
+
+      # Grafana 프로비저닝 설정 (읽기 전용)
+      # datasources.yml에서 Loki/Prometheus 자동 연결 설정
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+
+    environment:
+      # Grafana 기본 관리자 유저명
+      - GF_SECURITY_ADMIN_USER=admin
+      # 기본 관리자 비밀번호 (환경 변수로 주입, .env 파일 필수)
+      # 미설정 시 기본값: changeme (보안 위험!)
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
+      # 리포팅 기능 비활성화 (리소스 절약)
+      - GF_REPORTING_ENABLED=false
+      # 익명 접속 비활성화 (보안)
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+
+    # 의존성: Loki가 시작될 때까지 대기 (healthcheck 제거로 변경)
+    depends_on:
+      - loki
+
+    # 네트워크 (monitoring 네트워크에 연결)
+    networks:
+      - monitoring
+
+  # ═══════════════════════════════════════════════════════════
+  # ③ Prometheus: 시계열 메트릭 저장소 (데이터베이스)
+  # 역할: broker-1/2/3, springboot, mysql 메트릭 저장 및 PromQL 쿼리 제공
+  # ═══════════════════════════════════════════════════════════
+  prometheus:
+    # Prometheus 공식 이미지, 버전 v3.10.0
+    image: prom/prometheus:v3.10.0
+    # 컨테이너 이름
+    container_name: prometheus
+    # 자동 재시작
+    restart: unless-stopped
+
+    ports:
+      # Prometheus API 포트: 9090
+      # Grafana에서 데이터소스로 http://prometheus:9090 으로 연결
+      # 웹 UI: http://<monitoring-ip>:9090
+      - "9090:9090"
+
+    volumes:
+      # Prometheus 설정 파일 (읽기 전용)
+      # prometheus.yml에서 scrape 대상(Spring Boot, node_exporter 등) 정의
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+      # 시계열 데이터베이스(TSDB) 저장 경로
+      # /mnt/monitoring/prometheus에 저장하여 영구 보관
+      # 초기화 명령어:
+      #   sudo mkdir -p /mnt/monitoring/prometheus
+      #   sudo chown 65534:65534 /mnt/monitoring/prometheus  # Prometheus 유저 (UID=65534)
+      #   sudo chmod 755 /mnt/monitoring/prometheus
+      - /mnt/monitoring/prometheus:/prometheus
+
+    # Prometheus 시작 명령어 및 옵션들
+    command:
+      # Prometheus 설정 파일 경로
+      - --config.file=/etc/prometheus/prometheus.yml
+      # 메트릭 데이터 저장 위치
+      - --storage.tsdb.path=/prometheus
+      # 메트릭 보관 기간 (15일 이상 저장)
+      - --storage.tsdb.retention.time=15d
+      # Remote Write 수신 활성화 (Alloy가 메트릭을 push 방식으로 전송)
+      # Alloy → Prometheus의 HTTP POST 요청을 받기 위해 필수
+      - --web.enable-remote-write-receiver
+      # Lifecycle API 활성화 (reload, shutdown 등)
+      - --web.enable-lifecycle
+
+    # 네트워크 (monitoring 네트워크에 연결)
+    networks:
+      - monitoring
+
+  # ═══════════════════════════════════════════════════════════
+  # ④ Alloy: 통합 로그/메트릭 에이전트 (데이터 수집기)
+  # 역할: 로컬 시스템 로그 수집, MySQL 메트릭 수집, Loki/Prometheus로 전송
+  # Promtail + node_exporter + Prometheus Agent를 대체하는 단일 바이너리
+  # ═══════════════════════════════════════════════════════════
+  alloy:
+    # Grafana 공식 Alloy 이미지, latest (최신 버전 자동 업데이트)
+    # 버전 고정 권장 (프로덕션): grafana/alloy:v1.4.0 형태
+    image: grafana/alloy:latest
+    # 컨테이너 이름
+    container_name: alloy
+    # 자동 재시작
+    restart: unless-stopped
+
+    volumes:
+      # Alloy 설정 파일 (읽기 전용)
+      # config.alloy에서 수집 대상(로그 경로, MySQL 접속 정보 등) 정의
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+
+      # 호스트의 /var/log 디렉토리 마운트 (읽기 전용)
+      # Alloy가 syslog, kernel 로그 등을 수집하기 위함
+      - /var/log:/var/log:ro
+
+      # Docker 소켓 마운트 (읽기 전용)
+      # Alloy가 docker 명령어를 통해 컨테이너 로그도 수집
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    environment:
+      # MySQL 접속 정보 (prometheus.exporter.mysql 용)
+      # 환경 변수로 주입하여 .yml 파일에 노출되지 않게 함 (보안)
+      # 형식: user:password@tcp(host:port)/database
+      # 예: alloy_monitor:secure_password@tcp(mysql.heawave.com:3306)/
+      # 필요 권한: PROCESS (스레드 정보), REPLICATION CLIENT (복제 상태), SELECT (일반 조회)
+      - MYSQL_DSN=${MYSQL_DSN:-alloy_monitor:changeme@tcp(heatwave-endpoint:3306)/}
+
+    # Alloy 시작 명령어
+    command:
+      # Alloy 실행 모드
+      - run
+      # 메타데이터 저장 경로 (로그 위치 추적, 재시작 후 이어서 수집)
+      - --storage.path=/var/lib/alloy/data
+      # 설정 파일 경로
+      - /etc/alloy/config.alloy
+
+    # 의존성: Loki와 Prometheus가 준비될 때까지 대기
+    depends_on:
+      - loki
+      - prometheus
+
+    # 네트워크 (monitoring 네트워크에 연결)
+    networks:
+      - monitoring
+
+# ═══════════════════════════════════════════════════════════
+# Docker 네트워크 정의
+# ═══════════════════════════════════════════════════════════
+networks:
+  # "monitoring" 네트워크 생성 (서비스 간 통신용)
+  monitoring:
+    # 드라이버: bridge (표준 Docker 네트워크)
+    # 호스트 네트워크가 아니므로 서비스명(loki, prometheus 등)으로 DNS 해석 가능
+    driver: bridge

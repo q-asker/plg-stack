@@ -1,0 +1,122 @@
+// =============================================================
+// broker-3 (#1 OCI 인스턴스) Alloy 설정
+// Kafka + ZooKeeper 로그 → 원격 Loki
+// 시스템 메트릭 → 원격 Prometheus
+// =============================================================
+
+// ===== 로그 파이프라인 =====
+
+// Step 1️⃣: Kafka 로그 파일 경로 동적 검색
+local.file_match "kafka_logs" {
+  path_targets = [
+    {__path__ = "/var/log/kafka/server.log*",     job = "kafka"},       // 메인 서버 로그
+    {__path__ = "/var/log/kafka/controller.log*",  job = "kafka"},       // 컨트롤러 로그
+    {__path__ = "/var/log/kafka/state-change.log*", job = "kafka"},      // 상태 변화 로그
+  ]
+}
+
+// Step 2️⃣: Kafka 로그 읽기 및 처리
+loki.source.file "kafka_logs" {
+  targets    = local.file_match.kafka_logs.targets
+  forward_to = [loki.relabel.broker3_labels.receiver]
+}
+
+// Step 1️⃣: ZooKeeper 로그 파일 경로 동적 검색
+local.file_match "zookeeper_logs" {
+  path_targets = [
+    {__path__ = "/var/log/zookeeper/zookeeper*.log*", job = "zookeeper"},  // 메인 로그
+    {__path__ = "/var/log/zookeeper/zookeeper*.out",   job = "zookeeper"},  // stdout 로그
+  ]
+}
+
+// Step 2️⃣: ZooKeeper 로그 읽기
+loki.source.file "zookeeper_logs" {
+  targets    = local.file_match.zookeeper_logs.targets
+  forward_to = [loki.relabel.broker3_labels.receiver]
+}
+
+// Step 1️⃣: 시스템 로그 파일 경로 동적 검색
+local.file_match "system_logs" {
+  path_targets = [
+    {__path__ = "/var/log/host/syslog",    job = "system"},     // 시스템 이벤트
+    {__path__ = "/var/log/host/auth.log",  job = "system"},     // SSH/인증 로그
+  ]
+}
+
+// Step 2️⃣: 시스템 로그 읽기
+loki.source.file "system_logs" {
+  targets    = local.file_match.system_logs.targets
+  forward_to = [loki.relabel.broker3_labels.receiver]
+}
+
+// Step 1️⃣: Docker 컨테이너 발견
+discovery.docker "local_containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Step 2️⃣: Docker 컨테이너 로그 수집
+loki.source.docker "container_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.local_containers.targets
+  forward_to = [loki.relabel.broker3_labels.receiver]
+}
+
+// Step 3️⃣: 모든 로그에 메타데이터 라벨 추가
+// broker-3은 OCI ARM 인스턴스
+loki.relabel "broker3_labels" {
+  forward_to = [loki.write.remote_loki.receiver]
+
+  rule {
+    target_label = "host"
+    replacement  = "broker-3"
+  }
+  rule {
+    target_label = "cluster"
+    replacement  = "q-asker-kafka"
+  }
+  rule {
+    target_label = "arch"
+    replacement  = "arm64"  // OCI ARM 인스턴스
+  }
+}
+
+// Step 4️⃣: 처리된 로그를 원격 Loki로 전송
+loki.write "remote_loki" {
+  endpoint {
+    url = env("LOKI_URL")  // 환경변수로 관리 (.env 파일에 저장)
+                           // 예: http://monitoring.example.com:3100/loki/api/v1/push
+  }
+}
+
+// ===== 메트릭 파이프라인 =====
+
+// Step 1️⃣: Unix 시스템 메트릭 exporter 생성
+// arm64 아키텍처(OCI ARM 인스턴스)에서도 동일한 메트릭 수집
+prometheus.exporter.unix "system" {
+  // CPU, 메모리, 디스크, 네트워크, 부하 등 기본 메트릭
+}
+
+// Step 2️⃣: 15초마다 메트릭 스크래프
+prometheus.scrape "node_metrics" {
+  targets    = prometheus.exporter.unix.system.targets
+  forward_to = [prometheus.relabel.add_broker3_labels.receiver]
+  scrape_interval = "15s"
+}
+
+// Step 3️⃣: 메트릭에 브로커 정보 라벨 추가
+prometheus.relabel "add_broker3_labels" {
+  forward_to = [prometheus.remote_write.remote_prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "broker-3"
+  }
+}
+
+// Step 4️⃣: 처리된 메트릭을 원격 Prometheus로 전송
+prometheus.remote_write "remote_prometheus" {
+  endpoint {
+    url = env("PROMETHEUS_URL")  // 환경변수로 관리 (.env 파일에 저장)
+                                 // 예: http://monitoring.example.com:9090/api/v1/write
+  }
+}

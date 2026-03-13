@@ -1,0 +1,42 @@
+# =============================================================
+# Grafana 대시보드 자동 프로비저닝 (자동 설정)
+# 역할: Grafana 시작 시 자동으로 JSON 대시보드 로드
+# 관리 방식: /etc/grafana/provisioning/dashboards/json/ 디렉토리의 *.json 파일들을 읽음
+# =============================================================
+
+# Grafana 프로비저닝 API 버전
+# version 1: 기본 포맷 (유일한 지원 버전)
+apiVersion: 1
+
+# 대시보드 프로바이더 설정
+providers:
+  # ----- Q-Asker 대시보드 프로바이더 -----
+  - name: "Q-Asker"
+    # Grafana 조직 ID
+    # 1: 기본 조직 (단일 조직 환경)
+    orgId: 1
+    # 대시보드 폴더명
+    # 이 프로바이더가 로드하는 모든 대시보드는 "Q-Asker" 폴더에 배치
+    folder: "Q-Asker"
+    # 대시보드 소스 타입
+    # file: 로컬 파일시스템에서 JSON 파일 로드
+    # (다른 옵션: gcs, grafanacloud, s3 등)
+    type: file
+    # 삭제 금지 설정
+    # false: UI에서 대시보드 삭제 가능
+    # true: 자동 프로비저닝 보호 (UI 삭제 차단)
+    disableDeletion: false
+    # 편집 가능 설정
+    # true: Grafana UI에서 대시보드 수정 가능 (저장하면 JSON 파일도 갱신)
+    # false: 읽기 전용
+    editable: true
+    # 파일 기반 프로바이더 옵션
+    options:
+      # 대시보드 JSON 파일 경로
+      # docker-compose.yml의 바인드 마운트로 제공됨
+      # ./grafana/provisioning/dashboards/json 디렉토리의 모든 .json 파일 로드
+      path: /etc/grafana/provisioning/dashboards/json
+      # 폴더 구조 자동 생성 여부
+      # false: 디렉토리 구조 무시, 모든 대시보드를 "Q-Asker" 폴더에 배치
+      # true: subdirectory/dashboard.json → "subdirectory" 폴더에 배치
+      foldersFromFilesStructure: false

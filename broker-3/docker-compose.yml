@@ -1,0 +1,24 @@
+# =============================================================
+# broker-3 (#1 OCI 인스턴스) - Alloy 에이전트
+# ARM | Kafka + ZooKeeper 로그 수집 → Loki (#4)
+# =============================================================
+
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy-broker3
+    restart: unless-stopped
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /opt/kafka/logs:/var/log/kafka:ro
+      - /opt/zookeeper/logs:/var/log/zookeeper:ro
+      - /var/log:/var/log/host:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - LOKI_URL=${LOKI_URL}
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
+    # Alloy 에이전트 실행 커맨드
+    command:
+      - run                              # Alloy 에이전트 시작 모드
+      - --storage.path=/var/lib/alloy/data  # 내부 상태/메타데이터 캐시 경로
+      - /etc/alloy/config.alloy          # 로그/메트릭 수집 설정 파일

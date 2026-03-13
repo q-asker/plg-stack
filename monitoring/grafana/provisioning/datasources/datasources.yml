@@ -1,0 +1,52 @@
+# =============================================================
+# Grafana 데이터소스 자동 프로비저닝 (자동 설정)
+# 역할: Grafana 시작 시 자동으로 Loki/Prometheus 데이터소스 연결
+# 관리 방식: docker-compose.yml의 바인드 마운트로 읽기 전용 제공
+# =============================================================
+
+# Grafana 프로비저닝 API 버전
+# version 1: 기본 포맷 (유일한 지원 버전)
+apiVersion: 1
+
+# 데이터소스 목록
+datasources:
+  # ═══════════════════════════════════════════════════════════
+  # ① Loki 데이터소스 (로그)
+  # ═══════════════════════════════════════════════════════════
+  - name: Loki
+    # 데이터소스 타입: loki (Grafana에서 지원하는 Loki 플러그인 사용)
+    type: loki
+    # 접근 방식: proxy
+    # proxy: Grafana 백엔드가 데이터소스 요청을 중개
+    # (클라이언트가 직접 Loki에 접속하지 않음, 더 안전)
+    access: proxy
+    # Loki 서버 URL
+    # docker-compose.yml 네트워크에서 서비스명(loki)으로 DNS 해석
+    # 포트 3100: Loki HTTP API
+    url: http://loki:3100
+    # 기본 데이터소스 설정
+    # true: Grafana 쿼리 UI에서 첫 번째로 선택되는 데이터소스
+    isDefault: true
+    # Grafana 데이터소스 API 버전 (Loki의 버전이 아님)
+    version: 1
+    # 편집 불가 설정
+    # false: Grafana UI에서 이 데이터소스 설정 수정 가능
+    # true: 읽기 전용 (권장, 자동 프로비저닝 유지)
+    editable: false
+
+  # ═══════════════════════════════════════════════════════════
+  # ② Prometheus 데이터소스 (메트릭)
+  # ═══════════════════════════════════════════════════════════
+  - name: Prometheus
+    # 데이터소스 타입: prometheus (PromQL 쿼리 지원)
+    type: prometheus
+    # 접근 방식: proxy (위 Loki와 동일)
+    access: proxy
+    # Prometheus 서버 URL
+    # docker-compose.yml 네트워크에서 서비스명(prometheus)으로 DNS 해석
+    # 포트 9090: Prometheus HTTP API
+    url: http://prometheus:9090
+    # Grafana 데이터소스 API 버전
+    version: 1
+    # 편집 불가 설정
+    editable: false

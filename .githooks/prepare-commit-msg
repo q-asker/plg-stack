@@ -1,0 +1,27 @@
+#!/bin/bash
+# Git Hook: JIRA 티켓 자동 추가
+# 브랜치명에서 JIRA 티켓 ID를 감지하여 커밋 메시지에 추가
+
+# 커밋 메시지 파일
+commit_msg_file=$1
+
+# 현재 브랜치명 추출
+branch_name=$(git rev-parse --abbrev-ref HEAD)
+
+# JIRA 티켓 패턴 매칭 (예: PLG-123, ASKER-456)
+if [[ $branch_name =~ ([A-Z]+-[0-9]+) ]]; then
+  jira_ticket="${BASH_REMATCH[1]}"
+
+  # 커밋 메시지 읽기
+  commit_msg=$(cat "$commit_msg_file")
+
+  # 이미 티켓이 포함되어 있으면 추가하지 않음
+  if [[ ! $commit_msg =~ $jira_ticket ]]; then
+    # 첫 줄 앞에 티켓 추가
+    echo "[$jira_ticket] $(head -n 1 "$commit_msg_file")" > "$commit_msg_file"
+    tail -n +2 "$commit_msg_file" >> "$commit_msg_file.tmp"
+    mv "$commit_msg_file.tmp" "$commit_msg_file"
+  fi
+fi
+
+exit 0

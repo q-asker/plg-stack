@@ -1,0 +1,52 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.vite
+*.local
+
+# 환경변수 파일 (실제 값 + 로컬 오버라이드)
+.env
+.env.local
+.env.*.local
+
+# 템플릿 파일은 Git에 포함
+# - .env.example, remote-node.env.example, monitoring/.env.example
+# - 각 경로마다 .env.example이 참고 가이드 역할
+
+FastAPI
+docker-compose.yml
+gcp-credential.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Claude Code
+.playwright-mcp
+*.png
+!public/*.png
+!src/assets/*.png
+# CLAUDE.md와 .claude/는 프로젝트 초기화 파일이므로 Git에 포함
+# CLAUDE.md
+# .claude
+shrimp-rules.md
+# .mcp.json: 환경변수(GitHub 토큰 등)를 포함하므로 Git에서 제외
+.mcp.json
+shrimp_data
+docs

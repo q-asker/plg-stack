@@ -1,0 +1,179 @@
+// =============================================================
+// #4 Monitoring 인스턴스 Alloy 설정
+// 역할: 로그 + 메트릭 수집 통합 에이전트 (Promtail + node_exporter + Prometheus Agent)
+// 데이터 흐름:
+//   1. 호스트 로그(/var/log/*.log) 수집
+//   2. 도커 컨테이너 로그 수집
+//   3. HeatWave MySQL 원격 메트릭 수집
+//   4. Loki/Prometheus로 전송
+// =============================================================
+
+// ═══════════════════════════════════════════════════════════
+// ① 로그 수집 파이프라인 (File Sources)
+// ═══════════════════════════════════════════════════════════
+
+// ----- Step 1: 호스트 로그 파일 검색 -----
+// 로컬 파일 시스템의 로그 파일들을 동적으로 찾기
+local.file_match "host_logs" {
+  // 로그 파일 경로 패턴 (glob 형식)
+  // syslog: 시스템 이벤트
+  // auth.log: 인증/SSH 로그인 기록
+  // *.log: /var/log 디렉토리의 모든 .log 파일
+  path_targets = [
+    {__path__ = "/var/log/syslog"},
+    {__path__ = "/var/log/auth.log"},
+    {__path__ = "/var/log/*.log"},
+  ]
+}
+
+// ----- Step 2: 호스트 로그 읽기 -----
+// 파일 시스템의 로그를 Alloy로 수집
+loki.source.file "host_logs" {
+  // Step 1에서 찾은 파일들
+  targets    = local.file_match.host_logs.targets
+  // 다음 단계로 전달: 라벨 추가 단계
+  forward_to = [loki.relabel.add_host_labels.receiver]
+}
+
+// ----- Step 3: 도커 컨테이너 발견 -----
+// Docker 소켓 연결로 실행 중인 컨테이너 목록 조회
+discovery.docker "local_containers" {
+  // Docker 소켓 경로 (docker-compose.yml의 /var/run/docker.sock 마운트)
+  // Unix 소켓 통신으로 Docker 데몬에 접속
+  host = "unix:///var/run/docker.sock"
+}
+
+// ----- Step 4: 도커 컨테이너 로그 수집 -----
+// 발견된 컨테이너들의 stdout/stderr 수집
+loki.source.docker "container_logs" {
+  // Docker 소켓 경로
+  host       = "unix:///var/run/docker.sock"
+  // Step 3에서 발견한 컨테이너들
+  targets    = discovery.docker.local_containers.targets
+  // 다음 단계로 전달: 라벨 추가 단계
+  forward_to = [loki.relabel.add_host_labels.receiver]
+}
+
+// ----- Step 5: 라벨 추가 -----
+// 모든 로그에 메타데이터 라벨 추가 (필터링, 그룹핑용)
+loki.relabel "add_host_labels" {
+  // 다음 단계로 전달: Loki 쓰기 단계
+  forward_to = [loki.write.local_loki.receiver]
+
+  // 라벨 규칙 1: host 라벨 설정
+  rule {
+    // 대상 라벨명
+    target_label = "host"
+    // 모든 로그에 host="monitoring" 라벨 추가
+    replacement  = "monitoring"
+  }
+
+  // 라벨 규칙 2: env 라벨 설정
+  rule {
+    target_label = "env"
+    // 모든 로그에 env="production" 라벨 추가
+    replacement  = "production"
+  }
+}
+
+// ----- Step 6: Loki로 로그 전송 -----
+// 처리된 로그를 Loki에 push (HTTP POST)
+loki.write "local_loki" {
+  // Loki 서버 주소 (docker-compose.yml의 loki 서비스 이름)
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+  // 배치 설정: 10000 라인 또는 1초마다 전송
+  // 네트워크 효율성 최적화 (한 번에 많은 로그 전송)
+}
+
+// ═══════════════════════════════════════════════════════════
+// ② 메트릭 수집 파이프라인 (MySQL Metrics)
+// ═══════════════════════════════════════════════════════════
+
+// ----- Step 1: HeatWave MySQL 연결 -----
+// OCI 관리형 MySQL의 메트릭을 SQL 프로토콜로 수집
+// 원리:
+//   1. MySQL 클라이언트 프로토콜로 접속 (TCP 3306)
+//   2. SQL 쿼리 실행:
+//      - SHOW GLOBAL STATUS (연결, 쿼리, 캐시 통계)
+//      - SHOW GLOBAL VARIABLES (설정값)
+//      - SELECT * FROM INFORMATION_SCHEMA (테이블, 사용자 정보)
+//   3. 결과를 Prometheus 메트릭으로 변환
+// 예: Threads_connected: 5 → metric{mysql_global_status_threads_connected 5}
+//
+// 수집 가능한 메트릭 범주:
+// - 가용성: mysql_up (헬스체크), uptime
+// - 연결: 활성 커넥션 수, max_connections 대비 사용률
+// - 성능: QPS (Queries Per Second), Slow query 횟수
+// - InnoDB: Buffer pool 히트율, 디스크 읽기/쓰기
+// - 복제: Master/Slave 동기화 상태
+//
+// 필요 권한 (HeatWave 관리형 MySQL):
+// - PROCESS: SHOW PROCESSLIST, SHOW STATUS 등
+// - REPLICATION CLIENT: 복제 상태 조회
+// - SELECT: 테이블 조회
+// 거부되는 권한이 있으면 해당 지표는 수집 불가능
+
+prometheus.exporter.mysql "heatwave" {
+  // MySQL DSN (Data Source Name)
+  // 환경 변수에서 주입: ${MYSQL_DSN}
+  // 형식: user:password@tcp(host:port)/database
+  // 예: alloy_monitor:secure_password@tcp(mysql.heatwave.com:3306)/
+  // docker-compose.yml에서 설정된 기본값: alloy_monitor:changeme@tcp(heatwave-endpoint:3306)/
+  data_source_name = env("MYSQL_DSN")
+}
+
+// ----- Step 2: MySQL 메트릭 scrape -----
+// exporter가 생성한 /metrics 엔드포인트에서 메트릭 수집
+prometheus.scrape "mysql_metrics" {
+  // Step 1에서 생성한 exporter의 타겟들
+  // Alloy가 localhost:9104 (MySQL exporter 포트)에 HTTP GET 요청
+  targets    = prometheus.exporter.mysql.heatwave.targets
+
+  // 다음 단계로 전달: 라벨 추가 단계
+  forward_to = [prometheus.relabel.mysql_labels.receiver]
+
+  // MySQL scrape 주기 (30초)
+  // Prometheus 기본값(15초)보다 길게 설정
+  // 이유: 메모리 절약 + MySQL 추가 부하 감소
+  scrape_interval = "30s"
+}
+
+// ----- Step 3: 라벨 추가 -----
+// 수집된 MySQL 메트릭에 메타데이터 라벨 추가
+prometheus.relabel "mysql_labels" {
+  // 다음 단계로 전달: Prometheus 쓰기 단계
+  forward_to = [prometheus.remote_write.local_prometheus.receiver]
+
+  // 라벨 규칙 1: instance 라벨 설정
+  rule {
+    target_label = "instance"
+    // 모든 MySQL 메트릭에 instance="heatwave-mysql" 라벨 추가
+    // 이유: HeatWave 인스턴스 식별, Grafana에서 필터링
+    replacement  = "heatwave-mysql"
+  }
+
+  // 라벨 규칙 2: service 라벨 설정
+  rule {
+    target_label = "service"
+    // 모든 MySQL 메트릭에 service="q-asker-db" 라벨 추가
+    // 이유: 서비스별 메트릭 그룹화, 알림 규칙에서 사용
+    replacement  = "q-asker-db"
+  }
+}
+
+// ----- Step 4: Prometheus로 메트릭 전송 -----
+// 처리된 메트릭을 Prometheus에 push (HTTP POST)
+// Pull 방식(Prometheus가 주기적으로 fetch)이 아닌
+// Push 방식(Alloy가 주기적으로 전송)
+// 이유: 홈서버/Galaxy S20+가 NAT 뒤에 있어 외부 접근 불가능
+prometheus.remote_write "local_prometheus" {
+  // Prometheus 서버 주소
+  endpoint {
+    // docker-compose.yml의 prometheus 서비스 이름
+    url = "http://prometheus:9090/api/v1/write"
+  }
+  // 배치 설정: 자동 최적화
+  // 네트워크 효율성과 레이턴시 균형 유지
+}

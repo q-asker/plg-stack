@@ -1,0 +1,249 @@
+// =============================================================
+// #2 Spring Boot 인스턴스 Alloy 설정
+// Spring Boot 앱 로그 + JODConverter 로그 → 원격 Loki
+// 시스템 메트릭 + LibreOffice 프로세스 메트릭 → 원격 Prometheus
+//
+// 데이터 흐름 요약:
+//
+// [로그 파이프라인]
+//   Docker stdout → loki.source.docker → loki.process.multiline
+//     → loki.relabel → loki.write → Loki (OCI-3, :3100)
+//
+// [메트릭 파이프라인]
+//   호스트 OS ──→ prometheus.exporter.unix ──┐
+//   soffice.bin → prometheus.exporter.process ┤
+//                                             ├→ prometheus.relabel
+//                                             └→ prometheus.remote_write → Prometheus (OCI-3, :9090)
+//
+// 전제 조건 (docker-compose.yml):
+//   pid: "host"           → soffice.bin 프로세스 감지용
+//   /proc:/host/proc:ro   → 프로세스 메트릭 읽기용
+//   /var/run/docker.sock  → 컨테이너 로그 수집용
+//   .env 파일에 LOKI_URL, PROMETHEUS_URL 설정 필수
+// =============================================================
+
+
+// =============================================================
+//                    ===== 로그 파이프라인 =====
+// =============================================================
+
+// ── 1단계: Docker 컨테이너 자동 탐색 ──
+// Docker 소켓에 연결하여 현재 실행 중인 모든 컨테이너 목록을 가져옴
+// 컨테이너가 새로 뜨거나 죽으면 자동으로 목록이 갱신됨
+// 수집되는 메타데이터:
+//   __meta_docker_container_name  → 컨테이너 이름 (예: "spring-boot-blue")
+//   __meta_docker_container_id    → 컨테이너 ID
+//   __meta_docker_container_image → 이미지 (예: "qasker/q-asker-api-server-base:latest")
+discovery.docker "local_containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// ── 2단계: 컨테이너 stdout/stderr 로그 수집 ──
+// 탐색된 컨테이너들의 stdout/stderr를 실시간으로 읽음
+// Docker의 json-file 로그 드라이버가 저장한 로그를 tail 방식으로 수집
+// 파일 기반 수집(loki.source.file)은 사용하지 않음:
+//   - Spring Boot logback-spring.xml에 FileAppender 없음 (ConsoleAppender만 사용)
+//   - Docker 컨테이너 환경에서는 stdout이 12-Factor App 표준
+//   - 파일 + Docker 동시 수집 시 같은 로그가 Loki에 2번 저장되는 중복 문제 발생
+loki.source.docker "container_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.local_containers.targets
+  forward_to = [loki.process.multiline.receiver]  // 다음 단계: 멀티라인 병합
+}
+
+// ── 3단계: Java 스택트레이스 멀티라인 병합 ──
+// Docker json-file 드라이버는 stdout을 줄 단위로 캡처함
+// Java 에러 발생 시 스택트레이스가 여러 줄로 출력되는데:
+//
+//   2026-03-15 10:32:05 ERROR c.q.api.service - 변환 실패      ← 줄 1 (새 로그)
+//       at c.q.api.service.ConvertServiceImpl.convert(...)      ← 줄 2 (별개로 저장됨)
+//       at c.q.api.controller.S3Controller.upload(...)           ← 줄 3 (별개로 저장됨)
+//   Caused by: java.io.IOException: LibreOffice timeout         ← 줄 4 (별개로 저장됨)
+//
+// 멀티라인 처리 없이 Loki에서 |= "ERROR" 검색하면 줄 1만 나오고
+// 원인 정보(줄 2~4)는 흩어져서 찾기 어려움
+//
+// firstline 규칙:
+//   "날짜로 시작하는 줄" = 새 로그의 시작
+//   "그 외 줄"(공백, at, Caused by 등) = 이전 로그에 병합
+//
+// logback-spring.xml의 패턴: %d{yyyy-MM-dd HH:mm:ss.SSS}
+//   → "^\\d{4}-\\d{2}-\\d{2}" 정규식과 정확히 매칭
+loki.process "multiline" {
+  forward_to = [loki.relabel.springboot_labels.receiver]  // 다음 단계: 라벨 추가
+
+  stage.multiline {
+    firstline     = "^\\d{4}-\\d{2}-\\d{2}"  // 날짜로 시작하면 새 로그
+    max_wait_time = "3s"                       // 3초간 다음 줄 대기 후 병합 확정
+    max_lines     = 128                        // 한 로그 엔트리 최대 128줄 (깊은 스택트레이스 대응)
+  }
+}
+
+// ── 4단계: Loki 라벨 추가 ──
+// 모든 로그에 공통 라벨을 붙여서 Grafana에서 필터링 가능하게 함
+// Loki는 로그 본문을 인덱싱하지 않고 라벨만 인덱싱하므로,
+// 이 라벨이 검색 성능의 핵심
+//
+// Grafana LogQL 쿼리 예시:
+//   {host="springboot"}                    → 이 호스트의 모든 로그
+//   {app="q-asker-api"} |= "ERROR"        → Q-Asker API 에러만
+//   {host="springboot", app="q-asker-api"} → 교차 필터
+loki.relabel "springboot_labels" {
+  forward_to = [loki.write.remote_loki.receiver]  // 다음 단계: Loki로 전송
+
+  rule {
+    target_label = "host"         // 어느 서버인지 (5개 노드 구분용)
+    replacement  = "springboot"
+  }
+  rule {
+    target_label = "app"          // 어떤 애플리케이션인지
+    replacement  = "q-asker-api"
+  }
+  rule {
+    target_label = "arch"         // CPU 아키텍처 (디버깅 참고용)
+    replacement  = "arm64"
+  }
+}
+
+// ── 5단계: 원격 Loki로 전송 ──
+// 프로토콜: HTTP POST + Protobuf (snappy 압축)
+// 엔드포인트: /loki/api/v1/push
+// gRPC가 아닌 HTTP인 이유: 단방향 push, 스트리밍 불필요
+// snappy 선택 이유: gzip보다 CPU 사용량 적어 저사양 에이전트에 적합
+loki.write "remote_loki" {
+  endpoint {
+    url = env("LOKI_URL")  // .env 파일: http://monitoring.example.com:3100/loki/api/v1/push
+  }
+}
+
+
+// =============================================================
+//                   ===== 메트릭 파이프라인 =====
+// =============================================================
+
+// ── 1️⃣ 호스트 시스템 메트릭 (node_exporter 대체) ──
+// Alloy 내장 컴포넌트로 별도 node_exporter 설치 불필요
+// 수집 항목: CPU 사용률, 메모리 사용량, 디스크 I/O, 네트워크 트래픽,
+//           로드 평균, 파일시스템 사용률, 부팅 시간 등
+//
+// 주요 메트릭명:
+//   node_cpu_seconds_total          → CPU 코어별 사용 시간
+//   node_memory_MemAvailable_bytes  → 사용 가능한 메모리
+//   node_filesystem_avail_bytes     → 디스크 여유 공간
+//   node_network_receive_bytes_total → 네트워크 수신 바이트
+prometheus.exporter.unix "system" {}
+
+// 시스템 exporter에서 메트릭 수집 (15초 간격)
+prometheus.scrape "node_metrics" {
+  targets    = prometheus.exporter.unix.system.targets
+  forward_to = [prometheus.relabel.add_springboot_labels.receiver]
+
+  scrape_interval = "15s"
+}
+
+// ── 2️⃣ LibreOffice 프로세스 단위 메트릭 ──
+// soffice.bin 프로세스의 CPU/메모리/스레드/FD/프로세스 수 추적
+// 용도: 좀비 프로세스 누적, 메모리 누수, 프로세스 사망 감지
+//
+// soffice.bin은 Spring Boot 컨테이너 내부에서 실행됨
+// Docker는 기본적으로 컨테이너 간 PID를 격리하므로,
+// Alloy 컨테이너의 /proc에는 자기 프로세스만 보임
+// → 호스트 /proc를 /host/proc로 마운트하여 우회
+//
+// docker-compose.yml 전제 조건:
+//   pid: "host"           → 호스트 PID 네임스페이스 공유 (전체 프로세스 목록 접근)
+//   /proc:/host/proc:ro   → 호스트 /proc 파일시스템 읽기전용 마운트
+//
+// /proc란?
+//   Linux 커널이 프로세스 정보를 파일로 노출하는 가상 파일시스템
+//   /proc/{PID}/status  → 메모리 사용량, 상태
+//   /proc/{PID}/stat    → CPU 시간
+//   /proc/{PID}/fd/     → 열린 파일 디스크립터
+//   /proc/{PID}/cmdline → 실행 명령어 ("soffice.bin")
+//
+// 수집되는 주요 메트릭:
+//   namedprocess_namegroup_num_procs        → 프로세스 수 (2개여야 정상)
+//   namedprocess_namegroup_cpu_seconds_total → CPU 사용 시간 (user/system)
+//   namedprocess_namegroup_memory_bytes      → RSS/Virtual 메모리
+//   namedprocess_namegroup_num_threads       → 스레드 수
+//   namedprocess_namegroup_open_filedesc     → 열린 파일 수 (핸들 누수 감지)
+//   namedprocess_namegroup_read_bytes_total  → 디스크 I/O (변환 중 임시 파일)
+//
+// Grafana 알림 예시:
+//   namedprocess_namegroup_num_procs{groupname="soffice"} < 2
+//     → soffice.bin이 2개 미만이면 프로세스 사망 알림
+prometheus.exporter.process "libreoffice" {
+  procfs_path = "/host/proc"  // 호스트의 /proc를 컨테이너 내부 /host/proc에서 읽음
+  matcher {
+    name    = "soffice"       // Prometheus 메트릭의 groupname 라벨 값
+    cmdline = ["soffice.bin"] // /proc/{PID}/cmdline에서 이 문자열을 포함하는 프로세스 매칭
+  }
+}
+
+// LibreOffice exporter에서 메트릭 수집 (15초 간격)
+prometheus.scrape "libreoffice_metrics" {
+  targets    = prometheus.exporter.process.libreoffice.targets
+  forward_to = [prometheus.relabel.add_springboot_labels.receiver]
+
+  scrape_interval = "15s"
+}
+
+// ── 3️⃣ 공통 라벨 추가 ──
+// 시스템 메트릭(1️⃣)과 LO 프로세스 메트릭(2️⃣) 모두 이 컴포넌트를 경유
+// 두 scrape가 같은 relabel을 forward_to로 지정하여 "공유"하는 구조
+// → relabel + remote_write를 각각 2개씩 만들 필요 없이 하나로 합류
+//
+//   prometheus.scrape "node_metrics"         ──┐
+//                                              ├→ prometheus.relabel "add_springboot_labels"
+//   prometheus.scrape "libreoffice_metrics"  ──┘         │
+//                                                        ▼
+//                                           prometheus.remote_write "remote_prometheus"
+//
+// Grafana PromQL 쿼리 예시:
+//   node_cpu_seconds_total{instance="springboot"}
+//     → 이 호스트의 CPU 메트릭만 필터
+//   namedprocess_namegroup_num_procs{instance="springboot", groupname="soffice"}
+//     → 이 호스트의 soffice 프로세스 수
+prometheus.relabel "add_springboot_labels" {
+  forward_to = [prometheus.remote_write.remote_prometheus.receiver]
+
+  rule {
+    target_label = "instance"      // Grafana에서 "어느 서버인지" 구분하는 핵심 라벨
+    replacement  = "springboot"    // 5개 노드: broker-1, broker-2, broker-3, springboot, monitoring
+  }
+}
+
+// ── 4️⃣ 원격 Prometheus 서버로 전송 (Push) ──
+//
+// 이 블록이 메트릭 파이프라인의 최종 출구
+// 1️⃣ exporter → 2️⃣ scrape → 3️⃣ relabel을 거친 모든 메트릭이
+// 여기서 OCI-3 Monitoring의 Prometheus 서버로 전송됨
+//
+// 프로토콜: HTTP POST + Protobuf (snappy 압축) — Prometheus Remote Write 프로토콜
+// 엔드포인트: /api/v1/write
+//
+// Push 방식인 이유:
+//   Prometheus의 기본 철학은 Pull(서버가 대상에 접속해서 수집)이지만,
+//   Q-Asker 인프라에서는 Push를 선택함
+//
+//   ① Alloy를 선택한 목적이 통합 에이전트 — Pull로 바꾸면
+//      node_exporter + process_exporter를 별도 컨테이너로 분리해야 하고,
+//      Alloy를 쓰는 의미가 사라짐
+//   ② 5개 노드 전부 동일한 Push 패턴 — 새 노드 추가 시
+//      Alloy config 복사 + 호스트명만 변경하면 끝
+//   ③ broker-1/2(NAT 뒤)는 Pull 자체가 불가 —
+//      일부만 Pull로 바꾸면 Push+Pull 혼합 구조가 되어 관리 복잡성 증가
+//
+// Prometheus 서버 전제 조건:
+//   --web.enable-remote-write-receiver 플래그 필요
+//   (monitoring/docker-compose.yml의 prometheus command에 설정됨)
+//
+// Spring Boot Actuator 메트릭은 여기를 거치지 않음:
+//   Actuator는 이미 Prometheus 형식의 /metrics 엔드포인트를 제공하므로
+//   OCI-3의 Prometheus가 직접 Pull(scrape)함
+//   → monitoring/prometheus/prometheus.yml에 설정됨 (이 파일이 아님)
+prometheus.remote_write "remote_prometheus" {
+  endpoint {
+    url = env("PROMETHEUS_URL")  // .env 파일: http://monitoring.example.com:9090/api/v1/write
+  }
+}

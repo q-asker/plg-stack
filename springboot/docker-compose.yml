@@ -1,0 +1,46 @@
+# =============================================================
+# #2 Spring Boot 인스턴스 - Alloy 에이전트
+# OCI ARM 2 OCPU / 8GB | Spring Boot + JODConverter 로그 수집
+# Spring Boot / LibreOffice는 별도 컨테이너에서 실행
+# Alloy는 Docker 소켓으로 컨테이너 stdout/stderr 수집
+# =============================================================
+
+services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy-springboot
+    restart: unless-stopped
+    # 호스트 PID 네임스페이스 공유
+    # 목적: Spring Boot 컨테이너 내부의 soffice.bin 프로세스를
+    #       Alloy 컨테이너에서 볼 수 있게 함
+    # 이유: Docker는 기본적으로 컨테이너 간 PID를 격리하므로,
+    #       Alloy 컨테이너의 /proc에는 자기 프로세스만 보임
+    #       pid: "host"를 설정하면 호스트의 전체 프로세스 목록에 접근 가능
+    # 보안 참고: 호스트의 모든 프로세스를 볼 수 있게 되므로
+    #           프로덕션에서는 필요한 경우에만 사용
+    pid: "host"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # Docker 소켓 (모든 컨테이너의 stdout/stderr + 메타데이터 수집)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # 호스트 /proc 파일시스템 마운트
+      # 목적: prometheus.exporter.process가 soffice.bin의
+      #       CPU/메모리/스레드/FD 메트릭을 수집하기 위해 필요
+      #
+      # Linux /proc는 커널이 프로세스 정보를 파일로 노출하는 가상 파일시스템:
+      #   /proc/{PID}/status  → 메모리 사용량, 상태
+      #   /proc/{PID}/stat    → CPU 시간
+      #   /proc/{PID}/fd/     → 열린 파일 디스크립터
+      #   /proc/{PID}/cmdline → 실행 명령어 ("soffice.bin")
+      #
+      # 호스트의 /proc → 컨테이너 내부 /host/proc에 읽기전용 마운트
+      # config.alloy에서 procfs_path = "/host/proc"로 참조
+      - /proc:/host/proc:ro
+    environment:
+      - LOKI_URL=${LOKI_URL}
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
+    # Alloy 에이전트 실행 커맨드
+    command:
+      - run                                 # Alloy 에이전트 시작 모드
+      - --storage.path=/var/lib/alloy/data  # 내부 상태/메타데이터 캐시 경로
+      - /etc/alloy/config.alloy             # 로그/메트릭 수집 설정 파일
