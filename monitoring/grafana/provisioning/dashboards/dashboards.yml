@@ -16,8 +16,8 @@ providers:
     # 1: 기본 조직 (단일 조직 환경)
     orgId: 1
     # 대시보드 폴더명
-    # 이 프로바이더가 로드하는 모든 대시보드는 "Q-Asker" 폴더에 배치
-    folder: "Q-Asker"
+    # foldersFromFilesStructure: true 사용 시 하위 디렉토리명이 폴더명이 됨
+    # folder: "Q-Asker"  # foldersFromFilesStructure와 함께 사용 시 무시됨
     # 대시보드 소스 타입
     # file: 로컬 파일시스템에서 JSON 파일 로드
     # (다른 옵션: gcs, grafanacloud, s3 등)
@@ -37,6 +37,6 @@ providers:
       # ./grafana/provisioning/dashboards/json 디렉토리의 모든 .json 파일 로드
       path: /etc/grafana/provisioning/dashboards/json
       # 폴더 구조 자동 생성 여부
-      # false: 디렉토리 구조 무시, 모든 대시보드를 "Q-Asker" 폴더에 배치
+      # false: 디렉토리 구조 무시, 모든 대시보드를 단일 폴더에 배치
       # true: subdirectory/dashboard.json → "subdirectory" 폴더에 배치
-      foldersFromFilesStructure: false
+      foldersFromFilesStructure: true
