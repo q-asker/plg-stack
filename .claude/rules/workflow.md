@@ -77,6 +77,5 @@ globs: "*"
 - 요청 범위를 벗어난 파일은 수정하지 않는다
 - 리팩토링이 필요하면 별도 제안으로 분리한다
 - `.env` 파일을 Git에 커밋하지 않는다
-- 외부 라이브러리 추가 시 CLAUDE.md 기술 스택 섹션 갱신
-- `npm run build`가 항상 성공하는 상태를 유지한다
-- `npx prettier --check .`에서 에러가 없는 상태를 유지한다
+- 외부 이미지/서비스 추가 시 CLAUDE.md 기술 스택 섹션 갱신
+- `docker compose config`로 YAML 문법이 항상 유효한 상태를 유지한다

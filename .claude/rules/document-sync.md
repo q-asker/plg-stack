@@ -14,7 +14,7 @@ globs: "*"
 | 문서                             | 진실의 원천                                         |
 | -------------------------------- | --------------------------------------------------- |
 | `CLAUDE.md`                      | 기술 스택, 명령어, 아키텍처, 디렉토리 구조          |
-| `.claude/rules/code-rules.md`    | 코딩 컨벤션, FSD 규칙, 네이밍, 제약 사항            |
+| `.claude/rules/code-rules.md`    | 코딩 컨벤션, Docker/YAML 규칙, 네이밍, 제약 사항    |
 | `.claude/rules/workflow.md`      | 세션 가드, 작업 모드, 에이전트/스킬 위임, 작업 원칙 |
 | `.claude/rules/document-sync.md` | 문서 연동/갱신 트리거 (이 파일)                     |
 
@@ -27,30 +27,29 @@ globs: "*"
 
 ## 변경 → 문서 갱신 트리거
 
-| 코드 변경                             | 갱신할 문서                        | 전용 에이전트         |
-| ------------------------------------- | ---------------------------------- | --------------------- |
-| `package.json` 의존성 추가/삭제       | `CLAUDE.md` (기술 스택)            | —                     |
-| FSD 레이어/슬라이스 추가/삭제         | `CLAUDE.md` (아키텍처)             | —                     |
-| `src/` 디렉토리 구조 변경             | `CLAUDE.md` (아키텍처)             | —                     |
-| `.env*` 변수 추가/삭제                | `CLAUDE.md` (환경 변수)            | —                     |
-| `.github/workflows/*` 변경            | `CLAUDE.md` (개발 도구)            | —                     |
-| `vite.config.ts` 설정 변경            | `CLAUDE.md` (개발 도구/아키텍처)   | —                     |
-| `components.json` 변경                | `CLAUDE.md` (개발 도구)            | —                     |
-| Task 완료                             | 활성 `docs/roadmaps/ROADMAP_v*.md` | `development-planner` |
-| 새 Task 추가                          | 활성 `docs/roadmaps/ROADMAP_v*.md` | `development-planner` |
-| PRD 작성/변경                         | `docs/PRD.md`                      | `prd-generator`       |
-| Git 커밋                              | —                                  | `/commit` 스킬        |
+| 코드 변경                                    | 갱신할 문서                        | 전용 에이전트         |
+| -------------------------------------------- | ---------------------------------- | --------------------- |
+| `docker-compose.yml` 서비스 추가/삭제        | `CLAUDE.md` (기술 스택, 아키텍처)  | —                     |
+| `alloy/config.alloy` 수집 대상 변경          | `CLAUDE.md` (아키텍처)             | —                     |
+| `loki/`, `prometheus/` 설정 변경             | `CLAUDE.md` (아키텍처)             | —                     |
+| `.env*` 변수 추가/삭제                       | `CLAUDE.md` (환경 변수)            | —                     |
+| `grafana/provisioning/` 데이터소스/대시보드   | `CLAUDE.md` (개발 도구)            | —                     |
+| 노드 디렉토리 추가/삭제 (broker-*, etc.)     | `CLAUDE.md` (아키텍처)             | —                     |
+| Task 완료                                    | 활성 `docs/roadmaps/ROADMAP_v*.md` | `development-planner` |
+| 새 Task 추가                                 | 활성 `docs/roadmaps/ROADMAP_v*.md` | `development-planner` |
+| PRD 작성/변경                                | `docs/PRD.md`                      | `prd-generator`       |
+| Git 커밋                                     | —                                  | `/commit` 스킬        |
 
 ## CLAUDE.md 유지 규칙
 
-| 변경 사항                            | 갱신 대상 섹션      |
-| ------------------------------------ | ------------------- |
-| npm scripts 추가/변경/삭제           | `명령어 (Scripts)`  |
-| 기술 스택 또는 주요 패키지 추가/변경 | `기술 스택`         |
-| 아키텍처, FSD 구조 변경              | `아키텍처`          |
-| 환경 변수 추가/변경                  | `환경 변수`         |
-| 개발 도구 및 설정 변경               | `개발 도구 및 설정` |
-| 디렉토리 구조 변경                   | `아키텍처`          |
+| 변경 사항                                    | 갱신 대상 섹션      |
+| -------------------------------------------- | ------------------- |
+| Docker Compose 서비스/명령어 변경            | `명령어 (Scripts)`  |
+| 기술 스택 또는 주요 컨테이너 이미지 추가/변경 | `기술 스택`         |
+| 아키텍처, 노드 구성 변경                     | `아키텍처`          |
+| 환경 변수 추가/변경                          | `환경 변수`         |
+| 개발 도구 및 설정 변경                       | `개발 도구 및 설정` |
+| 디렉토리 구조 변경                           | `아키텍처`          |
 
 ## 준수 원칙
 
