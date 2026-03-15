@@ -13,8 +13,16 @@
       "title": "로그 볼륨 (시간대별)",
       "description": "시간대별 로그 발생량 추이. 급증 구간은 에러 또는 트래픽 폭증을 의미.",
       "type": "barchart",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "sum(count_over_time({host=~\"$host\", app=~\"$app\"} |~ \"$search\" [$__auto]))",
@@ -34,36 +42,83 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "fillOpacity": 80,
-            "stacking": { "mode": "normal" }
+            "stacking": {
+              "mode": "normal"
+            }
           }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "ERROR" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "WARN" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "WARN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "전체" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "전체"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
       "options": {
-        "tooltip": { "mode": "multi" }
+        "tooltip": {
+          "mode": "multi"
+        }
       }
     },
     {
       "title": "총 로그 수",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "sum(count_over_time({host=~\"$host\", app=~\"$app\"} |~ \"$search\" [$__auto]))",
@@ -72,24 +127,41 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["sum"] },
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
         "textMode": "value"
       }
     },
     {
       "title": "ERROR 수",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 6 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "sum(count_over_time({host=~\"$host\", app=~\"$app\"} |= \"ERROR\" |~ \"$search\" [$__auto]))",
@@ -98,25 +170,45 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["sum"] },
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
         "textMode": "value"
       }
     },
     {
       "title": "WARN 수",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 6
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "sum(count_over_time({host=~\"$host\", app=~\"$app\"} |= \"WARN\" |~ \"$search\" [$__auto]))",
@@ -125,25 +217,45 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["sum"] },
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
         "textMode": "value"
       }
     },
     {
       "title": "호스트별 로그 비율",
       "type": "piechart",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 6
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "sum by (host) (count_over_time({host=~\"$host\", app=~\"$app\"} |~ \"$search\" [$__auto]))",
@@ -152,17 +264,34 @@
         }
       ],
       "options": {
-        "legend": { "displayMode": "list", "placement": "right" },
-        "reduceOptions": { "calcs": ["sum"] },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "title": "🔴 ERROR 로그",
       "description": "ERROR 레벨 로그만 필터링. 장애 원인 추적에 활용.",
       "type": "logs",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 10 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\" |= \"ERROR\"",
@@ -184,8 +313,16 @@
       "title": "🟡 WARN 로그",
       "description": "WARN 레벨 로그만 필터링. 잠재적 문제 조기 발견에 활용.",
       "type": "logs",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 22 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\" |= \"WARN\"",
@@ -207,8 +344,16 @@
       "title": "🟢 INFO 로그",
       "description": "INFO 레벨 로그만 필터링. 정상 동작 흐름 확인에 활용.",
       "type": "logs",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 34 },
-      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
           "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\" |= \"INFO\"",
@@ -233,11 +378,22 @@
         "name": "host",
         "label": "Host",
         "type": "query",
-        "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-        "query": { "label": "host", "stream": "", "type": 1 },
+        "datasource": {
+          "type": "loki",
+          "uid": "P8E80F9AEF21F6940"
+        },
+        "query": {
+          "label": "host",
+          "stream": "",
+          "type": 1
+        },
         "includeAll": true,
         "multi": true,
-        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "refresh": 2,
         "sort": 1
       },
@@ -245,11 +401,22 @@
         "name": "app",
         "label": "App",
         "type": "query",
-        "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-        "query": { "label": "app", "stream": "{host=~\"$host\"}", "type": 1 },
+        "datasource": {
+          "type": "loki",
+          "uid": "P8E80F9AEF21F6940"
+        },
+        "query": {
+          "label": "app",
+          "stream": "{host=~\"$host\"}",
+          "type": 1
+        },
         "includeAll": true,
         "multi": true,
-        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "refresh": 2,
         "sort": 1
       },
@@ -257,15 +424,27 @@
         "name": "search",
         "label": "Search",
         "type": "textbox",
-        "current": { "selected": false, "text": "", "value": "" }
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        }
       }
     ]
   },
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker 로그 대시보드",
+  "title": "Q-Asker Loki 로그 대시보드",
   "uid": "q-asker-loki-logs",
   "version": 1,
-  "schemaVersion": 39
+  "schemaVersion": 39,
+  "tags": [
+    "loki",
+    "logs",
+    "q-asker"
+  ]
 }

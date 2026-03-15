@@ -247,3 +247,37 @@ prometheus.remote_write "remote_prometheus" {
     url = env("PROMETHEUS_URL")  // .env 파일: http://monitoring.example.com:9090/api/v1/write
   }
 }
+
+
+// ═══════════════════════════════════════════════════════════
+// ④ Alloy 자체 메트릭 파이프라인 (Self Monitoring)
+// ═══════════════════════════════════════════════════════════
+// 목적: Alloy 에이전트 자체의 건강 상태 및 파이프라인 처리량 모니터링
+// Alloy는 기본적으로 :12345 포트에서 /metrics 엔드포인트를 노출
+// 여기에는 파이프라인 처리량, 메모리, CPU, Loki/Prometheus 전송 상태 등 포함
+//
+// 수집되는 주요 메트릭:
+//   process_cpu_seconds_total       → Alloy 프로세스 CPU 사용 시간
+//   go_memstats_alloc_bytes         → Alloy Go 런타임 메모리 사용량
+//   go_goroutines                   → 활성 고루틴 수
+//   loki_write_sent_bytes_total     → Loki 전송 성공 바이트
+//   loki_write_dropped_bytes_total  → Loki 전송 실패 (드롭) 바이트
+//   prometheus_remote_write_samples_total → Prometheus 전송 성공 샘플
+//
+// Grafana PromQL 쿼리 예시:
+//   go_memstats_alloc_bytes{instance="springboot"}
+//     → 이 노드 Alloy의 메모리 사용량
+//   rate(loki_write_sent_bytes_total{instance="springboot"}[5m])
+//     → Loki 전송 처리량 (초당 바이트)
+
+// ----- Step 1: Alloy 내장 HTTP 서버에서 자체 메트릭 스크래프 -----
+// Alloy는 `run` 시작 시 기본 HTTP 포트 12345를 자동으로 열고
+// /metrics 엔드포인트에서 내부 메트릭을 Prometheus 형식으로 노출
+// localhost를 사용하므로 외부 네트워크 노출 없이 안전하게 수집
+prometheus.scrape "alloy_self" {
+  targets         = [{"__address__" = "localhost:12345"}]
+  forward_to      = [prometheus.relabel.add_springboot_labels.receiver]  // 기존 ③ relabel 재사용
+  scrape_interval = "30s"  // 30초 주기 (자체 메트릭은 빠른 변화 없으므로 부하 최소화)
+}
+// ④의 Step 2는 ③과 공유: prometheus.relabel "add_springboot_labels" (위에 정의됨)
+// ④의 Step 3은 ③과 공유: prometheus.remote_write "remote_prometheus" (위에 정의됨)

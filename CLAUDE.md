@@ -225,6 +225,10 @@ MYSQL_DSN=user:password@tcp(heawave-host:3306)/db
 ✓ Alloy: curl http://<node>:12345/metrics | grep loki_write
 ```
 
+## 작업 범위 제한
+
+- **Kafka 관련 작업은 수행하지 않는다** — Kafka 클러스터(broker-1/2/3)의 설정 변경, JMX exporter 추가, Kafka 전용 대시보드 등은 추후 별도 분리하여 수행 예정
+
 ## 참고 자료
 
 - **배포 가이드**: `README.md`
