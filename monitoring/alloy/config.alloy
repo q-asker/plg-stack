@@ -177,3 +177,42 @@ prometheus.remote_write "local_prometheus" {
   // 배치 설정: 자동 최적화
   // 네트워크 효율성과 레이턴시 균형 유지
 }
+
+// ═══════════════════════════════════════════════════════════
+// ③ 호스트 시스템 메트릭 파이프라인 (Unix Metrics)
+// ═══════════════════════════════════════════════════════════
+// 목적: monitoring 노드(OCI-3)의 CPU, 메모리, 디스크, 네트워크 메트릭 수집
+// 수집 메트릭:
+//   node_cpu_seconds_total          → CPU 코어별 사용 시간
+//   node_memory_MemAvailable_bytes  → 사용 가능한 메모리
+//   node_filesystem_avail_bytes     → 디스크 여유 공간
+//   node_network_receive_bytes_total → 네트워크 수신 바이트
+//   node_load1 / node_load5 / node_load15 → 시스템 로드 평균
+
+// ----- Step 1: Unix 시스템 메트릭 exporter 생성 -----
+// node_exporter를 별도 설치 없이 Alloy가 직접 제공
+// broker-1/2/3, springboot와 동일한 패턴
+prometheus.exporter.unix "system" {
+  // 기본 수집기가 자동으로 CPU, 메모리, 디스크, 네트워크, 부하 지표를 포함
+}
+
+// ----- Step 2: exporter에서 15초마다 메트릭 스크래프 -----
+// Step 1에서 생성한 localhost 엔드포인트에 HTTP GET 요청
+prometheus.scrape "node_metrics" {
+  targets         = prometheus.exporter.unix.system.targets
+  forward_to      = [prometheus.relabel.add_monitoring_labels.receiver]
+  scrape_interval = "15s"
+}
+
+// ----- Step 3: 수집된 메트릭에 인스턴스 라벨 추가 -----
+// Grafana에서 "어느 노드의 메트릭인가" 식별 가능하도록 instance 라벨 설정
+// PromQL 쿼리 예시: node_cpu_seconds_total{instance="monitoring"}
+prometheus.relabel "add_monitoring_labels" {
+  forward_to = [prometheus.remote_write.local_prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "monitoring"
+  }
+}
+// ③의 Step 4는 ②와 공유: prometheus.remote_write "local_prometheus" (위에 정의됨)
