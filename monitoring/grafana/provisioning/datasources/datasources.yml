@@ -19,8 +19,9 @@ datasources:
     # 데이터소스 타입: loki (Grafana에서 지원하는 Loki 플러그인 사용)
     type: loki
     # 접근 방식: proxy
-    # proxy: Grafana 백엔드가 데이터소스 요청을 중개
-    # (클라이언트가 직접 Loki에 접속하지 않음, 더 안전)
+    # Grafana는 프론트엔드(브라우저 React UI) + 백엔드(Go 서버)로 구성됨
+    # proxy: 브라우저 → Grafana 백엔드 → Loki (백엔드가 데이터소스 요청을 대행)
+    # direct: 브라우저 → Loki (브라우저가 직접 접근, Docker 내부 DNS 해석 불가로 사용 불가)
     access: proxy
     # Loki 서버 URL
     # docker-compose.yml 네트워크에서 서비스명(loki)으로 DNS 해석
@@ -44,7 +45,7 @@ datasources:
     uid: PBFA97CFB590B2093
     # 데이터소스 타입: prometheus (PromQL 쿼리 지원)
     type: prometheus
-    # 접근 방식: proxy (위 Loki와 동일)
+    # 접근 방식: proxy (위 Loki와 동일, 백엔드가 데이터소스 요청 대행)
     access: proxy
     # Prometheus 서버 URL
     # docker-compose.yml 네트워크에서 서비스명(prometheus)으로 DNS 해석
