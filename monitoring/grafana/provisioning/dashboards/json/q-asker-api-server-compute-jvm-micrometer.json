@@ -2665,7 +2665,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Q-Asker API Server Compute — JVM (Micrometer)",
-  "uid": "q-asker-api-server-compute-jvm-micrometer",
+  "uid": "api-server-compute-jvm-micrometer",
   "version": 1,
   "weekStart": ""
 }

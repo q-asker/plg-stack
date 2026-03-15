@@ -1311,6 +1311,6 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Q-Asker Monitoring Compute — 노드 인프라",
-  "uid": "q-asker-monitoring-compute-node-infra",
+  "uid": "monitoring-compute-node-infra",
   "version": 1
 }

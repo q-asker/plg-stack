@@ -983,6 +983,6 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Q-Asker Monitoring Compute — MySQL HeatWave",
-  "uid": "q-asker-monitoring-compute-mysql-heatwave",
+  "uid": "monitoring-compute-mysql-heatwave",
   "version": 1
 }

@@ -763,6 +763,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Q-Asker API Server Compute — LibreOffice 프로세스",
-  "uid": "q-asker-api-server-compute-libreoffice-process",
+  "uid": "api-server-compute-libreoffice-process",
   "version": 1
 }

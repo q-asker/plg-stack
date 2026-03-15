@@ -720,5 +720,5 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Q-Asker Monitoring Compute — Alloy 파이프라인",
-  "uid": "q-asker-monitoring-compute-alloy-pipeline"
+  "uid": "monitoring-compute-alloy-pipeline"
 }
