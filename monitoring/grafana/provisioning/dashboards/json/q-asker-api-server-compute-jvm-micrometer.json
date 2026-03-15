@@ -2555,7 +2555,8 @@
   "tags": [
     "jvm",
     "micrometer",
-    "q-asker"
+    "q-asker",
+    "api-server-compute"
   ],
   "templating": {
     "list": [
@@ -2663,8 +2664,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker JVM (Micrometer) 대시보드",
-  "uid": "q-asker-jvm-micrometer",
+  "title": "Q-Asker API Server Compute — JVM (Micrometer)",
+  "uid": "q-asker-api-server-compute-jvm-micrometer",
   "version": 1,
   "weekStart": ""
 }

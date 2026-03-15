@@ -438,13 +438,14 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker Loki 로그 대시보드",
-  "uid": "q-asker-loki-logs",
+  "title": "Q-Asker Monitoring Compute — Loki 로그",
+  "uid": "q-asker-monitoring-compute-loki-logs",
   "version": 1,
   "schemaVersion": 39,
   "tags": [
     "loki",
     "logs",
-    "q-asker"
+    "q-asker",
+    "monitoring-compute"
   ]
 }
