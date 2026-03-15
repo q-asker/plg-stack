@@ -186,6 +186,9 @@ services:
     command:
       # Alloy 실행 모드
       - run
+      # HTTP 서버 바인드 주소 (기본값: 127.0.0.1:12345 → localhost만 수신)
+      # 0.0.0.0으로 변경해야 같은 Docker 네트워크의 Prometheus가 /metrics에 접근 가능
+      - --server.http.listen-addr=0.0.0.0:12345
       # 메타데이터 저장 경로 (로그 위치 추적, 재시작 후 이어서 수집)
       - --storage.path=/var/lib/alloy/data
       # 설정 파일 경로

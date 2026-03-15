@@ -43,10 +43,9 @@ scrape_configs:
     # 정적 타겟 설정
     static_configs:
       # Spring Boot 호스트 + 포트
-      # 환경 변수로 주입: ${SPRINGBOOT_HOST:-springboot.example.com}:9090
-      # 기본값: springboot.example.com:9090 (DNS 해석)
-      # 또는 IP 주소: 168.107.15.251:9090 (Nginx 리버스 프록시)
-      - targets: ["${SPRINGBOOT_HOST:-springboot.example.com}:9090"]
+      # Prometheus는 환경변수 치환(${VAR})을 지원하지 않으므로 직접 지정
+      # origin-api.q-asker.com → OCI Private DNS로 프라이빗 IP 해석
+      - targets: ["origin-api.q-asker.com:9090"]
         # 메트릭에 추가할 라벨 (필터링, 그룹핑, 알림용)
         labels:
           # 인스턴스 식별자 (다중 인스턴스 구분)
@@ -59,8 +58,10 @@ scrape_configs:
   - job_name: "alloy-monitoring"
     # 정적 타겟 설정
     static_configs:
-      # Alloy 컨테이너의 메트릭 포트 12345
-      # Docker Compose 네트워크에서 서비스명(alloy)로 DNS 해석
+      # Alloy는 `run` 명령 시작 시 기본 HTTP 포트 12345를 자동으로 열고
+      # /metrics 엔드포인트에서 자체 메트릭을 Prometheus 형식으로 노출
+      # 같은 monitoring 네트워크 내이므로 서비스명(alloy)으로 DNS 해석되며
+      # 호스트 포트 매핑 없이 컨테이너 내부 포트에 직접 접근
       - targets: ["alloy:12345"]
         # 메트릭 라벨
         labels:
