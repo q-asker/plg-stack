@@ -158,14 +158,60 @@
       }
     },
     {
-      "title": "실시간 로그",
-      "description": "필터 조건에 맞는 로그 스트림. 우측 상단 'Live' 버튼으로 실시간 tail 가능.",
+      "title": "🔴 ERROR 로그",
+      "description": "ERROR 레벨 로그만 필터링. 장애 원인 추적에 활용.",
       "type": "logs",
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 10 },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 10 },
       "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
       "targets": [
         {
-          "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\"",
+          "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\" |= \"ERROR\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "title": "🟡 WARN 로그",
+      "description": "WARN 레벨 로그만 필터링. 잠재적 문제 조기 발견에 활용.",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [
+        {
+          "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\" |= \"WARN\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "title": "🟢 INFO 로그",
+      "description": "INFO 레벨 로그만 필터링. 정상 동작 흐름 확인에 활용.",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 34 },
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "targets": [
+        {
+          "expr": "{host=~\"$host\", app=~\"$app\"} |~ \"$search\" |= \"INFO\"",
           "refId": "A"
         }
       ],
