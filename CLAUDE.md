@@ -116,7 +116,7 @@ plg-stack/
 │
 ├── monitoring/                  ← OCI-3 모니터링 스택 (리더 선택)
 │   ├── docker-compose.yml       ← Loki + Prometheus + Grafana + Alloy
-│   ├── .env.example             ← 환경 변수 템플릿
+│   ├── .env                     ← 환경 변수 (Git 무시)
 │   ├── loki/
 │   │   └── loki-config.yaml     ← Loki 설정 (라벨 인덱싱)
 │   ├── prometheus/
@@ -188,7 +188,7 @@ plg-stack/
 
 ### 환경 변수
 
-**파일**: `remote-node.env.example` (원격 노드 공통), `monitoring/.env.example` (모니터링 스택)
+**파일**: `remote-node.env.example` (원격 노드 공통), `monitoring/.env` (모니터링 스택), `springboot/.env` (Spring Boot)
 
 **핵심 변수**:
 ```bash
