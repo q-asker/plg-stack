@@ -73,7 +73,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_chunk_duration_seconds_sum{instance=\"springboot-oci\"}[5m]) / rate(gemini_chunk_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_chunk_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(gemini_chunk_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "평균",
           "refId": "A"
         }
@@ -124,7 +124,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "histogram_quantile(0.50, rate(gemini_chunk_duration_seconds_bucket{instance=\"springboot-oci\"}[5m]))",
+          "expr": "histogram_quantile(0.50, rate(gemini_chunk_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
           "legendFormat": "p50",
           "refId": "A"
         },
@@ -133,7 +133,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "histogram_quantile(0.95, rate(gemini_chunk_duration_seconds_bucket{instance=\"springboot-oci\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(gemini_chunk_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
           "legendFormat": "p95",
           "refId": "B"
         },
@@ -142,7 +142,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "histogram_quantile(0.99, rate(gemini_chunk_duration_seconds_bucket{instance=\"springboot-oci\"}[5m]))",
+          "expr": "histogram_quantile(0.99, rate(gemini_chunk_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -197,7 +197,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_chunk_duration_seconds_bucket{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_chunk_duration_seconds_bucket{application=\"q-asker-api\"}[5m])",
           "format": "heatmap",
           "legendFormat": "{{le}}",
           "refId": "A"
@@ -207,6 +207,302 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 40,
+      "panels": [],
+      "title": "요청 응답 시간",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 15 }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 8 },
+      "id": 41,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "첫 퀴즈 응답 시간 (TTFQ)",
+      "description": "요청 시작 → 첫 번째 퀴즈 응답까지 소요 시간 (5분 평균)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "rate(gemini_request_first_quiz_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(gemini_request_first_quiz_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+          "legendFormat": "TTFQ",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 15 },
+              { "color": "red", "value": 30 }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 8 },
+      "id": 42,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "전체 완료 시간",
+      "description": "요청 시작 → 전체 퀴즈 생성 완료까지 소요 시간 (5분 평균)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "rate(gemini_request_total_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(gemini_request_total_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+          "legendFormat": "전체",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 30 }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 8 },
+      "id": 43,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "퀴즈 분산 시간 (Spread)",
+      "description": "첫 번째 퀴즈 ~ 마지막 퀴즈 응답 시간 차이 (5분 평균)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "rate(gemini_request_spread_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(gemini_request_spread_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+          "legendFormat": "Spread",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "TTFQ p50" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "전체 p50" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }]
+          }
+        ]
+      },
+      "gridPos": { "h": 6, "w": 14, "x": 0, "y": 14 },
+      "id": 44,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "TTFQ vs 전체 완료 추이 (p50)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "histogram_quantile(0.50, rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "TTFQ p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "histogram_quantile(0.50, rate(gemini_request_total_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "전체 p50",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 10, "x": 14, "y": 14 },
+      "id": 45,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "TTFQ 퍼센타일 (p50 / p95 / p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "histogram_quantile(0.50, rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "histogram_quantile(0.95, rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "histogram_quantile(0.99, rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
       "id": 10,
       "panels": [],
       "title": "토큰 사용량",
@@ -260,7 +556,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
       "id": 11,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
@@ -274,7 +570,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_input_total{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_tokens_input_total{application=\"q-asker-api\"}[5m])",
           "legendFormat": "입력",
           "refId": "A"
         },
@@ -283,7 +579,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_cached_total{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_tokens_cached_total{application=\"q-asker-api\"}[5m])",
           "legendFormat": "캐시",
           "refId": "B"
         },
@@ -292,7 +588,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_thinking_total{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_tokens_thinking_total{application=\"q-asker-api\"}[5m])",
           "legendFormat": "thinking",
           "refId": "C"
         },
@@ -301,7 +597,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_output_total{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_tokens_output_total{application=\"q-asker-api\"}[5m])",
           "legendFormat": "출력",
           "refId": "D"
         }
@@ -330,7 +626,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 8 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 21 },
       "id": 12,
       "options": {
         "minVizHeight": 75,
@@ -353,7 +649,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_cached_total{instance=\"springboot-oci\"}[5m]) / (rate(gemini_tokens_input_total{instance=\"springboot-oci\"}[5m]) + rate(gemini_tokens_cached_total{instance=\"springboot-oci\"}[5m]))",
+          "expr": "rate(gemini_tokens_cached_total{application=\"q-asker-api\"}[5m]) / (rate(gemini_tokens_input_total{application=\"q-asker-api\"}[5m]) + rate(gemini_tokens_cached_total{application=\"q-asker-api\"}[5m]))",
           "legendFormat": "캐시 히트율",
           "refId": "A"
         }
@@ -395,13 +691,13 @@
           }
         ]
       },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 8 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 21 },
       "id": 13,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "reduceOptions": {
           "calcs": ["lastNotNull"],
           "fields": "",
@@ -417,7 +713,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "gemini_tokens_input_total{instance=\"springboot-oci\"}",
+          "expr": "gemini_tokens_input_total{application=\"q-asker-api\"}",
           "legendFormat": "입력 토큰",
           "refId": "A"
         },
@@ -426,7 +722,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "gemini_tokens_cached_total{instance=\"springboot-oci\"}",
+          "expr": "gemini_tokens_cached_total{application=\"q-asker-api\"}",
           "legendFormat": "캐시 토큰",
           "refId": "B"
         },
@@ -435,7 +731,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "gemini_tokens_thinking_total{instance=\"springboot-oci\"}",
+          "expr": "gemini_tokens_thinking_total{application=\"q-asker-api\"}",
           "legendFormat": "Thinking 토큰",
           "refId": "C"
         },
@@ -444,7 +740,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "gemini_tokens_output_total{instance=\"springboot-oci\"}",
+          "expr": "gemini_tokens_output_total{application=\"q-asker-api\"}",
           "legendFormat": "출력 토큰",
           "refId": "D"
         }
@@ -473,7 +769,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 12 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 25 },
       "id": 14,
       "options": {
         "colorMode": "value",
@@ -496,7 +792,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_cached_total{instance=\"springboot-oci\"}[5m]) * 0.45 / (rate(gemini_tokens_input_total{instance=\"springboot-oci\"}[5m]) * 0.50 + rate(gemini_tokens_cached_total{instance=\"springboot-oci\"}[5m]) * 0.50)",
+          "expr": "rate(gemini_tokens_cached_total{application=\"q-asker-api\"}[5m]) * 0.45 / (rate(gemini_tokens_input_total{application=\"q-asker-api\"}[5m]) * 0.50 + rate(gemini_tokens_cached_total{application=\"q-asker-api\"}[5m]) * 0.50)",
           "legendFormat": "절감률",
           "refId": "A"
         }
@@ -521,7 +817,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 12 },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 25 },
       "id": 15,
       "options": {
         "colorMode": "value",
@@ -544,7 +840,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_input_total{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_tokens_input_total{application=\"q-asker-api\"}[5m])",
           "legendFormat": "입력/s",
           "refId": "A"
         },
@@ -553,7 +849,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_tokens_output_total{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(gemini_tokens_output_total{application=\"q-asker-api\"}[5m])",
           "legendFormat": "출력/s",
           "refId": "B"
         }
@@ -561,7 +857,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
       "id": 20,
       "panels": [],
       "title": "비용",
@@ -588,7 +884,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 17 },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 30 },
       "id": 21,
       "options": {
         "colorMode": "value",
@@ -610,7 +906,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_cost_estimated_total{instance=\"springboot-oci\"}[1h]) * 3600",
+          "expr": "rate(gemini_cost_estimated_total{application=\"q-asker-api\"}[1h]) * 3600",
           "legendFormat": "$/hr",
           "refId": "A"
         }
@@ -647,7 +943,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 12, "x": 6, "y": 17 },
+      "gridPos": { "h": 6, "w": 12, "x": 6, "y": 30 },
       "id": 22,
       "options": {
         "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom" },
@@ -662,7 +958,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "increase(gemini_cost_estimated_total{instance=\"springboot-oci\"}[1d])",
+          "expr": "increase(gemini_cost_estimated_total{application=\"q-asker-api\"}[1d])",
           "legendFormat": "일일 비용",
           "refId": "A"
         }
@@ -689,7 +985,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 17 },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 30 },
       "id": 23,
       "options": {
         "colorMode": "value",
@@ -711,7 +1007,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "gemini_cost_estimated_total{instance=\"springboot-oci\"}",
+          "expr": "gemini_cost_estimated_total{application=\"q-asker-api\"}",
           "legendFormat": "총 비용",
           "refId": "A"
         }
@@ -719,7 +1015,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
       "id": 30,
       "panels": [],
       "title": "요청 수",
@@ -756,7 +1052,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 16, "x": 0, "y": 24 },
+      "gridPos": { "h": 6, "w": 16, "x": 0, "y": 37 },
       "id": 31,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
@@ -770,7 +1066,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(gemini_chunk_duration_seconds_count{instance=\"springboot-oci\"}[1m]) * 60",
+          "expr": "rate(gemini_chunk_duration_seconds_count{application=\"q-asker-api\"}[1m]) * 60",
           "legendFormat": "RPM",
           "refId": "A"
         }
@@ -795,7 +1091,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 24 },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 37 },
       "id": 32,
       "options": {
         "colorMode": "value",
@@ -817,8 +1113,196 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "gemini_chunk_duration_seconds_count{instance=\"springboot-oci\"}",
+          "expr": "gemini_chunk_duration_seconds_count{application=\"q-asker-api\"}",
           "legendFormat": "총 요청",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
+      "id": 50,
+      "panels": [],
+      "title": "A/B 테스트: 청크 수 (max_chunks)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "id": 51,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "TTFQ 비교 (max_chunks별 p50)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.50, rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "TTFQ p50 — max_chunks={{max_chunks}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "id": 52,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "전체 완료 시간 비교 (max_chunks별 p50)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.50, rate(gemini_request_total_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "전체 p50 — max_chunks={{max_chunks}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "USD",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+      "id": 53,
+      "options": {
+        "legend": { "calcs": ["mean", "sum"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "비용 비교 (max_chunks별)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "rate(gemini_cost_estimated_total{application=\"q-asker-api\"}[5m])",
+          "legendFormat": "비용/s — max_chunks={{max_chunks}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+      "id": 54,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "Spread 비교 (max_chunks별 p50)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "histogram_quantile(0.50, rate(gemini_request_spread_duration_seconds_bucket{application=\"q-asker-api\"}[5m]))",
+          "legendFormat": "Spread p50 — max_chunks={{max_chunks}}",
           "refId": "A"
         }
       ]

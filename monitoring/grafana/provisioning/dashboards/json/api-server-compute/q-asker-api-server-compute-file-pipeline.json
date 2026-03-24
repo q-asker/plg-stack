@@ -61,7 +61,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(document_conversion_duration_seconds_sum{instance=\"springboot-oci\", result=\"success\"}[5m]) / rate(document_conversion_duration_seconds_count{instance=\"springboot-oci\", result=\"success\"}[5m])",
+          "expr": "rate(document_conversion_duration_seconds_sum{application=\"q-asker-api\", result=\"success\"}[5m]) / rate(document_conversion_duration_seconds_count{application=\"q-asker-api\", result=\"success\"}[5m])",
           "legendFormat": "평균",
           "refId": "A"
         }
@@ -99,7 +99,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "document_conversion_duration_seconds_count{instance=\"springboot-oci\", result=\"fail\"}",
+          "expr": "document_conversion_duration_seconds_count{application=\"q-asker-api\", result=\"fail\"}",
           "legendFormat": "실패",
           "refId": "A"
         }
@@ -151,19 +151,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "histogram_quantile(0.50, rate(document_conversion_duration_seconds_bucket{instance=\"springboot-oci\", result=\"success\"}[5m]))",
+          "expr": "histogram_quantile(0.50, rate(document_conversion_duration_seconds_bucket{application=\"q-asker-api\", result=\"success\"}[5m]))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "histogram_quantile(0.95, rate(document_conversion_duration_seconds_bucket{instance=\"springboot-oci\", result=\"success\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(document_conversion_duration_seconds_bucket{application=\"q-asker-api\", result=\"success\"}[5m]))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "histogram_quantile(0.99, rate(document_conversion_duration_seconds_bucket{instance=\"springboot-oci\", result=\"success\"}[5m]))",
+          "expr": "histogram_quantile(0.99, rate(document_conversion_duration_seconds_bucket{application=\"q-asker-api\", result=\"success\"}[5m]))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -208,7 +208,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "document_conversion_duration_seconds_bucket{instance=\"springboot-oci\", result=\"success\"}",
+          "expr": "document_conversion_duration_seconds_bucket{application=\"q-asker-api\", result=\"success\"}",
           "legendFormat": "{{le}}s 이내",
           "refId": "A",
           "format": "table",
@@ -257,7 +257,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(file_upload_s3_duration_seconds_sum{instance=\"springboot-oci\"}[5m]) / rate(file_upload_s3_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(file_upload_s3_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_s3_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "S3",
           "refId": "A"
         }
@@ -296,7 +296,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(file_upload_gemini_duration_seconds_sum{instance=\"springboot-oci\"}[5m]) / rate(file_upload_gemini_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(file_upload_gemini_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gemini_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "Gemini",
           "refId": "A"
         }
@@ -350,13 +350,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(file_upload_s3_duration_seconds_sum{instance=\"springboot-oci\"}[5m]) / rate(file_upload_s3_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(file_upload_s3_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_s3_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "S3",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(file_upload_gemini_duration_seconds_sum{instance=\"springboot-oci\"}[5m]) / rate(file_upload_gemini_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(file_upload_gemini_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gemini_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "Gemini",
           "refId": "B"
         }
@@ -410,13 +410,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(file_upload_s3_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(file_upload_s3_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "S3",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "rate(file_upload_gemini_duration_seconds_count{instance=\"springboot-oci\"}[5m])",
+          "expr": "rate(file_upload_gemini_duration_seconds_count{application=\"q-asker-api\"}[5m])",
           "legendFormat": "Gemini",
           "refId": "B"
         }
