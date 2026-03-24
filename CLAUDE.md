@@ -125,8 +125,12 @@ plg-stack/
 │   │   └── provisioning/
 │   │       └── datasources/
 │   │           └── datasources.yml
-│   └── alloy/
-│       └── config.alloy         ← MySQL exporter 설정
+│   ├── alloy/
+│   │   └── config.alloy         ← MySQL exporter 설정
+│   └── local/                   ← 로컬 테스트용 모니터링 스택
+│       ├── docker-compose.yml   ← Prometheus + Grafana (로컬)
+│       └── prometheus/
+│           └── prometheus.yml   ← Spring Boot Actuator 스크래핑
 │
 ├── remote-node.env.example      ← 원격 노드 공통 환경 변수
 └── .claude/                     ← Claude Code 설정 디렉토리
