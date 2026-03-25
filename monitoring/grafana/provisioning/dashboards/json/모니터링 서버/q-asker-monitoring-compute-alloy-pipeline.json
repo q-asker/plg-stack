@@ -8,10 +8,8 @@
   "graphTooltip": 1,
   "links": [],
   "tags": [
-    "alloy",
-    "pipeline",
-    "q-asker",
-    "monitoring-compute"
+    "monitoring",
+    "alloy"
   ],
   "panels": [
     {
@@ -719,6 +717,6 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker Monitoring Compute — Alloy 파이프라인",
+  "title": "Alloy 수집 파이프라인",
   "uid": "monitoring-compute-alloy-pipeline"
 }

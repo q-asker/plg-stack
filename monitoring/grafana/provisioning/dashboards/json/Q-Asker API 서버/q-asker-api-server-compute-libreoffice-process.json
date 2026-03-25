@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "OCI HeatWave MySQL 모니터링 대시보드 — Alloy MySQL exporter 메트릭 시각화",
+  "description": "LibreOffice(soffice.bin) 프로세스 모니터링 대시보드 — CPU, 메모리, 스레드, 파일 디스크립터 시각화",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -18,7 +18,7 @@
       },
       "id": 1,
       "panels": [],
-      "title": "헬스체크 & 개요",
+      "title": "프로세스 상태",
       "type": "row"
     },
     {
@@ -26,28 +26,14 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "MySQL 연결 상태. 1=정상, 0=다운.",
+      "description": "soffice.bin 프로세스 수. 정상=2 (마스터+워커), 0=사망, 3+=좀비 의심.",
       "fieldConfig": {
         "defaults": {
           "mappings": [
             {
               "options": {
-                "0": {
-                  "color": "red",
-                  "text": "DOWN"
-                },
-                "1": {
-                  "color": "green",
-                  "text": "UP"
-                }
-              },
-              "type": "value"
-            },
-            {
-              "options": {
                 "match": "null",
                 "result": {
-                  "color": "dark-grey",
                   "text": "N/A"
                 }
               },
@@ -63,7 +49,7 @@
               },
               {
                 "color": "green",
-                "value": 1
+                "value": 2
               }
             ]
           }
@@ -100,13 +86,13 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_up{instance=\"heatwave-mysql\"}",
+          "expr": "namedprocess_namegroup_num_procs{groupname=\"soffice\",instance=\"springboot\"}",
           "format": "time_series",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "MySQL 상태",
+      "title": "프로세스 수",
       "type": "stat"
     },
     {
@@ -114,7 +100,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "MySQL 서버 가동 시간. 재시작 시 초기화됨.",
+      "description": "soffice 프로세스 CPU 사용률 (5분 평균).",
       "fieldConfig": {
         "defaults": {
           "decimals": 1,
@@ -138,7 +124,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -172,13 +158,13 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_global_status_uptime{instance=\"heatwave-mysql\"}",
+          "expr": "sum(rate(namedprocess_namegroup_cpu_seconds_total{groupname=\"soffice\",instance=\"springboot\"}[5m])) * 100",
           "format": "time_series",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "가동 시간",
+      "title": "CPU 사용률",
       "type": "stat"
     },
     {
@@ -186,9 +172,10 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "현재 활성 커넥션 수.",
+      "description": "soffice 프로세스 실제 사용 메모리 (Resident Set Size).",
       "fieldConfig": {
         "defaults": {
+          "decimals": 1,
           "mappings": [
             {
               "options": {
@@ -206,17 +193,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 200
               }
             ]
-          }
+          },
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -229,7 +209,7 @@
       "id": 4,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
@@ -250,13 +230,13 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_global_status_threads_connected{instance=\"heatwave-mysql\"}",
+          "expr": "sum(namedprocess_namegroup_memory_bytes{groupname=\"soffice\",instance=\"springboot\",memtype=\"resident\"})",
           "format": "time_series",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "현재 커넥션 수",
+      "title": "RSS 메모리",
       "type": "stat"
     },
     {
@@ -264,350 +244,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "max_connections 대비 현재 커넥션 사용률. 90% 이상은 위험.",
-      "fieldConfig": {
-        "defaults": {
-          "decimals": 1,
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 1
-      },
-      "id": 5,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "mysql_global_status_threads_connected{instance=\"heatwave-mysql\"} / mysql_global_variables_max_connections{instance=\"heatwave-mysql\"} * 100",
-          "format": "time_series",
-          "legendFormat": "사용률",
-          "refId": "A"
-        }
-      ],
-      "title": "커넥션 사용률",
-      "type": "gauge"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 5
-      },
-      "id": 10,
-      "panels": [],
-      "title": "커넥션 추이",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "활성 커넥션 수 추이와 max_connections 상한선 비교.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "최대 허용"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    10,
-                    10
-                  ],
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 6
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "mysql_global_status_threads_connected{instance=\"heatwave-mysql\"}",
-          "format": "time_series",
-          "legendFormat": "활성 커넥션",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "mysql_global_variables_max_connections{instance=\"heatwave-mysql\"}",
-          "format": "time_series",
-          "legendFormat": "최대 허용",
-          "refId": "B"
-        }
-      ],
-      "title": "커넥션 수 추이",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      },
-      "id": 20,
-      "panels": [],
-      "title": "쿼리 성능",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "초당 처리 쿼리 수 (QPS). 트래픽 패턴과 부하를 파악.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "QPS",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "scheme",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "ops"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 16,
-        "x": 0,
-        "y": 15
-      },
-      "id": 21,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "rate(mysql_global_status_queries{instance=\"heatwave-mysql\"}[5m])",
-          "format": "time_series",
-          "legendFormat": "QPS",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "rate(mysql_global_status_questions{instance=\"heatwave-mysql\"}[5m])",
-          "format": "time_series",
-          "legendFormat": "Questions/s",
-          "refId": "B"
-        }
-      ],
-      "title": "초당 쿼리 수 (QPS)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "누적 슬로우 쿼리 수. 증가 추세이면 쿼리 최적화 필요.",
+      "description": "soffice 프로세스의 총 스레드 수.",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -627,14 +264,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 100
               }
             ]
           }
@@ -643,14 +272,14 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 15
+        "w": 6,
+        "x": 18,
+        "y": 1
       },
-      "id": 22,
+      "id": 5,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
@@ -671,26 +300,38 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_global_status_slow_queries{instance=\"heatwave-mysql\"}",
+          "expr": "sum(namedprocess_namegroup_num_threads{groupname=\"soffice\",instance=\"springboot\"})",
           "format": "time_series",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "슬로우 쿼리 (누적)",
+      "title": "스레드 수",
       "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 6,
+      "panels": [],
+      "title": "리소스 추이",
+      "type": "row"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "초당 슬로우 쿼리 발생률. 0 이상이면 주의.",
+      "description": "soffice 프로세스 CPU 사용률 추이 (user/system 모드별).",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "orange",
-            "mode": "fixed"
+            "mode": "palette-classic"
           },
           "custom": {
             "axisBorderShow": false,
@@ -700,8 +341,8 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
+            "drawStyle": "line",
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -709,13 +350,13 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "showValues": false,
             "spanNulls": false,
             "stacking": {
@@ -727,94 +368,12 @@
             }
           },
           "mappings": [],
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              }
-            ]
-          },
-          "unit": "ops"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 19
-      },
-      "id": 23,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.4.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "rate(mysql_global_status_slow_queries{instance=\"heatwave-mysql\"}[5m])",
-          "format": "time_series",
-          "legendFormat": "슬로우 쿼리/s",
-          "refId": "A"
-        }
-      ],
-      "title": "슬로우 쿼리 발생률",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
-      "id": 30,
-      "panels": [],
-      "title": "InnoDB Buffer Pool",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Buffer Pool 히트율. 메모리에서 데이터를 읽은 비율. 95% 이하이면 buffer_pool_size 증가 검토.",
-      "fieldConfig": {
-        "defaults": {
-          "decimals": 2,
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 80
-              },
-              {
-                "color": "green",
-                "value": 95
               }
             ]
           },
@@ -824,25 +383,23 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
+        "w": 12,
         "x": 0,
-        "y": 24
+        "y": 6
       },
-      "id": 31,
+      "id": 7,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "pluginVersion": "12.4.0",
       "targets": [
@@ -851,21 +408,31 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "(1 - mysql_global_status_innodb_buffer_pool_reads{instance=\"heatwave-mysql\"} / mysql_global_status_innodb_buffer_pool_read_requests{instance=\"heatwave-mysql\"}) * 100",
+          "expr": "sum by(mode) (rate(namedprocess_namegroup_cpu_seconds_total{groupname=\"soffice\",instance=\"springboot\",mode=\"user\"}[5m])) * 100",
           "format": "time_series",
-          "legendFormat": "히트율",
+          "legendFormat": "user",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum by(mode) (rate(namedprocess_namegroup_cpu_seconds_total{groupname=\"soffice\",instance=\"springboot\",mode=\"system\"}[5m])) * 100",
+          "format": "time_series",
+          "legendFormat": "system",
+          "refId": "B"
         }
       ],
-      "title": "Buffer Pool 히트율",
-      "type": "gauge"
+      "title": "CPU 사용 추이",
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "Buffer Pool 히트율 시간 추이. rate 기반으로 순간 히트율 계산.",
+      "description": "soffice 프로세스 메모리 사용량 추이 (RSS/Virtual).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -875,13 +442,13 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "히트율 %",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "scheme",
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -889,12 +456,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "smooth",
-            "lineWidth": 2,
+            "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "showValues": false,
             "spanNulls": false,
             "stacking": {
@@ -902,42 +469,33 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "line+area"
+              "mode": "off"
             }
           },
           "mappings": [],
-          "min": 0,
-          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "transparent",
+                "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "percent"
+          "unit": "bytes"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 18,
-        "x": 6,
-        "y": 24
+        "w": 12,
+        "x": 12,
+        "y": 6
       },
-      "id": 32,
+      "id": 8,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "min"
-          ],
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -945,7 +503,7 @@
         "tooltip": {
           "hideZeros": false,
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "12.4.0",
@@ -955,34 +513,254 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "(1 - rate(mysql_global_status_innodb_buffer_pool_reads{instance=\"heatwave-mysql\"}[5m]) / rate(mysql_global_status_innodb_buffer_pool_read_requests{instance=\"heatwave-mysql\"}[5m])) * 100",
+          "expr": "sum(namedprocess_namegroup_memory_bytes{groupname=\"soffice\",instance=\"springboot\",memtype=\"resident\"})",
           "format": "time_series",
-          "legendFormat": "히트율",
+          "legendFormat": "RSS (실제 사용)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum(namedprocess_namegroup_memory_bytes{groupname=\"soffice\",instance=\"springboot\",memtype=\"virtual\"})",
+          "format": "time_series",
+          "legendFormat": "Virtual (가상)",
+          "refId": "B"
+        }
+      ],
+      "title": "메모리 사용 추이",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 9,
+      "panels": [],
+      "title": "파일 디스크립터 & I/O",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "soffice 프로세스가 열고 있는 파일 디스크립터 수. 지속 증가 시 핸들 누수 의심.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum(namedprocess_namegroup_open_filedesc{groupname=\"soffice\",instance=\"springboot\"})",
+          "format": "time_series",
+          "legendFormat": "열린 FD",
           "refId": "A"
         }
       ],
-      "title": "Buffer Pool 히트율 추이",
+      "title": "열린 파일 디스크립터",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "soffice 프로세스 디스크 읽기/쓰기 속도. 문서 변환 중 임시 파일 I/O.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum(rate(namedprocess_namegroup_read_bytes_total{groupname=\"soffice\",instance=\"springboot\"}[5m]))",
+          "format": "time_series",
+          "legendFormat": "읽기",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum(rate(namedprocess_namegroup_write_bytes_total{groupname=\"soffice\",instance=\"springboot\"}[5m]))",
+          "format": "time_series",
+          "legendFormat": "쓰기",
+          "refId": "B"
+        }
+      ],
+      "title": "디스크 I/O",
       "type": "timeseries"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": [
-    "mysql",
-    "heatwave",
-    "q-asker",
-    "monitoring-compute"
+    "api-server",
+    "libreoffice"
   ],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "browser",
-  "title": "Q-Asker Monitoring Compute — MySQL HeatWave",
-  "uid": "monitoring-compute-mysql-heatwave",
+  "timezone": "",
+  "title": "문서 변환 프로세스",
+  "uid": "api-server-compute-libreoffice-process",
   "version": 1
 }

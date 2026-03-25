@@ -907,10 +907,8 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": [
-    "resilience4j",
-    "circuit-breaker",
-    "q-asker",
-    "api-server-compute"
+    "api-server",
+    "circuit-breaker"
   ],
   "templating": {
     "list": [
@@ -970,7 +968,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker API Server Compute — Circuit Breaker",
+  "title": "서킷 브레이커",
   "uid": "api-server-compute-circuit-breaker",
   "version": 1
 }

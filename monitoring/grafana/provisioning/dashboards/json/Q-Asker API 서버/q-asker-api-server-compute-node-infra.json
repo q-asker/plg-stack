@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Q-Asker 노드 인프라 모니터링 대시보드 — CPU, 메모리, 디스크, 네트워크 시각화 (카프카 브로커 제외)",
+  "description": "Q-Asker API Server(OCI-2) 노드 인프라 모니터링 대시보드 — CPU, 메모리, 디스크, 네트워크 시각화",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -244,7 +244,7 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "max": 4,
+          "max": 8,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -255,11 +255,11 @@
               },
               {
                 "color": "yellow",
-                "value": 1.4
+                "value": 2.8
               },
               {
                 "color": "red",
-                "value": 1.8
+                "value": 3.6
               }
             ]
           }
@@ -1276,10 +1276,8 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": [
-    "node",
-    "infra",
-    "q-asker",
-    "monitoring-compute"
+    "api-server",
+    "infra"
   ],
   "templating": {
     "list": [
@@ -1296,8 +1294,8 @@
         "multi": true,
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "springboot",
+          "value": "springboot"
         },
         "refresh": 2,
         "sort": 1
@@ -1310,7 +1308,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker Monitoring Compute — 노드 인프라",
-  "uid": "monitoring-compute-node-infra",
+  "title": "서버 인프라",
+  "uid": "api-server-compute-node-infra",
   "version": 1
 }

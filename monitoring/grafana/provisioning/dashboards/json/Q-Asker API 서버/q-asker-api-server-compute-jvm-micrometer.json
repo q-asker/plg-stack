@@ -841,10 +841,10 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_busy_threads{application=\"$application\", instance=\"$instance\"}",
+          "expr": "jvm_threads_live_threads{application=\"$application\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "TOMCAT - 활성",
+          "legendFormat": "활성",
           "refId": "A"
         },
         {
@@ -852,10 +852,10 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_current_threads{application=\"$application\", instance=\"$instance\"}",
+          "expr": "jvm_threads_daemon_threads{application=\"$application\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "TOMCAT - 현재",
+          "legendFormat": "데몬",
           "refId": "B"
         },
         {
@@ -863,10 +863,10 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_config_max_threads{application=\"$application\", instance=\"$instance\"}",
+          "expr": "jvm_threads_peak_threads{application=\"$application\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "TOMCAT - 최대",
+          "legendFormat": "피크",
           "refId": "C"
         }
       ],
@@ -2553,10 +2553,8 @@
   "refresh": "30s",
   "schemaVersion": 42,
   "tags": [
-    "jvm",
-    "micrometer",
-    "q-asker",
-    "api-server-compute"
+    "api-server",
+    "jvm"
   ],
   "templating": {
     "list": [
@@ -2664,7 +2662,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker API Server Compute — JVM (Micrometer)",
+  "title": "JVM 상태",
   "uid": "api-server-compute-jvm-micrometer",
   "version": 1,
   "weekStart": ""

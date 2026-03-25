@@ -1175,7 +1175,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_busy_threads{application=\"$application\", instance=\"$instance\"}",
+          "expr": "jvm_threads_live_threads{application=\"$application\", instance=\"$instance\"}",
           "legendFormat": "활성",
           "refId": "A"
         },
@@ -1184,8 +1184,8 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_current_threads{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "현재",
+          "expr": "jvm_threads_daemon_threads{application=\"$application\", instance=\"$instance\"}",
+          "legendFormat": "데몬",
           "refId": "B"
         },
         {
@@ -1193,12 +1193,12 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_config_max_threads{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "최대",
+          "expr": "jvm_threads_peak_threads{application=\"$application\", instance=\"$instance\"}",
+          "legendFormat": "피크",
           "refId": "C"
         }
       ],
-      "title": "Tomcat 스레드 풀",
+      "title": "JVM 스레드",
       "type": "timeseries"
     },
     {
@@ -1206,7 +1206,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "현재 활성 TCP 커넥션 수.",
+      "description": "현재 처리 중인 HTTP 요청 수.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1257,12 +1257,12 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_connections_current_connections{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "현재 커넥션",
+          "expr": "http_server_requests_active_seconds_count{application=\"$application\", instance=\"$instance\"}",
+          "legendFormat": "활성 요청",
           "refId": "A"
         }
       ],
-      "title": "Tomcat 커넥션",
+      "title": "활성 HTTP 요청",
       "type": "timeseries"
     },
     {
@@ -1340,7 +1340,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "tomcat_threads_busy_threads{application=\"$application\", instance=\"$instance\"} / tomcat_threads_config_max_threads{application=\"$application\", instance=\"$instance\"} * 100",
+          "expr": "jvm_threads_live_threads{application=\"$application\", instance=\"$instance\"} / jvm_threads_peak_threads{application=\"$application\", instance=\"$instance\"} * 100",
           "legendFormat": "스레드 사용률",
           "refId": "A"
         }
@@ -1992,10 +1992,8 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": [
-    "http",
-    "api",
-    "q-asker",
-    "api-server-compute"
+    "api-server",
+    "http"
   ],
   "templating": {
     "list": [
@@ -2055,7 +2053,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Q-Asker API Server Compute — HTTP API",
+  "title": "API 요청 · 응답",
   "uid": "api-server-compute-http-api",
   "version": 1
 }
