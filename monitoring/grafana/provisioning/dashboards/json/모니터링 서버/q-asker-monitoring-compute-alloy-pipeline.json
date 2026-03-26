@@ -698,7 +698,7 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "query": "label_values(process_start_time_seconds, instance)",
+        "query": "label_values(process_start_time_seconds{job!=\"prometheus\"}, instance)",
         "includeAll": true,
         "multi": true,
         "current": {
