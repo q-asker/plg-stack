@@ -26,25 +26,6 @@ type: code-rules
 
 ```
 plg-stack/
-├── broker-1/                      ← 홈서버 Kafka 브로커
-│   ├── docker-compose.yml         ← Kafka + ZK + Alloy (Docker 정의)
-│   ├── alloy/
-│   │   └── config.alloy           ← Alloy 에이전트 설정 (로그 수집)
-│   └── (선택) scripts/
-│       └── pre-start.sh           ← 시작 전 환경 초기화 스크립트
-│
-├── broker-2/                      ← Galaxy S20+ Kafka 브로커 (Control Center)
-│   ├── docker-compose.yml
-│   ├── alloy/
-│   │   └── config.alloy
-│   └── (선택) scripts/
-│
-├── broker-3/                      ← OCI-1 Kafka 브로커
-│   ├── docker-compose.yml
-│   ├── alloy/
-│   │   └── config.alloy
-│   └── (선택) scripts/
-│
 ├── springboot/                    ← OCI-2 Spring Boot 애플리케이션
 │   ├── docker-compose.yml         ← Spring Boot + LibreOffice + Alloy
 │   ├── src/                       ← (선택) Spring Boot 소스 코드
