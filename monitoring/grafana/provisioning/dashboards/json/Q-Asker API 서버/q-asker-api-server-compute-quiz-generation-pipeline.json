@@ -694,7 +694,7 @@
                 "sizing": "auto",
                 "valueMode": "color"
             },
-            "title": "퀴즈 타입별 요청 문제 수",
+            "title": "퀴즈 타입별 요청 수",
             "type": "bargauge",
             "targets": [
                 {
@@ -702,7 +702,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "floor(increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]))",
+                    "expr": "floor(sum by (quiz_type) (increase(quiz_generation_requests_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
@@ -2276,7 +2276,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "-increase(gemini_tokens_cached_total{application=\"q-asker-api\"}[$__range]) * 0.27 / 1000000",
+                    "expr": "increase(gemini_tokens_cached_total{application=\"q-asker-api\"}[$__range]) * 0.27 / 1000000",
                     "legendFormat": "절감 금액",
                     "refId": "A"
                 }
