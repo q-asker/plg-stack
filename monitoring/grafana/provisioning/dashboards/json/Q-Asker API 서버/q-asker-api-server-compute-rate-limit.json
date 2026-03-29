@@ -2,7 +2,7 @@
   "title": "[API] Rate Limit 모니터링",
   "uid": "api-server-compute-rate-limit",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 4,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
@@ -19,14 +19,8 @@
         "multi": false,
         "name": "application",
         "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(application)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
+        "query": { "qryType": 1, "query": "label_values(application)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
         "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       },
@@ -40,14 +34,8 @@
         "multi": false,
         "name": "instance",
         "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(http_server_requests_seconds_count{application=\"$application\"}, instance)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
+        "query": { "qryType": 1, "query": "label_values(http_server_requests_seconds_count{application=\"$application\"}, instance)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
         "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }
@@ -57,46 +45,44 @@
     {
       "id": 1,
       "type": "row",
-      "title": "요약",
+      "title": "🔴 글로벌 버킷 (서버 전체 공유)",
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
     },
     {
       "id": 2,
-      "type": "stat",
-      "title": "Rate Limited 요청 수 (5분)",
-      "description": "최근 5분 동안 Rate Limit에 걸린 총 요청 수.",
+      "type": "gauge",
+      "title": "글로벌 잔여 토큰",
+      "description": "글로벌 버킷(global=true)의 현재 잔여 토큰. 0이면 서버 전체에서 해당 Tier 요청이 차단된다.",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 10 },
-              { "color": "red", "value": 50 }
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "green", "value": 4 }
             ]
           },
-          "unit": "short",
-          "noValue": "0"
-        },
-        "overrides": []
+          "min": 0,
+          "max": 5,
+          "noValue": "-"
+        }
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
-        "textMode": "auto"
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "increase(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[5m])",
-          "legendFormat": "429",
+          "expr": "rate_limit_global_remaining_tokens",
+          "legendFormat": "{{tier}}",
           "refId": "A"
         }
       ]
@@ -104,10 +90,10 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Rate Limit 비율 (%)",
-      "description": "전체 요청 중 429로 차단된 요청의 비율.",
+      "title": "글로벌 차단 (5분)",
+      "description": "최근 5분 동안 글로벌 버킷에서 차단(429)된 요청 수.",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -116,152 +102,101 @@
             "steps": [
               { "color": "green", "value": null },
               { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              { "color": "red", "value": 3 }
             ]
           },
-          "unit": "percent",
-          "decimals": 2,
+          "unit": "short",
           "noValue": "0"
-        },
-        "overrides": []
+        }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "textMode": "value_and_name"
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "(sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}[5m])) * 100",
-          "legendFormat": "비율",
+          "expr": "sum by (tier) (increase(rate_limit_rejected_total{scope=\"global\"}[5m]))",
+          "legendFormat": "{{tier}} 차단",
           "refId": "A"
         }
       ]
     },
     {
       "id": 4,
-      "type": "stat",
-      "title": "Rate Limit 발생 URI 수",
-      "description": "최근 5분 동안 429가 발생한 고유 URI 수.",
+      "type": "timeseries",
+      "title": "글로벌 잔여 토큰 추이",
+      "description": "글로벌 버킷 잔여 토큰의 시간 변화. 0에 도달하면 모든 사용자의 요청이 차단된다.",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 3 },
-              { "color": "red", "value": 6 }
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
             ]
           },
-          "unit": "short",
-          "noValue": "0"
-        },
-        "overrides": []
+          "unit": "short"
+        }
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "legend": { "calcs": ["min", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "count(increase(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[5m]) > 0)",
-          "legendFormat": "URI 수",
+          "expr": "rate_limit_global_remaining_tokens",
+          "legendFormat": "{{tier}}",
           "refId": "A"
         }
       ]
     },
     {
       "id": 5,
-      "type": "stat",
-      "title": "현재 RPS (전체)",
-      "description": "현재 초당 전체 요청 수.",
-      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null }
-            ]
-          },
-          "unit": "reqps",
-          "decimals": 2,
-          "noValue": "0"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}[1m]))",
-          "legendFormat": "RPS",
-          "refId": "A"
-        }
-      ]
+      "type": "row",
+      "title": "CRITICAL (Tier별 소비 추이)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 }
     },
     {
       "id": 6,
-      "type": "row",
-      "title": "Rate Limit 추이",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
-    },
-    {
-      "id": 7,
       "type": "timeseries",
-      "title": "시간별 Rate Limited 요청 (URI별)",
-      "description": "URI별 429 응답 발생 추이. 어느 엔드포인트에서 Rate Limit이 집중되는지 확인한다.",
+      "title": "CRITICAL 소비 추이 (URI별)",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 8 },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
             "showPoints": "never",
             "spanNulls": false,
             "stacking": { "group": "A", "mode": "none" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "unit": "reqps"
-        },
-        "overrides": []
+          "unit": "ops"
+        }
       },
       "options": {
         "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -270,7 +205,41 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[1m]))",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/generation.*|/upload-doc\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "CRITICAL 차단 추이 (URI별)",
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/generation.*|/upload-doc\", status=\"429\"}[1m]))",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -278,120 +247,74 @@
     },
     {
       "id": 8,
+      "type": "row",
+      "title": "HEAVY (Tier별 소비 추이)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
+    },
+    {
+      "id": 9,
       "type": "timeseries",
-      "title": "정상 요청 vs Rate Limited 요청",
-      "description": "전체 요청 중 정상 처리된 요청과 429로 차단된 요청을 비교한다.",
+      "title": "HEAVY 소비 추이 (URI별)",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 15 },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
+            "fillOpacity": 10,
             "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "normal" },
+            "stacking": { "group": "A", "mode": "none" },
             "thresholdsStyle": { "mode": "off" }
           },
-          "unit": "reqps"
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Rate Limited (429)" },
-            "properties": [
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "정상 처리" },
-            "properties": [
-              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }
-            ]
-          }
-        ]
+          "unit": "ops"
+        }
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status!=\"429\"}[1m]))",
-          "legendFormat": "정상 처리",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/generation/.*/stream|/explanation/.*\"}[1m]))",
+          "legendFormat": "{{uri}}",
           "refId": "A"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[1m]))",
-          "legendFormat": "Rate Limited (429)",
-          "refId": "B"
         }
       ]
     },
     {
-      "id": 9,
-      "type": "row",
-      "title": "URI별 Rate Limit 분석",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
-    },
-    {
       "id": 10,
-      "type": "bargauge",
-      "title": "URI별 Rate Limit 비율 (%)",
-      "description": "URI별로 전체 요청 중 429 비율. 높을수록 해당 엔드포인트가 자주 차단되고 있음을 의미한다.",
+      "type": "timeseries",
+      "title": "HEAVY 차단 추이 (URI별)",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 15 },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 20 }
-            ]
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
           },
-          "unit": "percent",
-          "decimals": 1,
-          "min": 0,
-          "max": 100,
-          "noValue": "0"
-        },
-        "overrides": []
+          "unit": "ops"
+        }
       },
       "options": {
-        "displayMode": "gradient",
-        "maxVizHeight": 300,
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "namePlacement": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "showUnfilled": true,
-        "sizing": "auto",
-        "valueMode": "color"
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[5m])) / sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}[5m])) * 100",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/generation/.*/stream|/explanation/.*\", status=\"429\"}[1m]))",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -399,109 +322,226 @@
     },
     {
       "id": 11,
-      "type": "table",
-      "title": "URI별 Rate Limit 상세",
-      "description": "URI별 전체 요청 수, Rate Limited 수, 비율을 한눈에 확인한다.",
+      "type": "row",
+      "title": "WRITE (Tier별 소비 추이)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "WRITE 소비 추이 (URI별)",
       "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 22 },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
-            "align": "auto",
-            "cellOptions": { "type": "auto" },
-            "filterable": false,
-            "inspect": false
-          }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Rate Limit 비율" },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": { "mode": "gradient", "type": "color-background" }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    { "color": "green", "value": null },
-                    { "color": "yellow", "value": 5 },
-                    { "color": "red", "value": 20 }
-                  ]
-                }
-              },
-              { "id": "unit", "value": "percent" },
-              { "id": "decimals", "value": 2 }
-            ]
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
           },
-          {
-            "matcher": { "id": "byName", "options": "전체 요청/s" },
-            "properties": [
-              { "id": "unit", "value": "reqps" },
-              { "id": "decimals", "value": 3 }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Rate Limited/s" },
-            "properties": [
-              { "id": "unit", "value": "reqps" },
-              { "id": "decimals", "value": 3 }
-            ]
-          }
-        ]
+          "unit": "ops"
+        }
       },
       "options": {
-        "cellHeight": "sm",
-        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
-        "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Rate Limit 비율" }]
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}[5m]))",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/boards.*|/problem-set/.*|/history.*\", method=~\"POST|PUT|PATCH|DELETE\"}[1m]))",
           "legendFormat": "{{uri}}",
-          "refId": "A",
-          "instant": true
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[5m]))",
-          "legendFormat": "{{uri}}",
-          "refId": "B",
-          "instant": true
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "expr": "(sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", status=\"429\"}[5m])) or vector(0)) / sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}[5m])) * 100",
-          "legendFormat": "{{uri}}",
-          "refId": "C",
-          "instant": true
+          "refId": "A"
         }
-      ],
-      "transformations": [
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "WRITE 차단 추이 (URI별)",
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
         {
-          "id": "merge",
-          "options": {}
-        },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/boards.*|/problem-set/.*|/history.*\", method=~\"POST|PUT|PATCH|DELETE\", status=\"429\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "STANDARD (Tier별 소비 추이)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "STANDARD 소비 추이 (URI별)",
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 29 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
         {
-          "id": "organize",
-          "options": {
-            "renameByName": {
-              "Value #A": "전체 요청/s",
-              "Value #B": "Rate Limited/s",
-              "Value #C": "Rate Limit 비율"
-            }
-          }
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/auth/.*\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "STANDARD 차단 추이 (URI별)",
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 29 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri=~\"/auth/.*\", status=\"429\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "READ (Tier별 소비 추이)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "READ 소비 추이 (URI별)",
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri!~\"/generation.*|/upload-doc|/generation/.*/stream|/explanation/.*|/auth/.*|/actuator.*\", method=\"GET\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "READ 차단 추이 (URI별)",
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\", uri!~\"/generation.*|/upload-doc|/generation/.*/stream|/explanation/.*|/auth/.*|/actuator.*\", method=\"GET\", status=\"429\"}[1m]))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
         }
       ]
     }
