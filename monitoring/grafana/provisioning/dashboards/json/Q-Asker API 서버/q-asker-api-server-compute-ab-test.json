@@ -439,6 +439,58 @@
                                 "value": 0
                             }
                         ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "실패율"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "percentunit"
+                            },
+                            {
+                                "id": "decimals",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "요청 문제수"
+                        },
+                        "properties": [
+                            {
+                                "id": "decimals",
+                                "value": 0
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "생성 문제수"
+                        },
+                        "properties": [
+                            {
+                                "id": "decimals",
+                                "value": 0
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "실패 문제수"
+                        },
+                        "properties": [
+                            {
+                                "id": "decimals",
+                                "value": 0
+                            }
+                        ]
                     }
                 ]
             },
@@ -483,7 +535,8 @@
                             "application": true,
                             "instance": true,
                             "job": true,
-                            "__name__": true
+                            "__name__": true,
+                            "quiz_type": true
                         },
                         "indexByName": {
                             "max_chunks": 0,
@@ -491,14 +544,22 @@
                             "Value #B": 2,
                             "Value #C": 3,
                             "Value #D": 4,
-                            "Value #E": 5
+                            "Value #E": 5,
+                            "Value #F": 6,
+                            "Value #G": 7,
+                            "Value #H": 8,
+                            "Value #I": 9
                         },
                         "renameByName": {
                             "Value #A": "TTFQ 평균",
                             "Value #B": "전체 완료 평균",
                             "Value #C": "Spread 평균",
                             "Value #D": "비용 합계",
-                            "Value #E": "요청 수"
+                            "Value #E": "요청 수",
+                            "Value #F": "실패율",
+                            "Value #G": "요청 문제수",
+                            "Value #H": "생성 문제수",
+                            "Value #I": "실패 문제수"
                         }
                     }
                 }
@@ -556,6 +617,50 @@
                     "expr": "increase(gemini_request_total_duration_seconds_count{application=\"q-asker-api\"}[$__range])",
                     "legendFormat": "요청 수",
                     "refId": "E",
+                    "format": "table",
+                    "instant": true
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "1 - (sum by(max_chunks) (increase(quiz_generation_quizzes_generated_total{application=\"q-asker-api\", max_chunks!=\"\"}[$__range])) / sum by(max_chunks) (increase(quiz_generation_quizzes_requested_total{application=\"q-asker-api\", max_chunks!=\"\"}[$__range])))",
+                    "legendFormat": "실패율",
+                    "refId": "F",
+                    "format": "table",
+                    "instant": true
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "sum by(max_chunks) (increase(quiz_generation_quizzes_requested_total{application=\"q-asker-api\", max_chunks!=\"\"}[$__range]))",
+                    "legendFormat": "요청 문제수",
+                    "refId": "G",
+                    "format": "table",
+                    "instant": true
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "sum by(max_chunks) (increase(quiz_generation_quizzes_generated_total{application=\"q-asker-api\", max_chunks!=\"\"}[$__range]))",
+                    "legendFormat": "생성 문제수",
+                    "refId": "H",
+                    "format": "table",
+                    "instant": true
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "sum by(max_chunks) (increase(quiz_generation_quizzes_requested_total{application=\"q-asker-api\", max_chunks!=\"\"}[$__range])) - sum by(max_chunks) (increase(quiz_generation_quizzes_generated_total{application=\"q-asker-api\", max_chunks!=\"\"}[$__range]))",
+                    "legendFormat": "실패 문제수",
+                    "refId": "I",
                     "format": "table",
                     "instant": true
                 }

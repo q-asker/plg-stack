@@ -28,7 +28,7 @@
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 15
+                "y": 23
             },
             "id": 1,
             "panels": [],
@@ -71,7 +71,7 @@
                 "h": 6,
                 "w": 6,
                 "x": 0,
-                "y": 16
+                "y": 24
             },
             "id": 3,
             "options": {
@@ -163,7 +163,7 @@
                 "h": 6,
                 "w": 18,
                 "x": 6,
-                "y": 16
+                "y": 24
             },
             "id": 48,
             "options": {
@@ -200,7 +200,7 @@
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 54
+                "y": 62
             },
             "id": 6,
             "panels": [],
@@ -278,7 +278,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 55
+                "y": 63
             },
             "id": 7,
             "options": {
@@ -413,7 +413,7 @@
                 "h": 8,
                 "w": 16,
                 "x": 8,
-                "y": 55
+                "y": 63
             },
             "id": 8,
             "options": {
@@ -450,7 +450,7 @@
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 38
+                "y": 46
             },
             "id": 9,
             "panels": [],
@@ -551,7 +551,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 47
+                "y": 55
             },
             "id": 13,
             "options": {
@@ -674,7 +674,7 @@
                 "h": 7,
                 "w": 6,
                 "x": 6,
-                "y": 39
+                "y": 47
             },
             "id": 100,
             "options": {
@@ -782,7 +782,7 @@
                 "h": 7,
                 "w": 6,
                 "x": 12,
-                "y": 39
+                "y": 47
             },
             "id": 101,
             "options": {
@@ -810,7 +810,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "floor(increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]))",
+                    "expr": "floor(sum by(quiz_type) (increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
@@ -890,7 +890,7 @@
                 "h": 7,
                 "w": 6,
                 "x": 0,
-                "y": 39
+                "y": 47
             },
             "id": 102,
             "options": {
@@ -1012,7 +1012,7 @@
                 "h": 7,
                 "w": 6,
                 "x": 18,
-                "y": 39
+                "y": 47
             },
             "id": 105,
             "options": {
@@ -1040,7 +1040,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "floor(increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]) - increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]))",
+                    "expr": "floor(sum by(quiz_type) (increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])) - sum by(quiz_type) (increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
@@ -1138,7 +1138,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 8,
-                "y": 47
+                "y": 55
             },
             "id": 103,
             "options": {
@@ -1162,7 +1162,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[5m])",
+                    "expr": "sum by(quiz_type) (increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[5m]))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
@@ -1227,7 +1227,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 16,
-                "y": 47
+                "y": 55
             },
             "id": 104,
             "options": {
@@ -1290,7 +1290,7 @@
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 97
+                "y": 105
             },
             "id": 14,
             "panels": [],
@@ -1333,7 +1333,7 @@
                 "h": 4,
                 "w": 6,
                 "x": 0,
-                "y": 98
+                "y": 106
             },
             "id": 15,
             "options": {
@@ -1412,7 +1412,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 102
+                "y": 110
             },
             "id": 16,
             "options": {
@@ -1497,7 +1497,7 @@
                 "h": 4,
                 "w": 6,
                 "x": 6,
-                "y": 98
+                "y": 106
             },
             "id": 19,
             "options": {
@@ -1565,7 +1565,7 @@
                 "h": 4,
                 "w": 6,
                 "x": 12,
-                "y": 98
+                "y": 106
             },
             "id": 20,
             "options": {
@@ -1633,7 +1633,7 @@
                 "h": 4,
                 "w": 6,
                 "x": 18,
-                "y": 98
+                "y": 106
             },
             "id": 21,
             "options": {
@@ -1744,7 +1744,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 8,
-                "y": 102
+                "y": 110
             },
             "id": 22,
             "options": {
@@ -1832,7 +1832,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 16,
-                "y": 102
+                "y": 110
             },
             "id": 23,
             "options": {
@@ -2097,8 +2097,8 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 5,
-                "x": 19,
+                "w": 4,
+                "x": 16,
                 "y": 1
             },
             "id": 26,
@@ -2157,8 +2157,8 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 10,
-                "x": 4,
+                "w": 8,
+                "x": 8,
                 "y": 1
             },
             "id": 27,
@@ -2217,6 +2217,24 @@
                     "expr": "increase(gemini_tokens_output_total{application=\"q-asker-api\"}[$__range])",
                     "legendFormat": "출력 토큰",
                     "refId": "D"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "sum(increase(gemini_equalization_tokens_input_total{application=\"q-asker-api\"}[$__range]))",
+                    "legendFormat": "균등화 입력",
+                    "refId": "E"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "sum(increase(gemini_equalization_tokens_output_total{application=\"q-asker-api\"}[$__range]))",
+                    "legendFormat": "균등화 출력",
+                    "refId": "F"
                 }
             ]
         },
@@ -2230,7 +2248,7 @@
                     "color": {
                         "mode": "thresholds"
                     },
-                    "decimals": 1,
+                    "decimals": 4,
                     "max": 1,
                     "min": 0,
                     "thresholds": {
@@ -2248,8 +2266,8 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 5,
-                "x": 14,
+                "w": 4,
+                "x": 4,
                 "y": 1
             },
             "id": 28,
@@ -2276,7 +2294,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "increase(gemini_tokens_cached_total{application=\"q-asker-api\"}[$__range]) * 0.27 / 1000000",
+                    "expr": "-1 * increase(gemini_tokens_cached_total{application=\"q-asker-api\"}[$__range]) * 0.27 / 1000000",
                     "legendFormat": "절감 금액",
                     "refId": "A"
                 }
@@ -2343,8 +2361,78 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "sum(increase(gemini_request_cost_total{application=\"q-asker-api\"}[$__range]))",
-                    "legendFormat": "비용",
+                    "expr": "sum(increase(gemini_request_cost_total{application=\"q-asker-api\"}[$__range])) + sum(increase(gemini_equalization_cost_total{application=\"q-asker-api\"}[$__range]))",
+                    "legendFormat": "총 비용",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 0,
+                    "max": 100,
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    },
+                    "unit": "percent"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 4,
+                "x": 20,
+                "y": 1
+            },
+            "id": 54,
+            "options": {
+                "minVizHeight": 75,
+                "minVizWidth": 75,
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true
+            },
+            "title": "균등화 시행 비율",
+            "description": "전체 문항 중 선택지 균등화가 시행된 비율",
+            "type": "gauge",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "PBFA97CFB590B2093"
+                    },
+                    "expr": "sum(increase(gemini_selection_equalization_total{application=\"q-asker-api\"}[$__range])) / sum(increase(gemini_selection_checked_total{application=\"q-asker-api\"}[$__range])) * 100",
+                    "legendFormat": "균등화율",
                     "refId": "A"
                 }
             ]
@@ -2385,7 +2473,7 @@
                 "h": 7,
                 "w": 8,
                 "x": 8,
-                "y": 23
+                "y": 31
             },
             "id": 34,
             "options": {
@@ -2448,7 +2536,7 @@
                 "h": 7,
                 "w": 8,
                 "x": 16,
-                "y": 23
+                "y": 31
             },
             "id": 35,
             "options": {
@@ -2507,7 +2595,7 @@
                 "h": 7,
                 "w": 8,
                 "x": 0,
-                "y": 23
+                "y": 31
             },
             "id": 60,
             "options": {
@@ -2551,7 +2639,7 @@
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 22
+                "y": 30
             },
             "id": 38,
             "panels": [],
@@ -2625,7 +2713,7 @@
                 "h": 7,
                 "w": 8,
                 "x": 0,
-                "y": 30
+                "y": 38
             },
             "id": 39,
             "options": {
@@ -2744,7 +2832,7 @@
                 "h": 7,
                 "w": 8,
                 "x": 8,
-                "y": 30
+                "y": 38
             },
             "id": 41,
             "options": {
@@ -2821,7 +2909,7 @@
                 "h": 7,
                 "w": 8,
                 "x": 16,
-                "y": 30
+                "y": 38
             },
             "id": 42,
             "options": {
