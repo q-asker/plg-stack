@@ -2738,8 +2738,8 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "rate(file_upload_s3_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_s3_duration_seconds_count{application=\"q-asker-api\"}[5m])",
-                    "legendFormat": "S3",
+                    "expr": "rate(file_upload_oci_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_oci_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+                    "legendFormat": "OCI",
                     "refId": "A"
                 },
                 {
@@ -2857,8 +2857,8 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "rate(file_upload_s3_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_s3_duration_seconds_count{application=\"q-asker-api\"}[5m])",
-                    "legendFormat": "S3",
+                    "expr": "rate(file_upload_oci_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_oci_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+                    "legendFormat": "OCI",
                     "refId": "A"
                 },
                 {
