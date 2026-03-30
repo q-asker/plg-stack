@@ -810,7 +810,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "floor(increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]))",
+                    "expr": "floor(sum by(quiz_type) (increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
@@ -1040,7 +1040,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "floor(increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]) - increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range]))",
+                    "expr": "floor(sum by(quiz_type) (increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])) - sum by(quiz_type) (increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
@@ -1162,7 +1162,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[5m])",
+                    "expr": "sum by(quiz_type) (increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[5m]))",
                     "legendFormat": "{{quiz_type}}",
                     "refId": "A"
                 }
