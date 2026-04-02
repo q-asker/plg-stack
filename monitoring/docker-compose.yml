@@ -85,6 +85,8 @@ services:
       # 기본 관리자 비밀번호 (환경 변수로 주입, .env 파일 필수)
       # 미설정 시 기본값: changeme (보안 위험!)
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
+      # 외부 접속 URL (Slack 알림 링크 등에 사용)
+      - GF_SERVER_ROOT_URL=https://mon.q-asker.com
       # 리포팅 기능 비활성화 (리소스 절약)
       - GF_REPORTING_ENABLED=false
       # 익명 접속 비활성화 (보안)
