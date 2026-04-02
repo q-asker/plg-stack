@@ -17,9 +17,7 @@ contactPoints:
       - uid: slack-error-webhook
         type: slack
         settings:
-          # .env → docker-compose.yml → Grafana 환경변수로 주입
-          url: $SLACK_WEBHOOK_URL
-          # 알림을 보낼 Slack 채널 (웹훅에 채널이 설정되어 있어도 필수)
+          # 알림을 보낼 Slack 채널
           recipient: "#알림-에러"
           # Slack 메시지 제목
           title: |
@@ -32,8 +30,12 @@ contactPoints:
             *요약*: {{ .Annotations.summary }}
             *시작*: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
             {{ if .Annotations.log_query }}*Grafana 로그 쿼리*: `{{ .Annotations.log_query }}`{{ end }}
+            {{ if .Annotations.dashboard_url }}👉 <{{ .Annotations.dashboard_url }}|Grafana에서 확인>{{ end }}
             ---
             {{ end }}
+        # Slack Incoming Webhook URL은 secureSettings에 배치 (Grafana가 민감 정보로 처리)
+        secureSettings:
+          url: $SLACK_WEBHOOK_URL
 
 # ═══════════════════════════════════════════════════════════
 # ② Notification Policy: 알림 라우팅
@@ -100,5 +102,6 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "최근 1분간 ERROR 레벨 로그가 감지되었습니다. Grafana Explore에서 확인하세요."
+          summary: "최근 1분간 ERROR 레벨 로그가 감지되었습니다."
           log_query: "{level=\"ERROR\"}"
+          dashboard_url: "https://mon.q-asker.com/explore?schemaVersion=1&panes=%7B%22a%22:%7B%22datasource%22:%22P8E80F9AEF21F6940%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22%7Blevel%3D%5C%22ERROR%5C%22%7D%22%7D%5D%7D%7D&orgId=1"
