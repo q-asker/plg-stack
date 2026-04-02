@@ -17,6 +17,10 @@ contactPoints:
       - uid: slack-error-webhook
         type: slack
         settings:
+          # Slack Incoming Webhook URL
+          url: $SLACK_WEBHOOK_URL
+          # 알림을 보낼 Slack 채널
+          recipient: "#알림-에러"
           # Slack 메시지 제목
           title: |
             {{ if eq .Status "firing" }}🚨 ERROR 로그 발생{{ else }}✅ 정상 복구{{ end }}
@@ -31,9 +35,6 @@ contactPoints:
             {{ if .Annotations.dashboard_url }}👉 <{{ .Annotations.dashboard_url }}|Grafana에서 확인>{{ end }}
             ---
             {{ end }}
-        # Slack Incoming Webhook URL은 secureSettings에 배치 (Grafana가 민감 정보로 처리)
-        secureSettings:
-          url: $SLACK_WEBHOOK_URL
 
 # ═══════════════════════════════════════════════════════════
 # ② Notification Policy: 알림 라우팅
