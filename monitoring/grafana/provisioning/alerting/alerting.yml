@@ -96,6 +96,9 @@ groups:
                     type: gt
                     params:
                       - 0
+        # 데이터 없음 = 정상 (ERROR 로그가 없는 것이 정상 상태)
+        # NoData를 Alerting으로 처리하면 에러가 없어도 알림 발생
+        noDataState: OK
         # 즉시 발동 (Pending 없이 바로 Firing)
         for: 0s
         labels:
