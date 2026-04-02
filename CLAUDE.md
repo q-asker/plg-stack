@@ -172,6 +172,7 @@ ALLOY_MEMORY_LIMIT=256MiB    # 메모리 누수 대비 필수
 # Monitoring 스택
 GRAFANA_ADMIN_PASSWORD=<secure>
 MYSQL_DSN=user:password@tcp(heawave-host:3306)/db
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...  # Grafana 에러 알림용
 ```
 
 ## 개발 워크플로우

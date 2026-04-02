@@ -89,6 +89,8 @@ services:
       - GF_REPORTING_ENABLED=false
       # 익명 접속 비활성화 (보안)
       - GF_AUTH_ANONYMOUS_ENABLED=false
+      # Slack 웹훅 URL (알림 프로비저닝에서 $SLACK_WEBHOOK_URL로 참조)
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
 
     # 의존성: Loki가 시작될 때까지 대기 (healthcheck 제거로 변경)
     depends_on:

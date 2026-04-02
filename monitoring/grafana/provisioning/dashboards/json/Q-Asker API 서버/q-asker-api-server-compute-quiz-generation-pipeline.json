@@ -2747,7 +2747,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "rate(file_upload_gemini_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gemini_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+                    "expr": "rate(file_upload_gcs_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gcs_duration_seconds_count{application=\"q-asker-api\"}[5m])",
                     "legendFormat": "Gemini",
                     "refId": "B"
                 }
@@ -2866,7 +2866,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "rate(file_upload_gemini_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gemini_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+                    "expr": "rate(file_upload_gcs_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gcs_duration_seconds_count{application=\"q-asker-api\"}[5m])",
                     "legendFormat": "Gemini",
                     "refId": "B"
                 }
@@ -2932,7 +2932,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "sum(increase(gemini_file_request_total{application=\"q-asker-api\",type=\"repeat\"}[$__range])) / clamp_min(sum(increase(gemini_file_request_total{application=\"q-asker-api\",type=\"repeat\"}[$__range])) + sum(increase(gemini_file_request_total{application=\"q-asker-api\",type=\"new\"}[$__range])), 1)",
+                    "expr": "sum(increase(gcs_file_request_total{application=\"q-asker-api\",type=\"repeat\"}[$__range])) / clamp_min(sum(increase(gcs_file_request_total{application=\"q-asker-api\",type=\"repeat\"}[$__range])) + sum(increase(gcs_file_request_total{application=\"q-asker-api\",type=\"new\"}[$__range])), 1)",
                     "legendFormat": "같은 파일로 재요청률",
                     "refId": "A"
                 }

@@ -1,0 +1,102 @@
+# =============================================================
+# Grafana 알림 프로비저닝 (자동 설정)
+# 역할: ERROR 로그 발생 시 Slack 웹훅으로 알림 전송
+# 구성: Contact Point + Notification Policy + Alert Rule
+# =============================================================
+
+apiVersion: 1
+
+# ═══════════════════════════════════════════════════════════
+# ① Contact Point: Slack 웹훅
+# Grafana가 알림을 보낼 대상 (Slack 채널)
+# ═══════════════════════════════════════════════════════════
+contactPoints:
+  - orgId: 1
+    name: Slack Alerts
+    receivers:
+      - uid: slack-error-webhook
+        type: slack
+        settings:
+          # .env → docker-compose.yml → Grafana 환경변수로 주입
+          url: $SLACK_WEBHOOK_URL
+          # Slack 메시지 제목
+          title: |
+            {{ if eq .Status "firing" }}🚨 ERROR 로그 발생{{ else }}✅ 정상 복구{{ end }}
+          # Slack 메시지 본문 (Go template)
+          text: |
+            {{ range .Alerts }}
+            *상태*: {{ .Status }}
+            *알림*: {{ .Labels.alertname }}
+            *요약*: {{ .Annotations.summary }}
+            *시작*: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+            {{ if .Annotations.log_query }}*Grafana 로그 쿼리*: `{{ .Annotations.log_query }}`{{ end }}
+            ---
+            {{ end }}
+
+# ═══════════════════════════════════════════════════════════
+# ② Notification Policy: 알림 라우팅
+# 모든 알림을 Slack으로 라우팅
+# ═══════════════════════════════════════════════════════════
+policies:
+  - orgId: 1
+    # 기본 수신자: 위에서 정의한 Slack Contact Point
+    receiver: Slack Alerts
+    # 알림 그룹핑 기준 (같은 alertname은 하나로 묶음)
+    group_by:
+      - grafana_folder
+      - alertname
+    # 같은 그룹의 첫 알림 대기 시간 (30초간 모아서 한 번에 발송)
+    group_wait: 30s
+    # 같은 그룹에 새 알림 추가 시 재발송 간격
+    group_interval: 5m
+    # 동일 알림 반복 발송 간격 (알림 피로 방지)
+    repeat_interval: 1h
+
+# ═══════════════════════════════════════════════════════════
+# ③ Alert Rule: Loki ERROR 로그 감지
+# LogQL로 ERROR 레벨 로그 발생 여부를 1분마다 평가
+# ═══════════════════════════════════════════════════════════
+groups:
+  - orgId: 1
+    name: error-log-alerts
+    folder: Q-Asker Alerts
+    # 평가 주기: 1분마다 Loki에 쿼리 실행
+    interval: 1m
+    rules:
+      - uid: loki-error-log-alert
+        title: ERROR 로그 발생
+        # 평가 조건: refId B (Threshold)의 결과를 사용
+        condition: B
+        data:
+          # A: Loki에서 최근 1분간 ERROR 로그 건수 조회
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: P8E80F9AEF21F6940
+            model:
+              refId: A
+              expr: "sum(count_over_time({level=\"ERROR\"}[1m]))"
+              queryType: range
+          # B: A의 결과가 0보다 크면 알림 발동 (Threshold 조건)
+          - refId: B
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+        # 즉시 발동 (Pending 없이 바로 Firing)
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "최근 1분간 ERROR 레벨 로그가 감지되었습니다. Grafana Explore에서 확인하세요."
+          log_query: "{level=\"ERROR\"}"
