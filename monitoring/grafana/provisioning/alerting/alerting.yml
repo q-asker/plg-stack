@@ -19,6 +19,8 @@ contactPoints:
         settings:
           # .env → docker-compose.yml → Grafana 환경변수로 주입
           url: $SLACK_WEBHOOK_URL
+          # 알림을 보낼 Slack 채널 (웹훅에 채널이 설정되어 있어도 필수)
+          recipient: "#알림-에러"
           # Slack 메시지 제목
           title: |
             {{ if eq .Status "firing" }}🚨 ERROR 로그 발생{{ else }}✅ 정상 복구{{ end }}
