@@ -17,8 +17,6 @@ contactPoints:
       - uid: slack-error-webhook
         type: slack
         settings:
-          # 알림을 보낼 Slack 채널
-          recipient: "#알림-에러"
           # Slack 메시지 제목
           title: |
             {{ if eq .Status "firing" }}🚨 ERROR 로그 발생{{ else }}✅ 정상 복구{{ end }}
