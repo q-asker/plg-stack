@@ -79,12 +79,12 @@ loki.process "multiline" {
   }
 
   // ── 3-1단계: 로그 레벨 라벨 추출 ──
-  // logback 패턴: "2026-03-31 10:32:05.123  ERROR c.q.api.service - 메시지"
-  // 타임스탬프 뒤 공백 이후 로그 레벨(ERROR/WARN/INFO/DEBUG/TRACE)을 추출
+  // Spring Boot 3.x 로그 포맷: "2026-04-02T08:41:19.362Z  INFO 1 --- [q-asker] ..."
+  // ISO 8601 타임스탬프(T 구분자 + Z 타임존) 뒤 공백 이후 로그 레벨 추출
   // level 라벨로 승격하면 Loki 인덱스로 검색 가능 → 본문 스캔 불필요
   // 카디널리티: 최대 5종(ERROR/WARN/INFO/DEBUG/TRACE)으로 안전
   stage.regex {
-    expression = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}\\s+(?P<level>\\w+)\\s"
+    expression = "^\\d{4}-\\d{2}-\\d{2}.\\d{2}:\\d{2}:\\d{2}\\.\\d+\\S*\\s+(?P<level>\\w+)\\s"
   }
   stage.labels {
     values = { level = "" }  // regex에서 추출한 level 값을 라벨로 승격
