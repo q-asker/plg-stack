@@ -2730,7 +2730,7 @@
                 },
                 "textMode": "auto"
             },
-            "title": "OCI / Gemini 평균 업로드 시간",
+            "title": "OCI / GCS 평균 업로드 시간",
             "type": "stat",
             "targets": [
                 {
@@ -2748,7 +2748,7 @@
                         "uid": "PBFA97CFB590B2093"
                     },
                     "expr": "rate(file_upload_gcs_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gcs_duration_seconds_count{application=\"q-asker-api\"}[5m])",
-                    "legendFormat": "Gemini",
+                    "legendFormat": "GCS",
                     "refId": "B"
                 }
             ]
@@ -2849,7 +2849,7 @@
                     "sort": "desc"
                 }
             },
-            "title": "OCI vs Gemini 업로드 시간 비교",
+            "title": "OCI vs GCS 업로드 시간 비교",
             "type": "timeseries",
             "targets": [
                 {
@@ -2867,7 +2867,7 @@
                         "uid": "PBFA97CFB590B2093"
                     },
                     "expr": "rate(file_upload_gcs_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_gcs_duration_seconds_count{application=\"q-asker-api\"}[5m])",
-                    "legendFormat": "Gemini",
+                    "legendFormat": "GCS",
                     "refId": "B"
                 }
             ]
