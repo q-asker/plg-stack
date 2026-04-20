@@ -704,7 +704,8 @@
                     },
                     "expr": "floor(sum by (quiz_type) (increase(quiz_generation_requests_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
-                    "refId": "A"
+                    "refId": "A",
+                    "instant": true
                 }
             ]
         },
@@ -812,7 +813,8 @@
                     },
                     "expr": "floor(sum by(quiz_type) (increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
-                    "refId": "A"
+                    "refId": "A",
+                    "instant": true
                 }
             ]
         },
@@ -1042,7 +1044,8 @@
                     },
                     "expr": "floor(sum by(quiz_type) (increase(quiz_generation_quizzes_requested_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])) - sum by(quiz_type) (increase(quiz_generation_quizzes_generated_total{quiz_type!=\"\",application=\"q-asker-api\"}[$__range])))",
                     "legendFormat": "{{quiz_type}}",
-                    "refId": "A"
+                    "refId": "A",
+                    "instant": true
                 }
             ]
         },
@@ -1061,24 +1064,24 @@
                         "axisCenteredZero": false,
                         "axisLabel": "문제 수",
                         "axisPlacement": "auto",
-                        "drawStyle": "bars",
-                        "fillOpacity": 80,
+                        "drawStyle": "points",
+                        "fillOpacity": 0,
                         "gradientMode": "none",
                         "hideFrom": {
                             "legend": false,
                             "tooltip": false,
                             "viz": false
                         },
-                        "lineWidth": 1,
-                        "pointSize": 5,
+                        "lineWidth": 0,
+                        "pointSize": 10,
                         "scaleDistribution": {
                             "type": "linear"
                         },
-                        "showPoints": "never",
-                        "spanNulls": true,
+                        "showPoints": "always",
+                        "spanNulls": false,
                         "stacking": {
                             "group": "A",
-                            "mode": "normal"
+                            "mode": "none"
                         },
                         "thresholdsStyle": {
                             "mode": "off"
@@ -1350,7 +1353,7 @@
                 },
                 "textMode": "auto"
             },
-            "title": "평균 응답 시간",
+            "title": "평균 청크 처리 시간",
             "type": "stat",
             "targets": [
                 {
@@ -2738,7 +2741,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "rate(file_upload_oci_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_oci_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+                    "expr": "rate(file_upload_oci_duration_seconds_sum{application=\"q-asker-api\",type=\"pdf\"}[5m]) / rate(file_upload_oci_duration_seconds_count{application=\"q-asker-api\",type=\"pdf\"}[5m])",
                     "legendFormat": "OCI",
                     "refId": "A"
                 },
@@ -2857,7 +2860,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "rate(file_upload_oci_duration_seconds_sum{application=\"q-asker-api\"}[5m]) / rate(file_upload_oci_duration_seconds_count{application=\"q-asker-api\"}[5m])",
+                    "expr": "rate(file_upload_oci_duration_seconds_sum{application=\"q-asker-api\",type=\"pdf\"}[5m]) / rate(file_upload_oci_duration_seconds_count{application=\"q-asker-api\",type=\"pdf\"}[5m])",
                     "legendFormat": "OCI",
                     "refId": "A"
                 },

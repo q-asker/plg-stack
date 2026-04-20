@@ -104,7 +104,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "histogram_quantile(0.50, sum by(le) (rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m])))",
+                    "expr": "histogram_quantile(0.50, sum by(le, max_chunks) (rate(gemini_request_first_quiz_duration_seconds_bucket{application=\"q-asker-api\"}[5m])))",
                     "legendFormat": "TTFQ p50 — max_chunks={{max_chunks}}",
                     "refId": "A"
                 }
@@ -183,7 +183,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "histogram_quantile(0.50, sum by(le) (rate(gemini_request_total_duration_seconds_bucket{application=\"q-asker-api\"}[5m])))",
+                    "expr": "histogram_quantile(0.50, sum by(le, max_chunks) (rate(gemini_request_total_duration_seconds_bucket{application=\"q-asker-api\"}[5m])))",
                     "legendFormat": "전체 p50 — max_chunks={{max_chunks}}",
                     "refId": "A"
                 }
@@ -341,7 +341,7 @@
                         "type": "prometheus",
                         "uid": "PBFA97CFB590B2093"
                     },
-                    "expr": "histogram_quantile(0.50, sum by(le) (rate(gemini_request_spread_duration_seconds_bucket{application=\"q-asker-api\"}[5m])))",
+                    "expr": "histogram_quantile(0.50, sum by(le, max_chunks) (rate(gemini_request_spread_duration_seconds_bucket{application=\"q-asker-api\"}[5m])))",
                     "legendFormat": "Spread p50 — max_chunks={{max_chunks}}",
                     "refId": "A"
                 }
