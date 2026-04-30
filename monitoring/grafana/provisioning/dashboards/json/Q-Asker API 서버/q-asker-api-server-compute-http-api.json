@@ -1188,7 +1188,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.TimeToFirstByte",
@@ -1354,7 +1354,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.DNSResolutionTime",
@@ -1391,7 +1391,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.ConnectTime",
@@ -1428,7 +1428,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.SSLLatency",
@@ -1465,7 +1465,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.TimeToFirstByte",
@@ -1563,7 +1563,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.IsHealthy",
@@ -1662,7 +1662,7 @@
                     "tenancy": "DEFAULT/",
                     "tenancyName": "DEFAULT/",
                     "compartment": "$oci_compartment",
-                    "compartmentName": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
                     "metric": "HTTP.TimeToFirstByte",
@@ -1818,8 +1818,8 @@
             {
                 "current": {
                     "selected": false,
-                    "text": "gulsauce",
-                    "value": "gulsauce"
+                    "text": "gulsauce(루트)",
+                    "value": "ocid1.tenancy.oc1..aaaaaaaapsfhhocgabvigtaxdundqbn4i2aoulu4izxvs4csre3io2oa7sba"
                 },
                 "hide": 0,
                 "includeAll": false,
@@ -1829,11 +1829,11 @@
                 "options": [
                     {
                         "selected": true,
-                        "text": "gulsauce",
-                        "value": "gulsauce"
+                        "text": "gulsauce(루트)",
+                        "value": "ocid1.tenancy.oc1..aaaaaaaapsfhhocgabvigtaxdundqbn4i2aoulu4izxvs4csre3io2oa7sba"
                     }
                 ],
-                "query": "gulsauce",
+                "query": "ocid1.tenancy.oc1..aaaaaaaapsfhhocgabvigtaxdundqbn4i2aoulu4izxvs4csre3io2oa7sba",
                 "skipUrlSync": false,
                 "type": "custom",
                 "description": "OCI compartment 이름. Health Check 생성한 compartment와 일치해야 함."
@@ -1848,5 +1848,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 5
+    "version": 6
 }
