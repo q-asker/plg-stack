@@ -1157,14 +1157,10 @@
                 "overrides": [
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-icn.*"
+                            "id": "byName",
+                            "options": "Seoul (aws-icn)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "Seoul (aws-icn)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1176,14 +1172,10 @@
                     },
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-nrt.*"
+                            "id": "byName",
+                            "options": "Tokyo (aws-tyo)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "Tokyo (aws-nrt)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1195,14 +1187,10 @@
                     },
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-iad.*"
+                            "id": "byName",
+                            "options": "US East (aws-iad)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "US East (aws-iad)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1264,30 +1252,98 @@
                     "dimensions": [],
                     "dimensionValues": [],
                     "groupBy": "",
-                    "legendFormat": "{{vantagePointName}}",
+                    "legendFormat": "Seoul (aws-icn)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m].mean().groupBy(vantagePointName)",
-                    "queryTextRaw": "HTTP.RequestTime[1m].mean().groupBy(vantagePointName)",
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
                     "rawQuery": true,
                     "hide": false,
                     "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.RequestTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "",
+                    "legendFormat": "Tokyo (aws-tyo)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.RequestTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "",
+                    "legendFormat": "US East (aws-iad)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "C"
                 }
             ],
             "title": "Vantage별 RequestTime (api.q-asker.com)",
             "type": "timeseries",
-            "transformations": [
-                {
-                    "id": "renameByRegex",
-                    "options": {
-                        "regex": ".*aws-([a-z]+).*",
-                        "renamePattern": "aws-$1"
-                    }
-                }
-            ]
+            "transformations": []
         },
         {
             "datasource": {
@@ -1604,14 +1660,10 @@
                 "overrides": [
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-icn.*"
+                            "id": "byName",
+                            "options": "Seoul (aws-icn)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "Seoul (aws-icn)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1623,14 +1675,10 @@
                     },
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-nrt.*"
+                            "id": "byName",
+                            "options": "Tokyo (aws-tyo)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "Tokyo (aws-nrt)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1642,14 +1690,10 @@
                     },
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-iad.*"
+                            "id": "byName",
+                            "options": "US East (aws-iad)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "US East (aws-iad)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1709,30 +1753,98 @@
                     "dimensions": [],
                     "dimensionValues": [],
                     "groupBy": "",
-                    "legendFormat": "{{vantagePointName}}",
+                    "legendFormat": "Seoul (aws-icn)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.ResponseTime[1m].mean().groupBy(vantagePointName)",
-                    "queryTextRaw": "HTTP.ResponseTime[1m].mean().groupBy(vantagePointName)",
+                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
+                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
                     "rawQuery": true,
                     "hide": false,
                     "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.ResponseTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "",
+                    "legendFormat": "Tokyo (aws-tyo)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
+                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.ResponseTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "",
+                    "legendFormat": "US East (aws-iad)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
+                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "C"
                 }
             ],
             "title": "Vantage별 응답시간 (RequestTime)",
             "type": "stat",
-            "transformations": [
-                {
-                    "id": "renameByRegex",
-                    "options": {
-                        "regex": ".*aws-([a-z]+).*",
-                        "renamePattern": "aws-$1"
-                    }
-                }
-            ]
+            "transformations": []
         },
         {
             "datasource": {
@@ -1770,14 +1882,10 @@
                 "overrides": [
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-icn.*"
+                            "id": "byName",
+                            "options": "Seoul (aws-icn)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "Seoul (aws-icn)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1789,14 +1897,10 @@
                     },
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-nrt.*"
+                            "id": "byName",
+                            "options": "Tokyo (aws-tyo)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "Tokyo (aws-nrt)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1808,14 +1912,10 @@
                     },
                     {
                         "matcher": {
-                            "id": "byRegexp",
-                            "options": ".*aws-iad.*"
+                            "id": "byName",
+                            "options": "US East (aws-iad)"
                         },
                         "properties": [
-                            {
-                                "id": "displayName",
-                                "value": "US East (aws-iad)"
-                            },
                             {
                                 "id": "color",
                                 "value": {
@@ -1876,30 +1976,98 @@
                     "dimensions": [],
                     "dimensionValues": [],
                     "groupBy": "",
-                    "legendFormat": "{{vantagePointName}}",
+                    "legendFormat": "Seoul (aws-icn)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m].mean().groupBy(vantagePointName)",
-                    "queryTextRaw": "HTTP.RequestTime[1m].mean().groupBy(vantagePointName)",
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
                     "rawQuery": true,
                     "hide": false,
                     "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.RequestTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "",
+                    "legendFormat": "Tokyo (aws-tyo)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.RequestTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "",
+                    "legendFormat": "US East (aws-iad)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "C"
                 }
             ],
             "title": "Vantage별 평균 RequestTime (last 1h) — SLA 보정값 산출용",
             "type": "bargauge",
-            "transformations": [
-                {
-                    "id": "renameByRegex",
-                    "options": {
-                        "regex": ".*aws-([a-z]+).*",
-                        "renamePattern": "aws-$1"
-                    }
-                }
-            ]
+            "transformations": []
         }
     ],
     "refresh": "30s",
@@ -2044,5 +2212,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 10
+    "version": 13
 }
