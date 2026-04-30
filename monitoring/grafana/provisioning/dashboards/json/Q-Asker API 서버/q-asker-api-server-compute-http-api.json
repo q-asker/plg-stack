@@ -1191,14 +1191,15 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.TimeToFirstByte",
+                    "metric": "HTTP.RequestTime",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
@@ -1211,14 +1212,14 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.TimeToFirstByte[1m].mean()",
+                    "queryText": "HTTP.RequestTime[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 }
             ],
-            "title": "Vantage별 TTFB (api.q-asker.com)",
+            "title": "Vantage별 RequestTime (api.q-asker.com)",
             "type": "timeseries"
         },
         {
@@ -1357,14 +1358,15 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.DNSResolutionTime",
+                    "metric": "HTTP.DNSLookupTime",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
@@ -1377,7 +1379,7 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.DNSResolutionTime[1m].mean()",
+                    "queryText": "HTTP.DNSLookupTime[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
@@ -1394,27 +1396,28 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.ConnectTime",
+                    "metric": "HTTP.TCPConnectTime.Full",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
                     "dimensionValues": [],
                     "groupBy": "vantagePointName",
-                    "legendFormat": "TCP Connect",
+                    "legendFormat": "TCP Connect (Full)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.ConnectTime[1m].mean()",
+                    "queryText": "HTTP.TCPConnectTime.Full[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
@@ -1431,27 +1434,28 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.SSLLatency",
+                    "metric": "HTTP.TCPConnectTime.SSL",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
                     "dimensionValues": [],
                     "groupBy": "vantagePointName",
-                    "legendFormat": "TLS",
+                    "legendFormat": "TLS (TCP+SSL)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.SSLLatency[1m].mean()",
+                    "queryText": "HTTP.TCPConnectTime.SSL[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
@@ -1468,27 +1472,28 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.TimeToFirstByte",
+                    "metric": "HTTP.RequestTime",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
                     "dimensionValues": [],
                     "groupBy": "vantagePointName",
-                    "legendFormat": "TTFB",
+                    "legendFormat": "RequestTime",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.TimeToFirstByte[1m].mean()",
+                    "queryText": "HTTP.RequestTime[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
@@ -1503,7 +1508,7 @@
                 "type": "oci-metrics-datasource",
                 "uid": "bfklq6l0v2tc0f"
             },
-            "description": "OCI Health Check가 측정한 가용성 (HTTP 200 응답 비율). 99% 이상 정상. 99% 미만 시 5xx 에러 또는 origin 다운 의심.",
+            "description": "ResponseTime이 측정되면 healthy로 간주. 0이면 측정 실패.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -1514,22 +1519,20 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "red",
+                                "color": "green",
                                 "value": null
                             },
                             {
                                 "color": "yellow",
-                                "value": 0.95
+                                "value": 200
                             },
                             {
-                                "color": "green",
-                                "value": 0.99
+                                "color": "red",
+                                "value": 500
                             }
                         ]
                     },
-                    "unit": "percentunit",
-                    "min": 0,
-                    "max": 1
+                    "unit": "ms"
                 },
                 "overrides": []
             },
@@ -1566,14 +1569,15 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.IsHealthy",
+                    "metric": "HTTP.ResponseTime",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
@@ -1586,14 +1590,14 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.IsHealthy[1m].mean()",
+                    "queryText": "HTTP.ResponseTime[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 }
             ],
-            "title": "Vantage별 가용성 (Uptime)",
+            "title": "Vantage별 응답시간 (RequestTime)",
             "type": "stat"
         },
         {
@@ -1665,14 +1669,15 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.TimeToFirstByte",
+                    "metric": "HTTP.RequestTime",
                     "metricNames": [
-                        "HTTP.TimeToFirstByte",
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
                         "HTTP.ResponseTime",
-                        "HTTP.ConnectTime",
-                        "HTTP.SSLLatency",
-                        "HTTP.DNSResolutionTime",
-                        "HTTP.IsHealthy"
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
                     ],
                     "aggregation": "mean()",
                     "statistic": "mean()",
@@ -1685,14 +1690,14 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.TimeToFirstByte[1m].mean()",
+                    "queryText": "HTTP.RequestTime[1m].mean()",
                     "queryTextRaw": "",
                     "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 }
             ],
-            "title": "Vantage별 평균 TTFB (last 1h) — SLA 보정값 산출용",
+            "title": "Vantage별 평균 RequestTime (last 1h) — SLA 보정값 산출용",
             "type": "bargauge"
         }
     ],
@@ -1838,5 +1843,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 7
+    "version": 8
 }
