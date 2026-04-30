@@ -1258,9 +1258,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName=\"aws-icn\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 },
@@ -1296,9 +1296,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName=\"aws-tyo\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "B"
                 },
@@ -1334,9 +1334,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName=\"aws-iad\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "C"
                 }
@@ -1504,7 +1504,7 @@
                     "tagsValues": [],
                     "queryText": "HTTP.DNSLookupTime[1m].mean()",
                     "queryTextRaw": "HTTP.DNSLookupTime[1m].mean()",
-                    "rawQuery": true,
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 },
@@ -1542,7 +1542,7 @@
                     "tagsValues": [],
                     "queryText": "HTTP.TCPConnectTime.Full[1m].mean()",
                     "queryTextRaw": "HTTP.TCPConnectTime.Full[1m].mean()",
-                    "rawQuery": true,
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "B"
                 },
@@ -1580,7 +1580,7 @@
                     "tagsValues": [],
                     "queryText": "HTTP.TCPConnectTime.SSL[1m].mean()",
                     "queryTextRaw": "HTTP.TCPConnectTime.SSL[1m].mean()",
-                    "rawQuery": true,
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "C"
                 },
@@ -1618,7 +1618,7 @@
                     "tagsValues": [],
                     "queryText": "HTTP.RequestTime[1m].mean()",
                     "queryTextRaw": "HTTP.RequestTime[1m].mean()",
-                    "rawQuery": true,
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "D"
                 }
@@ -1759,9 +1759,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
-                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName=\"aws-icn\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 },
@@ -1797,9 +1797,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
-                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName=\"aws-tyo\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "B"
                 },
@@ -1835,9 +1835,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
-                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.ResponseTime[1m]{vantagePointName=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "HTTP.ResponseTime[1m]{vantagePointName=\"aws-iad\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "C"
                 }
@@ -1982,9 +1982,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-icn\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName=\"aws-icn\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "A"
                 },
@@ -2020,9 +2020,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-tyo\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName=\"aws-tyo\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "B"
                 },
@@ -2058,9 +2058,9 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName = \"aws-iad\"}.mean()",
-                    "rawQuery": true,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePointName=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "HTTP.RequestTime[1m]{vantagePointName=\"aws-iad\"}.mean()",
+                    "rawQuery": false,
                     "hide": false,
                     "refId": "C"
                 }
@@ -2212,5 +2212,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 13
+    "version": 14
 }
