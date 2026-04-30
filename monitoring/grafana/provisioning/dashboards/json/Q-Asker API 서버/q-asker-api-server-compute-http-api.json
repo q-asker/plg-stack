@@ -1154,7 +1154,65 @@
                     },
                     "unit": "ms"
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-icn.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Seoul (aws-icn)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "green"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-nrt.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Tokyo (aws-nrt)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "yellow"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-iad.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "US East (aws-iad)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "red"
+                                }
+                            }
+                        ]
+                    }
+                ]
             },
             "gridPos": {
                 "h": 8,
@@ -1220,7 +1278,16 @@
                 }
             ],
             "title": "Vantage별 RequestTime (api.q-asker.com)",
-            "type": "timeseries"
+            "type": "timeseries",
+            "transformations": [
+                {
+                    "id": "renameByRegex",
+                    "options": {
+                        "regex": ".*aws-([a-z]+).*",
+                        "renamePattern": "aws-$1"
+                    }
+                }
+            ]
         },
         {
             "datasource": {
@@ -1534,7 +1601,65 @@
                     },
                     "unit": "ms"
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-icn.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Seoul (aws-icn)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "green"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-nrt.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Tokyo (aws-nrt)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "yellow"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-iad.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "US East (aws-iad)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "red"
+                                }
+                            }
+                        ]
+                    }
+                ]
             },
             "gridPos": {
                 "h": 8,
@@ -1598,7 +1723,16 @@
                 }
             ],
             "title": "Vantage별 응답시간 (RequestTime)",
-            "type": "stat"
+            "type": "stat",
+            "transformations": [
+                {
+                    "id": "renameByRegex",
+                    "options": {
+                        "regex": ".*aws-([a-z]+).*",
+                        "renamePattern": "aws-$1"
+                    }
+                }
+            ]
         },
         {
             "datasource": {
@@ -1633,7 +1767,65 @@
                     "min": 0,
                     "max": 1500
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-icn.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Seoul (aws-icn)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "green"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-nrt.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Tokyo (aws-nrt)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "yellow"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*aws-iad.*"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "US East (aws-iad)"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "red"
+                                }
+                            }
+                        ]
+                    }
+                ]
             },
             "gridPos": {
                 "h": 8,
@@ -1698,7 +1890,16 @@
                 }
             ],
             "title": "Vantage별 평균 RequestTime (last 1h) — SLA 보정값 산출용",
-            "type": "bargauge"
+            "type": "bargauge",
+            "transformations": [
+                {
+                    "id": "renameByRegex",
+                    "options": {
+                        "regex": ".*aws-([a-z]+).*",
+                        "renamePattern": "aws-$1"
+                    }
+                }
+            ]
         }
     ],
     "refresh": "30s",
@@ -1843,5 +2044,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 9
+    "version": 10
 }
