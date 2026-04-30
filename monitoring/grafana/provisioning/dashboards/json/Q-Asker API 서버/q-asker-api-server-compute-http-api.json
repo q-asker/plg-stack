@@ -1079,13 +1079,630 @@
             ],
             "title": "평균 vs 최대 응답시간",
             "type": "timeseries"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 23
+            },
+            "id": 20,
+            "panels": [],
+            "title": "OCI 외부 측정 (건전성 검사)",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "oci-metrics-datasource",
+                "uid": "bfklq6l0v2tc0f"
+            },
+            "description": "OCI Health Check가 측정한 vantage(Seoul/Tokyo/US)별 TTFB. CF Edge↔Origin 네트워크 RTT + 서버 처리 시간을 포함한다. 서버 처리(http_server_requests_seconds)와의 차이가 순수 네트워크 RTT.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "TTFB (ms)",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 300
+                            },
+                            {
+                                "color": "red",
+                                "value": 700
+                            }
+                        ]
+                    },
+                    "unit": "ms"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 24
+            },
+            "id": 21,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max",
+                        "lastNotNull"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TimeToFirstByte",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "{{vantageName}}",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TimeToFirstByte[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "A"
+                }
+            ],
+            "title": "Vantage별 TTFB (api.q-asker.com)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "oci-metrics-datasource",
+                "uid": "bfklq6l0v2tc0f"
+            },
+            "description": "DNS 조회 + TCP Connect + TLS Handshake + TTFB의 누적. 어느 단계가 비대한지 한눈에 확인. 서울 vantage 기준 TTFB가 비정상적으로 크면 nginx/CF↔Origin 경로 이슈 의심.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisLabel": "Time (ms)",
+                        "axisPlacement": "auto",
+                        "drawStyle": "line",
+                        "fillOpacity": 30,
+                        "gradientMode": "opacity",
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "ms"
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "DNS"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "blue"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TCP Connect"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "purple"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TLS"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "orange"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TTFB"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "red"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 24
+            },
+            "id": 22,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.DNSResolutionTime",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "DNS",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.DNSResolutionTime[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.ConnectTime",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "TCP Connect",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.ConnectTime[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.SSLLatency",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "TLS",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.SSLLatency[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "C"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TimeToFirstByte",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "TTFB",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TimeToFirstByte[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "D"
+                }
+            ],
+            "title": "응답 시간 단계 분해 (전체 vantage 평균)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "oci-metrics-datasource",
+                "uid": "bfklq6l0v2tc0f"
+            },
+            "description": "OCI Health Check가 측정한 가용성 (HTTP 200 응답 비율). 99% 이상 정상. 99% 미만 시 5xx 에러 또는 origin 다운 의심.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.95
+                            },
+                            {
+                                "color": "green",
+                                "value": 0.99
+                            }
+                        ]
+                    },
+                    "unit": "percentunit",
+                    "min": 0,
+                    "max": 1
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 32
+            },
+            "id": 23,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.IsHealthy",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "{{vantageName}}",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.IsHealthy[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "A"
+                }
+            ],
+            "title": "Vantage별 가용성 (Uptime)",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "oci-metrics-datasource",
+                "uid": "bfklq6l0v2tc0f"
+            },
+            "description": "최근 1시간 vantage별 TTFB 평균. SLA 보정값 산출 기준. 서버 처리 시간(http_server_requests_seconds) 평균을 빼면 네트워크 RTT 추정.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 300
+                            },
+                            {
+                                "color": "red",
+                                "value": 700
+                            }
+                        ]
+                    },
+                    "unit": "ms",
+                    "min": 0,
+                    "max": 1500
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 16,
+                "x": 8,
+                "y": 32
+            },
+            "id": 24,
+            "options": {
+                "displayMode": "gradient",
+                "minVizHeight": 10,
+                "minVizWidth": 0,
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "showUnfilled": true,
+                "valueMode": "color"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "$oci_compartment",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TimeToFirstByte",
+                    "metricNames": [
+                        "HTTP.TimeToFirstByte",
+                        "HTTP.ResponseTime",
+                        "HTTP.ConnectTime",
+                        "HTTP.SSLLatency",
+                        "HTTP.DNSResolutionTime",
+                        "HTTP.IsHealthy"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [],
+                    "groupBy": "vantageName",
+                    "legendFormat": "{{vantageName}}",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TimeToFirstByte[1m].mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": false,
+                    "hide": false,
+                    "refId": "A"
+                }
+            ],
+            "title": "Vantage별 평균 TTFB (last 1h) — SLA 보정값 산출용",
+            "type": "bargauge"
         }
     ],
     "refresh": "30s",
     "schemaVersion": 39,
     "tags": [
         "api-server",
-        "http"
+        "http",
+        "oci",
+        "health-check"
     ],
     "templating": {
         "list": [
@@ -1165,6 +1782,61 @@
                 "skipUrlSync": false,
                 "sort": 1,
                 "type": "query"
+            },
+            {
+                "current": {
+                    "selected": false,
+                    "text": "ap-chuncheon-1",
+                    "value": "ap-chuncheon-1"
+                },
+                "hide": 0,
+                "includeAll": false,
+                "label": "OCI 리전",
+                "multi": false,
+                "name": "oci_region",
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "ap-chuncheon-1",
+                        "value": "ap-chuncheon-1"
+                    },
+                    {
+                        "selected": false,
+                        "text": "ap-tokyo-1",
+                        "value": "ap-tokyo-1"
+                    },
+                    {
+                        "selected": false,
+                        "text": "us-ashburn-1",
+                        "value": "us-ashburn-1"
+                    }
+                ],
+                "query": "ap-chuncheon-1, ap-tokyo-1, us-ashburn-1",
+                "skipUrlSync": false,
+                "type": "custom"
+            },
+            {
+                "current": {
+                    "selected": false,
+                    "text": "gulsauce",
+                    "value": "gulsauce"
+                },
+                "hide": 0,
+                "includeAll": false,
+                "label": "OCI 컴파트먼트",
+                "multi": false,
+                "name": "oci_compartment",
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "gulsauce",
+                        "value": "gulsauce"
+                    }
+                ],
+                "query": "gulsauce",
+                "skipUrlSync": false,
+                "type": "custom",
+                "description": "OCI compartment 이름. Health Check 생성한 compartment와 일치해야 함."
             }
         ]
     },
@@ -1176,5 +1848,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 4
+    "version": 5
 }
