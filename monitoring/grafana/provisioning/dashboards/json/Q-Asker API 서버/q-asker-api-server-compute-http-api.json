@@ -1863,7 +1863,7 @@
                 "type": "oci-metrics-datasource",
                 "uid": "bfklq6l0v2tc0f"
             },
-            "description": "최근 1시간 vantage별 TTFB 평균. SLA 보정값 산출 기준. 서버 처리 시간(http_server_requests_seconds) 평균을 빼면 네트워크 RTT 추정.",
+            "description": "최근 1시간 vantage별 OCI HTTP.TotalDuration 평균. DNS + TCP + TLS + Request + Response 전체 단계 합산 (Cold connection 보수적 추정). SLA 보정값 산출 기준.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -1973,7 +1973,7 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.RequestTime",
+                    "metric": "HTTP.TotalDuration",
                     "metricNames": [
                         "BasicCount",
                         "HTTP.DNSLookupTime",
@@ -1996,7 +1996,7 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePoint=\"aws-icn\"}.mean()",
+                    "queryText": "HTTP.TotalDuration[1m]{vantagePoint=\"aws-icn\"}.mean()",
                     "queryTextRaw": "",
                     "rawQuery": true,
                     "hide": false,
@@ -2013,7 +2013,7 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.RequestTime",
+                    "metric": "HTTP.TotalDuration",
                     "metricNames": [
                         "BasicCount",
                         "HTTP.DNSLookupTime",
@@ -2036,7 +2036,7 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePoint=\"aws-tyo\"}.mean()",
+                    "queryText": "HTTP.TotalDuration[1m]{vantagePoint=\"aws-tyo\"}.mean()",
                     "queryTextRaw": "",
                     "rawQuery": true,
                     "hide": false,
@@ -2053,7 +2053,7 @@
                     "compartmentName": "gulsauce(루트)",
                     "region": "$oci_region",
                     "namespace": "oci_healthchecks",
-                    "metric": "HTTP.RequestTime",
+                    "metric": "HTTP.TotalDuration",
                     "metricNames": [
                         "BasicCount",
                         "HTTP.DNSLookupTime",
@@ -2076,14 +2076,14 @@
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m]{vantagePoint=\"aws-iad\"}.mean()",
+                    "queryText": "HTTP.TotalDuration[1m]{vantagePoint=\"aws-iad\"}.mean()",
                     "queryTextRaw": "",
                     "rawQuery": true,
                     "hide": false,
                     "refId": "C"
                 }
             ],
-            "title": "Vantage별 평균 RequestTime (last 1h) — SLA 보정값 산출용",
+            "title": "Vantage별 평균 TotalDuration (last 1h) — SLA 보정값 산출용",
             "type": "bargauge",
             "transformations": []
         }
@@ -2230,5 +2230,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 17
+    "version": 18
 }

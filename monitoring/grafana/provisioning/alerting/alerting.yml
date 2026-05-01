@@ -93,7 +93,9 @@ groups:
             model:
               refId: A
               expr: "sum by (error_msg) (count_over_time({level=\"ERROR\"} | regexp `---\\s+\\[.*?\\]\\s+\\S+\\s+:\\s+(?P<error_msg>.{1,80})` | label_format error_msg=`{{ regexReplaceAll \"\\\\s+\\\\w+=.*\" .error_msg \"\" }}` [1m]))"
-              queryType: range
+              # 알림 평가용은 단일 값(instant)이 필요. range로 두면
+              # Threshold 표현식 B가 "time series data, only reduced data can be alerted on" 에러로 실패함
+              queryType: instant
           # B: A의 결과가 0보다 크면 알림 발동 (Threshold 조건)
           - refId: B
             relativeTimeRange:
