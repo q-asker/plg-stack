@@ -1356,7 +1356,7 @@
                 "type": "oci-metrics-datasource",
                 "uid": "bfklq6l0v2tc0f"
             },
-            "description": "DNS 조회 + TCP Connect + TLS Handshake + TTFB의 누적. 어느 단계가 비대한지 한눈에 확인. 서울 vantage 기준 TTFB가 비정상적으로 크면 nginx/CF↔Origin 경로 이슈 의심.",
+            "description": "Seoul (aws-icn) vantage 기준 OCI Health Check 단계별 응답 시간 분해. DNS Lookup + TCP Connect + TLS Handshake + Request (TTFB) + Response. Cold connection bottleneck 식별용.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -1425,7 +1425,7 @@
                     {
                         "matcher": {
                             "id": "byName",
-                            "options": "TLS"
+                            "options": "TLS (SSL)"
                         },
                         "properties": [
                             {
@@ -1440,7 +1440,7 @@
                     {
                         "matcher": {
                             "id": "byName",
-                            "options": "TTFB"
+                            "options": "RequestTime (TTFB)"
                         },
                         "properties": [
                             {
@@ -1500,17 +1500,19 @@
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
-                    "dimensionValues": [],
-                    "groupBy": "",
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-icn\""
+                    ],
+                    "groupBy": "select option (optional)",
                     "legendFormat": "DNS",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.DNSLookupTime[1m].mean()",
-                    "queryTextRaw": "HTTP.DNSLookupTime[1m].mean()",
-                    "rawQuery": false,
+                    "queryText": "HTTP.DNSLookupTime[1m]{vantagePoint=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
                     "hide": false,
                     "refId": "A"
                 },
@@ -1538,17 +1540,19 @@
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
-                    "dimensionValues": [],
-                    "groupBy": "",
-                    "legendFormat": "TCP Connect (Full)",
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-icn\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "TCP Connect",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.TCPConnectTime.Full[1m].mean()",
-                    "queryTextRaw": "HTTP.TCPConnectTime.Full[1m].mean()",
-                    "rawQuery": false,
+                    "queryText": "HTTP.TCPConnectTime.Full[1m]{vantagePoint=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
                     "hide": false,
                     "refId": "B"
                 },
@@ -1576,17 +1580,19 @@
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
-                    "dimensionValues": [],
-                    "groupBy": "",
-                    "legendFormat": "TLS (TCP+SSL)",
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-icn\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "TLS (SSL)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.TCPConnectTime.SSL[1m].mean()",
-                    "queryTextRaw": "HTTP.TCPConnectTime.SSL[1m].mean()",
-                    "rawQuery": false,
+                    "queryText": "HTTP.TCPConnectTime.SSL[1m]{vantagePoint=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
                     "hide": false,
                     "refId": "C"
                 },
@@ -1614,22 +1620,602 @@
                     "aggregation": "mean()",
                     "statistic": "mean()",
                     "dimensions": [],
-                    "dimensionValues": [],
-                    "groupBy": "",
-                    "legendFormat": "RequestTime",
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-icn\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "RequestTime (TTFB)",
                     "resolution": "auto",
                     "interval": "auto",
                     "window": "auto",
                     "resourcegroup": "",
                     "tagsValues": [],
-                    "queryText": "HTTP.RequestTime[1m].mean()",
-                    "queryTextRaw": "HTTP.RequestTime[1m].mean()",
-                    "rawQuery": false,
+                    "queryText": "HTTP.RequestTime[1m]{vantagePoint=\"aws-icn\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
                     "hide": false,
                     "refId": "D"
                 }
             ],
-            "title": "응답 시간 단계 분해 (전체 vantage 평균)",
+            "title": "Seoul (aws-icn) 단계 분해",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "oci-metrics-datasource",
+                "uid": "bfklq6l0v2tc0f"
+            },
+            "description": "Tokyo (aws-tyo) vantage 기준 OCI Health Check 단계별 응답 시간 분해. DNS Lookup + TCP Connect + TLS Handshake + Request (TTFB) + Response. Cold connection bottleneck 식별용.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisLabel": "Time (ms)",
+                        "axisPlacement": "auto",
+                        "drawStyle": "line",
+                        "fillOpacity": 30,
+                        "gradientMode": "opacity",
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "ms"
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "DNS"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "blue"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TCP Connect"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "purple"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TLS (SSL)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "orange"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "RequestTime (TTFB)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "red"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 32
+            },
+            "id": 25,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.DNSLookupTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-tyo\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "DNS",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.DNSLookupTime[1m]{vantagePoint=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TCPConnectTime.Full",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-tyo\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "TCP Connect",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TCPConnectTime.Full[1m]{vantagePoint=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TCPConnectTime.SSL",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-tyo\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "TLS (SSL)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TCPConnectTime.SSL[1m]{vantagePoint=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "C"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.RequestTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-tyo\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "RequestTime (TTFB)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.RequestTime[1m]{vantagePoint=\"aws-tyo\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "D"
+                }
+            ],
+            "title": "Tokyo (aws-tyo) 단계 분해",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "oci-metrics-datasource",
+                "uid": "bfklq6l0v2tc0f"
+            },
+            "description": "US East (aws-iad) vantage 기준 OCI Health Check 단계별 응답 시간 분해. DNS Lookup + TCP Connect + TLS Handshake + Request (TTFB) + Response. Cold connection bottleneck 식별용.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisLabel": "Time (ms)",
+                        "axisPlacement": "auto",
+                        "drawStyle": "line",
+                        "fillOpacity": 30,
+                        "gradientMode": "opacity",
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "ms"
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "DNS"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "blue"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TCP Connect"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "purple"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "TLS (SSL)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "orange"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "RequestTime (TTFB)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "red"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 32
+            },
+            "id": 26,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.DNSLookupTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-iad\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "DNS",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.DNSLookupTime[1m]{vantagePoint=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TCPConnectTime.Full",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-iad\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "TCP Connect",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TCPConnectTime.Full[1m]{vantagePoint=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.TCPConnectTime.SSL",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-iad\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "TLS (SSL)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.TCPConnectTime.SSL[1m]{vantagePoint=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "C"
+                },
+                {
+                    "datasource": {
+                        "type": "oci-metrics-datasource",
+                        "uid": "bfklq6l0v2tc0f"
+                    },
+                    "tenancy": "DEFAULT/",
+                    "tenancyName": "DEFAULT/",
+                    "compartment": "$oci_compartment",
+                    "compartmentName": "gulsauce(루트)",
+                    "region": "$oci_region",
+                    "namespace": "oci_healthchecks",
+                    "metric": "HTTP.RequestTime",
+                    "metricNames": [
+                        "BasicCount",
+                        "HTTP.DNSLookupTime",
+                        "HTTP.RequestTime",
+                        "HTTP.ResponseTime",
+                        "HTTP.TCPConnectTime.Full",
+                        "HTTP.TCPConnectTime.SSL",
+                        "HTTP.TotalDuration"
+                    ],
+                    "aggregation": "mean()",
+                    "statistic": "mean()",
+                    "dimensions": [],
+                    "dimensionValues": [
+                        "vantagePoint=\"aws-iad\""
+                    ],
+                    "groupBy": "select option (optional)",
+                    "legendFormat": "RequestTime (TTFB)",
+                    "resolution": "auto",
+                    "interval": "auto",
+                    "window": "auto",
+                    "resourcegroup": "",
+                    "tagsValues": [],
+                    "queryText": "HTTP.RequestTime[1m]{vantagePoint=\"aws-iad\"}.mean()",
+                    "queryTextRaw": "",
+                    "rawQuery": true,
+                    "hide": false,
+                    "refId": "D"
+                }
+            ],
+            "title": "US East (aws-iad) 단계 분해",
             "type": "timeseries"
         },
         {
@@ -1715,7 +2301,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 32
+                "y": 40
             },
             "id": 23,
             "options": {
@@ -1943,7 +2529,7 @@
                 "h": 8,
                 "w": 16,
                 "x": 8,
-                "y": 32
+                "y": 40
             },
             "id": 24,
             "options": {
@@ -2230,5 +2816,5 @@
     "timezone": "browser",
     "title": "[API] API 요청 · 응답",
     "uid": "api-server-compute-http-api",
-    "version": 18
+    "version": 19
 }
