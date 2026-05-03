@@ -927,6 +927,6 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "[CB] 서킷브레이커 튜닝 메트릭 모음",
-  "uid": "api-server-compute-circuit-breaker-tuning-metrics",
+  "uid": "api-server-compute-cb-tuning-metrics",
   "version": 1
 }
