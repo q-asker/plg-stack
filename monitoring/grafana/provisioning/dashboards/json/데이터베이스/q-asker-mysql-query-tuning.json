@@ -124,7 +124,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qasker\"}",
+          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\"}",
           "format": "time_series",
           "legendFormat": "{{table}}",
           "refId": "A"
@@ -192,7 +192,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qasker\"} / scalar(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qasker\", table=\"user\"})",
+          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\"} / scalar(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=\"user\"})",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{table}}",
@@ -291,7 +291,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "increase(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qasker\"}[1d])",
+          "expr": "increase(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\"}[1d])",
           "format": "time_series",
           "legendFormat": "{{table}}",
           "refId": "A"
@@ -389,7 +389,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sum by (table) (mysql_info_schema_table_size{instance=\"heatwave-mysql\", schema=\"qasker\", component=~\"data_length|index_length\"})",
+          "expr": "sum by (table) (mysql_info_schema_table_size{instance=\"heatwave-mysql\", schema=\"qaskerdb\", component=~\"data_length|index_length\"})",
           "format": "time_series",
           "legendFormat": "{{table}}",
           "refId": "A"

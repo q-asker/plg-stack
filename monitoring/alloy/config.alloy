@@ -129,9 +129,9 @@ prometheus.exporter.mysql "heatwave" {
   // 비용: 30초마다 SELECT FROM information_schema.TABLES 1회 (InnoDB 통계 캐시 조회, 거의 0)
   enable_collectors = ["info_schema.tables"]
 
-  // qasker 스키마만 수집 (sys/mysql/performance_schema 제외 → 카디널리티 절감)
+  // qaskerdb 스키마만 수집 (sys/mysql/performance_schema 제외 → 카디널리티 절감)
   info_schema.tables {
-    databases = "qasker"
+    databases = "qaskerdb"
   }
 }
 
