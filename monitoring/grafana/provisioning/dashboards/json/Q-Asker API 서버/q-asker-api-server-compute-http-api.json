@@ -1167,51 +1167,6 @@
                 "skipUrlSync": false,
                 "sort": 1,
                 "type": "query"
-            },
-            {
-                "current": {
-                    "selected": false,
-                    "text": "ap-chuncheon-1",
-                    "value": "ap-chuncheon-1"
-                },
-                "hide": 2,
-                "includeAll": false,
-                "label": "OCI 리전",
-                "multi": false,
-                "name": "oci_region",
-                "options": [
-                    {
-                        "selected": true,
-                        "text": "ap-chuncheon-1 (춘천 - home)",
-                        "value": "ap-chuncheon-1"
-                    }
-                ],
-                "query": "ap-chuncheon-1",
-                "skipUrlSync": false,
-                "type": "constant"
-            },
-            {
-                "current": {
-                    "selected": false,
-                    "text": "gulsauce(루트)",
-                    "value": "ocid1.tenancy.oc1..aaaaaaaapsfhhocgabvigtaxdundqbn4i2aoulu4izxvs4csre3io2oa7sba"
-                },
-                "hide": 0,
-                "includeAll": false,
-                "label": "OCI 컴파트먼트",
-                "multi": false,
-                "name": "oci_compartment",
-                "options": [
-                    {
-                        "selected": true,
-                        "text": "gulsauce(루트)",
-                        "value": "ocid1.tenancy.oc1..aaaaaaaapsfhhocgabvigtaxdundqbn4i2aoulu4izxvs4csre3io2oa7sba"
-                    }
-                ],
-                "query": "ocid1.tenancy.oc1..aaaaaaaapsfhhocgabvigtaxdundqbn4i2aoulu4izxvs4csre3io2oa7sba",
-                "skipUrlSync": false,
-                "type": "custom",
-                "description": "OCI compartment 이름. Health Check 생성한 compartment와 일치해야 함."
             }
         ]
     },
