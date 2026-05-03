@@ -16,7 +16,7 @@
       }
     ]
   },
-  "description": "MySQL 쿼리 튜닝 시드 산정 및 효과 검증용 대시보드 — 테이블 데이터 분포, 비율, 성장 곡선, 디스크 크기 추적",
+  "description": "MySQL 쿼리 튜닝 시드 산정 및 효과 검증용 대시보드 — 도메인 FK 관계 기반 시드 비율, 행 수 추이, 디스크 크기 추적",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -32,7 +32,7 @@
       },
       "id": 1,
       "panels": [],
-      "title": "테이블 데이터 분포 (시드 산정용)",
+      "title": "테이블 데이터 분포",
       "type": "row"
     },
     {
@@ -40,7 +40,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "qasker 스키마의 테이블별 행 수 추이. InnoDB 통계 캐시 기반 근사치(±5%). 쿼리 튜닝 시드 산정 시 테이블 간 비율과 성장 곡선을 파악하는 용도.",
+      "description": "qaskerdb 스키마의 테이블별 행 수 추이. InnoDB 통계 캐시 기반 근사치(±5%). 쿼리 튜닝 시 기준선이 되는 절대값.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -134,11 +134,24 @@
       "type": "timeseries"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 10,
+      "panels": [],
+      "title": "도메인 관계별 시드 비율 (FK 기반)",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "user 테이블 1행당 다른 테이블의 행 수 (비율). 쿼리 튜닝 시 시딩 비율 산정 기준값. 예: quiz_history=50 → 사용자 1명당 풀이 50건.",
+      "description": "problem_set 1개당 자식 테이블 행 수. FK 관계: problem.problem_set_id, quiz_history.problem_set_id, essay_grade_log.problem_set_id. 핵심: problem 비율(평균 문제 수)은 쿼리 튜닝 시 JOIN 부하의 직접적 지표.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -162,11 +175,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 9
+        "y": 10
       },
-      "id": 3,
+      "id": 11,
       "options": {
         "displayMode": "gradient",
         "maxVizHeight": 300,
@@ -192,14 +205,14 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\"} / scalar(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=\"user\"})",
+          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=~\"problem|quiz_history|essay_grade_log\"} / scalar(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=\"problem_set\"})",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{table}}",
           "refId": "A"
         }
       ],
-      "title": "user 1명당 테이블별 행 수 (시드 비율)",
+      "title": "problem_set 1개당 (콘텐츠)",
       "type": "bargauge"
     },
     {
@@ -207,7 +220,158 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "테이블별 일일 행 증가량. 어떤 테이블이 빠르게 성장하는지 파악하여 시딩 시나리오의 미래 볼륨 추정에 활용.",
+      "description": "user 1명당 자식 테이블 행 수. FK 관계: refresh_token.user_id, board.user_id, problem_set.userId(nullable soft-FK), quiz_history.user_id. 주의: problem_set은 익명 생성 가능하므로 비율에 익명 분량 포함됨.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "id": 12,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=~\"problem_set|quiz_history|board|refresh_token\"} / scalar(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=\"user\"})",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{table}}",
+          "refId": "A"
+        }
+      ],
+      "title": "user 1명당 (사용자 활동)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "board 1개당 reply 행 수. FK 관계: reply.board_id. 게시글 1개당 평균 댓글 수.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "id": 13,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=\"reply\"} / scalar(mysql_info_schema_table_rows{instance=\"heatwave-mysql\", schema=\"qaskerdb\", table=\"board\"})",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "reply",
+          "refId": "A"
+        }
+      ],
+      "title": "board 1개당 (게시판)",
+      "type": "bargauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 20,
+      "panels": [],
+      "title": "성장 & 디스크 사용량",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "테이블별 일일 행 증가량. 24시간 누적 데이터가 필요하므로 Alloy 재시작 직후에는 No data로 표시될 수 있음.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -265,10 +429,10 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 9
+        "x": 0,
+        "y": 19
       },
-      "id": 4,
+      "id": 21,
       "options": {
         "legend": {
           "calcs": [
@@ -362,11 +526,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 17
+        "w": 12,
+        "x": 12,
+        "y": 19
       },
-      "id": 5,
+      "id": 22,
       "options": {
         "legend": {
           "calcs": [
@@ -418,5 +582,5 @@
   "timezone": "browser",
   "title": "MySQL 쿼리 튜닝",
   "uid": "monitoring-compute-mysql-query-tuning",
-  "version": 1
+  "version": 2
 }
