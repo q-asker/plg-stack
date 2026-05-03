@@ -122,6 +122,17 @@ prometheus.exporter.mysql "heatwave" {
   // 예: alloy_monitor:secure_password@tcp(mysql.heatwave.com:3306)/
   // docker-compose.yml에서 설정된 기본값: alloy_monitor:changeme@tcp(heatwave-endpoint:3306)/
   data_source_name = env("MYSQL_DSN")
+
+  // info_schema.tables 컬렉터 활성화
+  // 노출 메트릭: mysql_info_schema_table_rows / table_size / table_version
+  // 용도: 테이블별 행 수·크기 추적 — 쿼리 튜닝 시드 산정, 테이블 간 비율 분석
+  // 비용: 30초마다 SELECT FROM information_schema.TABLES 1회 (InnoDB 통계 캐시 조회, 거의 0)
+  enable_collectors = ["info_schema.tables"]
+
+  // qasker 스키마만 수집 (sys/mysql/performance_schema 제외 → 카디널리티 절감)
+  info_schema.tables {
+    databases = "qasker"
+  }
 }
 
 // ----- Step 2: MySQL 메트릭 scrape -----
