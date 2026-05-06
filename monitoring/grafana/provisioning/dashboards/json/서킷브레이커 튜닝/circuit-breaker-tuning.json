@@ -345,80 +345,12 @@
       }
     },
     {
-      "id": 400,
+      "id": 600,
       "type": "row",
-      "title": "2. 트리거 정합성 — 왜 OPEN됐나?",
+      "title": "2. 시험기간 트래픽 — 서킷브레이커가 언제 일하나?",
       "gridPos": {
         "x": 0,
         "y": 17,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 14,
-      "title": "퀴즈 생성 성공 / 실패 / 부분실패",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 18,
-        "w": 12,
-        "h": 7
-      },
-      "description": "fail 또는 partial이 발생하는 quiz_type을 파악. failure-rate 임계(30%) 발동의 ground truth. 4월에는 MULTIPLE만 fail/partial 발생.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (outcome, quiz_type) (rate(quiz_generation_outcome_total{quiz_type=~\"$quiz_type\"}[$rate_window]))",
-          "legendFormat": "{{quiz_type}} / {{outcome}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "stacking": {
-              "mode": "normal"
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": 15,
-      "title": "5분 타임아웃 발생률 (slow=60s가 먼저 발동하는지)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 18,
-        "w": 12,
-        "h": 7
-      },
-      "description": "5분(300s) 타임아웃이 자주 발동되면 slow=60s가 보호 효과 못 내고 있다는 신호. 시험기간에 이 값이 늘면 slow 임계 하향 검토.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (quiz_type) (rate(gemini_streaming_timeout_total{quiz_type=~\"$quiz_type\"}[$rate_window]))",
-          "legendFormat": "{{quiz_type}}"
-        }
-      ]
-    },
-    {
-      "id": 600,
-      "type": "row",
-      "title": "3. 시험기간 트래픽 — 서킷브레이커가 언제 일하나?",
-      "gridPos": {
-        "x": 0,
-        "y": 25,
         "w": 24,
         "h": 1
       },
@@ -430,7 +362,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 18,
         "w": 12,
         "h": 7
       },
@@ -476,7 +408,7 @@
       "type": "state-timeline",
       "gridPos": {
         "x": 12,
-        "y": 26,
+        "y": 18,
         "w": 12,
         "h": 7
       },
@@ -527,7 +459,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 25,
         "w": 8,
         "h": 5
       },
@@ -579,7 +511,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 33,
+        "y": 25,
         "w": 8,
         "h": 5
       },
@@ -612,7 +544,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 33,
+        "y": 25,
         "w": 8,
         "h": 5
       },
