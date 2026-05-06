@@ -1,7 +1,7 @@
 {
   "uid": "cb-tuning",
   "title": "Circuit Breaker 튜닝",
-  "description": "Resilience4j 서킷브레이커(aiServer/Gemini) 임계값 튜닝 대시보드. 도메인: 시험기간 burst가 운영 critical, burst 분포 = ground truth. 비용·일반 API 모니터링은 별도 대시보드 책임.",
+  "description": "Resilience4j 서킷브레이커(aiServer/Gemini) 임계값 튜닝 대시보드. 도메인: 시험기간 burst가 운영 critical, burst 분포 = ground truth. JVM/시스템 리소스(G1GC 영향 미미) · 비용 · 일반 API 모니터링은 별도 대시보드 책임.",
   "tags": [
     "circuit-breaker",
     "tuning",
@@ -413,57 +413,12 @@
       ]
     },
     {
-      "id": 500,
+      "id": 600,
       "type": "row",
-      "title": "3. 시스템 — 가짜 slow 배제",
+      "title": "3. 시험기간 트래픽 — 서킷브레이커가 언제 일하나?",
       "gridPos": {
         "x": 0,
         "y": 25,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 18,
-      "title": "JVM 힙 / GC pause (응답 지연이 GC 탓인지 배제)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 26,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
-          "legendFormat": "힙 사용량"
-        },
-        {
-          "refId": "B",
-          "expr": "rate(jvm_gc_pause_seconds_sum[$rate_window])",
-          "legendFormat": "GC pause (초/초)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
-      },
-      "description": "TTFQ 증가가 외부 Gemini 지연이 아닌 JVM GC 영향일 가능성 차단. GC pause 스파이크와 TTFQ 스파이크 시점 비교."
-    },
-    {
-      "id": 600,
-      "type": "row",
-      "title": "4. 시험기간 트래픽 — 서킷브레이커가 언제 일하나?",
-      "gridPos": {
-        "x": 0,
-        "y": 33,
         "w": 24,
         "h": 1
       },
@@ -475,7 +430,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 26,
         "w": 12,
         "h": 7
       },
@@ -521,7 +476,7 @@
       "type": "state-timeline",
       "gridPos": {
         "x": 12,
-        "y": 34,
+        "y": 26,
         "w": 12,
         "h": 7
       },
@@ -572,7 +527,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 33,
         "w": 8,
         "h": 5
       },
@@ -624,7 +579,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 41,
+        "y": 33,
         "w": 8,
         "h": 5
       },
@@ -657,7 +612,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 41,
+        "y": 33,
         "w": 8,
         "h": 5
       },
