@@ -90,7 +90,7 @@
     {
       "id": 200,
       "type": "row",
-      "title": "2. TTFQ Distribution (measured + estimated)",
+      "title": "2. TTFQ 분포 (실측 + 통계 추정)",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -101,7 +101,7 @@
     },
     {
       "id": 5,
-      "title": "TTFQ measured (p50 / p95)",
+      "title": "TTFQ 실측 분위수 (p50 / p95)",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
@@ -117,23 +117,24 @@
         {
           "refId": "A",
           "expr": "histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))",
-          "legendFormat": "p50 (measured)"
+          "legendFormat": "p50 (실측)"
         },
         {
           "refId": "B",
           "expr": "histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))",
-          "legendFormat": "p95 (measured)"
+          "legendFormat": "p95 (실측)"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s"
         }
-      }
+      },
+      "description": "첫 응답까지 시간(TTFQ)의 p50/p95 실측값. 30s 버킷 한계 내 신뢰 가능 영역."
     },
     {
       "id": 6,
-      "title": "TTFQ estimated p99 (log-normal vs Pareto α=2.21)",
+      "title": "TTFQ p99 추정값 (로그정규 vs 파레토 α=2.21)",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
@@ -141,7 +142,7 @@
         "w": 12,
         "h": 8
       },
-      "description": "log-normal: 30s 이하 분포 fit. Pareto: 30s 초과 꼬리 fit (Heavy-tail 보강). slow threshold=60s 선 표시.",
+      "description": "로그정규: 30s 이하 분포에서 fit (p50, p95에서 외삽). 파레토: 30s 초과 꼬리에서 fit (heavy-tail 보강). 빨간 가로선 = slow 임계 60s.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -150,17 +151,17 @@
         {
           "refId": "A",
           "expr": "exp(ln(histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))) * 1.4136 + ln(histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))) * -0.4136)",
-          "legendFormat": "p99 (log-normal estimate)"
+          "legendFormat": "p99 (로그정규 추정)"
         },
         {
           "refId": "B",
           "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))) / 0.01 ) ^ (1/2.21)",
-          "legendFormat": "p99 (Pareto estimate)"
+          "legendFormat": "p99 (파레토 추정)"
         },
         {
           "refId": "C",
           "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))) / 0.001 ) ^ (1/2.21)",
-          "legendFormat": "p99.9 (Pareto estimate)"
+          "legendFormat": "p99.9 (파레토 추정)"
         }
       ],
       "fieldConfig": {
@@ -189,7 +190,7 @@
     },
     {
       "id": 7,
-      "title": "Slow threshold exceedance ratios (%)",
+      "title": "Slow 임계 초과율 (%)",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
@@ -197,7 +198,7 @@
         "w": 12,
         "h": 8
       },
-      "description": "30s 직접 측정 + 60s Pareto 외삽. 1% 선이 임계 위험 신호.",
+      "description": "30s 초과율은 직접 측정, 60s 초과율은 파레토 분포로 외삽. 1% 선 = 임계 도달 빈도가 위험 수준.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -206,12 +207,12 @@
         {
           "refId": "A",
           "expr": "100 * (sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))",
-          "legendFormat": "P(TTFQ>30s) measured"
+          "legendFormat": "P(TTFQ>30s) 실측"
         },
         {
           "refId": "B",
           "expr": "100 * 2^(-2.21) * (sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))",
-          "legendFormat": "P(TTFQ>60s) Pareto estimate"
+          "legendFormat": "P(TTFQ>60s) 파레토 추정"
         }
       ],
       "fieldConfig": {
@@ -244,7 +245,7 @@
     },
     {
       "id": 8,
-      "title": "TTFQ _max observed (heavy-tail watch)",
+      "title": "TTFQ 실측 최댓값 (heavy-tail 감시)",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
@@ -252,7 +253,7 @@
         "w": 12,
         "h": 8
       },
-      "description": "실측 max 추적. 119s baseline 초과 시 fat-tail 심화 시그널.",
+      "description": "실측 최댓값 추적. baseline 119s 초과 시 heavy-tail 심화 시그널.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -295,7 +296,7 @@
     {
       "id": 400,
       "type": "row",
-      "title": "4. Trigger-related Signals (CB 입력 정합성)",
+      "title": "4. 트리거 관련 신호 (서킷브레이커 입력 정합성)",
       "gridPos": {
         "x": 0,
         "y": 17,
@@ -306,7 +307,7 @@
     },
     {
       "id": 14,
-      "title": "Quiz generation outcome (record-exceptions 정합성)",
+      "title": "퀴즈 생성 결과 (record-exceptions 정합성)",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
@@ -314,7 +315,7 @@
         "w": 12,
         "h": 7
       },
-      "description": "fail/partial이 GeminiInfraException으로 CB에 카운트되는지 검증. failure-rate 임계(30%) 산정 근거.",
+      "description": "fail/partial이 GeminiInfraException으로 서킷브레이커에 카운트되는지 검증. failure-rate 임계(30%) 산정 근거.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -339,7 +340,7 @@
     },
     {
       "id": 15,
-      "title": "Streaming timeout rate (slow=60s vs 5min cap 관계)",
+      "title": "스트리밍 타임아웃 발생률 (slow=60s vs 5분 cap 관계)",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
@@ -347,7 +348,7 @@
         "w": 12,
         "h": 7
       },
-      "description": "5min timeout이 slow=60s 임계보다 먼저 발동하는지 검증. timeout이 잦으면 slow 임계 하향 검토.",
+      "description": "5분 타임아웃이 slow=60s 임계보다 먼저 발동하는지 검증. 타임아웃이 잦으면 slow 임계 하향 검토 신호.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -363,7 +364,7 @@
     {
       "id": 500,
       "type": "row",
-      "title": "5. System Resources (fake-slow 배제)",
+      "title": "5. 시스템 리소스 (가짜 slow 배제)",
       "gridPos": {
         "x": 0,
         "y": 25,
@@ -374,7 +375,7 @@
     },
     {
       "id": 18,
-      "title": "JVM heap used + GC pause",
+      "title": "JVM 힙 사용량 + GC pause",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
@@ -390,23 +391,24 @@
         {
           "refId": "A",
           "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
-          "legendFormat": "heap used"
+          "legendFormat": "힙 사용량"
         },
         {
           "refId": "B",
           "expr": "rate(jvm_gc_pause_seconds_sum[$rate_window])",
-          "legendFormat": "gc pause/s"
+          "legendFormat": "GC pause(초/초)"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "bytes"
         }
-      }
+      },
+      "description": "TTFQ 증가가 GC 영향인지 배제. GC pause 스파이크 = 가짜 slow 의심."
     },
     {
       "id": 19,
-      "title": "HikariCP connections (active / pending)",
+      "title": "HikariCP 커넥션 (active / pending)",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
@@ -422,24 +424,25 @@
         {
           "refId": "A",
           "expr": "hikaricp_connections_active",
-          "legendFormat": "active"
+          "legendFormat": "활성(active)"
         },
         {
           "refId": "B",
           "expr": "hikaricp_connections_pending",
-          "legendFormat": "pending"
+          "legendFormat": "대기(pending)"
         },
         {
           "refId": "C",
           "expr": "hikaricp_connections_max",
-          "legendFormat": "max"
+          "legendFormat": "최대(max)"
         }
-      ]
+      ],
+      "description": "DB 풀이 Gemini 응답 지연에 영향 주는지 배제 (간접 검증)."
     },
     {
       "id": 600,
       "type": "row",
-      "title": "6. Burst Pattern (sparse + burst 혼재 평가 발동성)",
+      "title": "6. 버스트 패턴 (sparse + burst 혼재 시 평가 발동성)",
       "gridPos": {
         "x": 0,
         "y": 33,
@@ -450,7 +453,7 @@
     },
     {
       "id": 20,
-      "title": "Calls per minute (burst detection, 1m window)",
+      "title": "분당 호출 수 (버스트 감지, 1분 윈도우)",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
@@ -458,7 +461,7 @@
         "w": 12,
         "h": 7
       },
-      "description": "1분 윈도우 RPS (gemini TTFQ 호출). 평시 baseline ~0.0002 ops 대비 burst peak 가시화. 빨간 라인=720s window×5min-calls 도달에 필요한 ops(0.0083).",
+      "description": "1분 윈도우 RPS (gemini TTFQ 호출 기준). 평시 baseline ~0.0002 ops 대비 burst peak 가시화. 노란 라인 = 720초 윈도우 × 5건(min-calls) 도달에 필요한 ops(0.0083).",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -467,7 +470,7 @@
         {
           "refId": "A",
           "expr": "sum(rate(gemini_request_first_quiz_duration_seconds_count[1m]))",
-          "legendFormat": "1m rate"
+          "legendFormat": "1분 rate"
         }
       ],
       "fieldConfig": {
@@ -496,7 +499,7 @@
     },
     {
       "id": 21,
-      "title": "Evaluation active timeline (≥5 calls in 720s)",
+      "title": "평가 활성 타임라인 (720초 내 5건 이상)",
       "type": "state-timeline",
       "gridPos": {
         "x": 12,
@@ -504,7 +507,7 @@
         "w": 12,
         "h": 7
       },
-      "description": "12분(=720s) 윈도우에 호출 5건 이상 들어온 시점=CB 평가 발동 가능 구간. 1=활성, 0=비활성. 자체 측정 메트릭 기반.",
+      "description": "12분(=720초) 윈도우에 호출 5건 이상 들어온 시점 = 서킷브레이커 평가 발동 가능 구간. 1=활성, 0=비활성. 자체 측정 메트릭 기반.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -513,7 +516,7 @@
         {
           "refId": "A",
           "expr": "(sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5)",
-          "legendFormat": "evaluation_active"
+          "legendFormat": "평가 활성"
         }
       ],
       "options": {
@@ -527,7 +530,7 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "INACTIVE",
+                  "text": "비활성",
                   "color": "dark-orange"
                 }
               }
@@ -536,7 +539,7 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "ACTIVE",
+                  "text": "활성",
                   "color": "green"
                 }
               }
@@ -547,7 +550,7 @@
     },
     {
       "id": 22,
-      "title": "Burst event count ($__range, ≥5 calls in 720s window)",
+      "title": "버스트 발생 횟수 (선택 범위 내, 720초 내 5건 이상)",
       "type": "stat",
       "gridPos": {
         "x": 0,
@@ -599,7 +602,7 @@
     },
     {
       "id": 23,
-      "title": "Peak RPS vs baseline ($__range)",
+      "title": "Peak RPS vs 평균 RPS (선택 범위)",
       "type": "stat",
       "gridPos": {
         "x": 8,
@@ -607,7 +610,7 @@
         "w": 8,
         "h": 5
       },
-      "description": "burst peak (1m max) ÷ 평균 RPS = burst 비율. 비율이 높을수록 평시 통계로 임계 산정 위험.",
+      "description": "버스트 peak(1분 max) ÷ 평균 RPS = 버스트 비율. 비율이 높을수록 평시 통계로 임계 산정 시 위험.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -616,12 +619,12 @@
         {
           "refId": "A",
           "expr": "max_over_time(sum(rate(gemini_request_first_quiz_duration_seconds_count[1m]))[$__range:1m])",
-          "legendFormat": "peak (1m max)"
+          "legendFormat": "peak (1분 최댓값)"
         },
         {
           "refId": "B",
           "expr": "sum(rate(gemini_request_first_quiz_duration_seconds_count[$__range]))",
-          "legendFormat": "baseline (mean)"
+          "legendFormat": "평균 (baseline)"
         }
       ],
       "fieldConfig": {
@@ -632,7 +635,7 @@
     },
     {
       "id": 24,
-      "title": "Evaluation active time ratio ($__range)",
+      "title": "평가 활성 시간 비율 (선택 범위)",
       "type": "stat",
       "gridPos": {
         "x": 16,
