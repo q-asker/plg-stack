@@ -370,7 +370,7 @@
       "gridPos": {
         "x": 0,
         "y": 28,
-        "w": 6,
+        "w": 8,
         "h": 5
       },
       "description": "선택 범위 내 burst 진입 횟수. q-asker 도메인: burst = 시험기간 트래픽 = 운영 critical event. 이 횟수가 곧 임계 튜닝의 ground truth sample 크기.",
@@ -420,9 +420,9 @@
       "title": "평소 vs 몰릴 때 RPS 차이",
       "type": "stat",
       "gridPos": {
-        "x": 6,
+        "x": 8,
         "y": 28,
-        "w": 6,
+        "w": 8,
         "h": 5
       },
       "description": "burst peak ÷ 평시 평균. 차이가 클수록 평시 통계로 임계 산정 시 위험. 4월: peak 0.044 / 평균 0.0002 = 213배 차이.",
@@ -449,67 +449,14 @@
       }
     },
     {
-      "id": 24,
-      "title": "서킷브레이커가 일한 시간 비율",
-      "type": "stat",
-      "gridPos": {
-        "x": 12,
-        "y": 28,
-        "w": 6,
-        "h": 5
-      },
-      "description": "선택 범위에서 평가가 활성화된 시간 비율. 4월 0.4%≈3시간이지만 그 시간이 곧 시험기간 critical traffic이므로 운영 시점 100%. 임계 튜닝의 ground truth 시간.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "100 * avg_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m])",
-          "instant": true
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "background"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "green",
-                "value": 10
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
       "id": 25,
       "type": "stat",
       "title": "평균 burst 지속 시간 (선택 범위)",
       "description": "burst 한 번이 평균 몇 분간 지속되는지. 평가 활성 분 합계 ÷ burst 횟수. 12분(=720초) 윈도우 기준으로 측정되므로 짧은 burst는 12분 근처, 긴 burst는 그 이상. sliding-window-size(720s)와 비교: burst가 720초보다 짧으면 평가가 burst 사이에 끊겨 부정확.",
       "gridPos": {
-        "x": 18,
+        "x": 16,
         "y": 28,
-        "w": 6,
+        "w": 8,
         "h": 5
       },
       "datasource": {
