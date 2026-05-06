@@ -1,7 +1,7 @@
 {
   "uid": "cb-tuning",
   "title": "Circuit Breaker 튜닝",
-  "description": "Resilience4j 서킷브레이커(aiServer/Gemini) 임계값 튜닝 대시보드. 도메인: 시험기간 burst가 운영 critical, burst 분포 = ground truth. JVM/시스템 리소스(G1GC 영향 미미) · 비용 · 일반 API 모니터링은 별도 대시보드 책임.",
+  "description": "Resilience4j 서킷브레이커(aiServer/Gemini) 임계값 튜닝 대시보드. 분석 기준: TTFQ(첫 퀴즈 응답까지 시간, gemini_request_first_quiz_duration_seconds) 전용. ICC-332 배포 이후 CB가 TTFQ를 측정하는 시점 기준의 사전·사후 튜닝 분석에 사용. 도메인: 시험기간 burst가 운영 critical, burst 분포 = ground truth. 주의: 배포 전 4월 데이터의 CB 동작(OPEN 10회 등)은 TTLQ 기반이므로 이 대시보드의 TTFQ 분포와 직접 매칭되지 않음. JVM/시스템 리소스(G1GC 영향 미미) · 비용 · 일반 API 모니터링은 별도 대시보드 책임.",
   "tags": [
     "circuit-breaker",
     "tuning",
@@ -240,68 +240,13 @@
       }
     },
     {
-      "id": 7,
-      "title": "느린 응답(30s/60s 초과) 비율",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 9,
-        "w": 12,
-        "h": 8
-      },
-      "description": "30s 초과는 직접 측정. 60s 초과는 파레토 외삽. 이 비율이 시험기간에 1% 넘으면 slow=60s 임계가 자주 발동될 신호.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "100 * (sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))",
-          "legendFormat": "30초 초과"
-        },
-        {
-          "refId": "B",
-          "expr": "100 * 2^(-2.21) * (sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))",
-          "legendFormat": "60초 초과 (추정)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.7
-              },
-              {
-                "color": "red",
-                "value": 1.0
-              }
-            ]
-          },
-          "custom": {
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          }
-        }
-      }
-    },
-    {
       "id": 8,
       "title": "관측된 가장 느린 응답 (long-tail 감시)",
       "type": "timeseries",
       "gridPos": {
-        "x": 12,
+        "x": 0,
         "y": 9,
-        "w": 12,
+        "w": 24,
         "h": 8
       },
       "description": "실측 최댓값. baseline 119초를 넘으면 시험기간에 더 심한 long-tail 발생 → 임계 재검토 필요.",
@@ -357,13 +302,29 @@
       "collapsed": false
     },
     {
+      "id": 690,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### 🔍 burst 판단 기준\n**12분(=720초) 윈도우에 TTFQ 호출이 5건 이상 들어온 시점 = burst 활성**\n\nPromQL 정의: `(sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5)`\n\nResilience4j 설정 `sliding-window-size=720s` × `minimum-number-of-calls=5`와 1:1 동기화 — **\"CB가 임계값을 평가할 수 있는 최소 조건이 만족된 구간\"**을 burst로 정의. q-asker 도메인 특성상 시험기간 트래픽 집중과 일치한다고 가정."
+      }
+    },
+    {
       "id": 20,
       "title": "분당 호출 수 — 트래픽이 언제 들어오나?",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 18,
-        "w": 12,
+        "y": 21,
+        "w": 24,
         "h": 7
       },
       "description": "1분 윈도우 RPS. 평소엔 거의 0, 시험기간 burst 시점만 spike. 노란선 0.0083 ops = 720s 윈도우에 5건(min-calls) 도달 가능선.",
@@ -403,64 +364,13 @@
       }
     },
     {
-      "id": 21,
-      "title": "서킷브레이커가 일하는 시간 — 평가 활성 / 비활성",
-      "type": "state-timeline",
-      "gridPos": {
-        "x": 12,
-        "y": 18,
-        "w": 12,
-        "h": 7
-      },
-      "description": "12분(720초) 윈도우에 호출 5건 이상이면 평가 활성(녹색). 시험기간 burst 시점에만 활성, 평시는 비활성(주황). 도메인 특성상 활성=시험기간 critical.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "(sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5)",
-          "legendFormat": "상태"
-        }
-      ],
-      "options": {
-        "showValue": "auto",
-        "mergeValues": true
-      },
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "평가 비활성 (트래픽 부족)",
-                  "color": "dark-orange"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "평가 활성 (시험기간)",
-                  "color": "green"
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": 22,
       "title": "시험기간 트래픽 몰림 횟수 (burst event count)",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 25,
-        "w": 8,
+        "y": 28,
+        "w": 6,
         "h": 5
       },
       "description": "선택 범위 내 burst 진입 횟수. q-asker 도메인: burst = 시험기간 트래픽 = 운영 critical event. 이 횟수가 곧 임계 튜닝의 ground truth sample 크기.",
@@ -510,9 +420,9 @@
       "title": "평소 vs 몰릴 때 RPS 차이",
       "type": "stat",
       "gridPos": {
-        "x": 8,
-        "y": 25,
-        "w": 8,
+        "x": 6,
+        "y": 28,
+        "w": 6,
         "h": 5
       },
       "description": "burst peak ÷ 평시 평균. 차이가 클수록 평시 통계로 임계 산정 시 위험. 4월: peak 0.044 / 평균 0.0002 = 213배 차이.",
@@ -543,9 +453,9 @@
       "title": "서킷브레이커가 일한 시간 비율",
       "type": "stat",
       "gridPos": {
-        "x": 16,
-        "y": 25,
-        "w": 8,
+        "x": 12,
+        "y": 28,
+        "w": 6,
         "h": 5
       },
       "description": "선택 범위에서 평가가 활성화된 시간 비율. 4월 0.4%≈3시간이지만 그 시간이 곧 시험기간 critical traffic이므로 운영 시점 100%. 임계 튜닝의 ground truth 시간.",
@@ -585,6 +495,69 @@
               {
                 "color": "green",
                 "value": 10
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "평균 burst 지속 시간 (선택 범위)",
+      "description": "burst 한 번이 평균 몇 분간 지속되는지. 평가 활성 분 합계 ÷ burst 횟수. 12분(=720초) 윈도우 기준으로 측정되므로 짧은 burst는 12분 근처, 긴 burst는 그 이상. sliding-window-size(720s)와 비교: burst가 720초보다 짧으면 평가가 burst 사이에 끊겨 부정확.",
+      "gridPos": {
+        "x": 18,
+        "y": 28,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "60 * sum_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m]) / (sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m])) / 2)",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 300
+              },
+              {
+                "color": "orange",
+                "value": 900
               }
             ]
           }
