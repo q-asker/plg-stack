@@ -510,6 +510,232 @@
           }
         }
       }
+    },
+    {
+      "id": 700,
+      "type": "row",
+      "collapsed": false,
+      "title": "3. CB 내부 옵션 결정 — 진성 실패 / 회복 / sample",
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 790,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### 🛠 CB 내부 옵션 결정 가이드\n이 Row는 **CB 메트릭 없이 외부에서 관측한 실패 패턴**으로 다음 3옵션을 추론.\n\n- **failure-rate-threshold (30%)** ← 진성 실패율 추세 (#27, #29). outcome=fail ≈ GeminiInfraException.\n- **wait-duration-in-open-state (60s)** ← 실패 군집 패턴 (#28). 군집 사이 간격 ≈ Gemini 회복 시간.\n- **permitted-half-open (3)** ← fail 동반 burst 비율 (#30). 50% 이상이면 3건은 noise 큼."
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "진성 실패율 추세 (failure-rate-threshold 결정)",
+      "description": "outcome=fail / 전체 호출 비율. record-exceptions=GeminiInfraException과 거의 매칭. 30% 임계 빨간선 도달 빈도가 임계 적정성의 핵심 신호.",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[$rate_window])) / sum(rate(quiz_generation_outcome_total[$rate_window]))",
+          "legendFormat": "진성 실패율 (%)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 15
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "실패 발생 군집 (wait-duration-in-open-state 결정)",
+      "description": "5분 윈도우 fail 호출 rate. 군집 1개 = OPEN 진입 1회로 간주 가능. 군집 사이 평균 간격 ≈ Gemini 회복 시간 → 60s wait가 적정인지 판단.",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[5m]))",
+          "legendFormat": "5분 fail rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "stat",
+      "title": "선택 범위 평균 진성 실패율",
+      "description": "30% 임계 대비 baseline 위치. 30%/3 = 10% 미만이면 임계 헐거움 / 50%+면 빠른 차단 가치.",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[$__range])) / sum(rate(quiz_generation_outcome_total[$__range]))",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 15
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "stat",
+      "title": "fail 동반 burst 비율 (permitted-half-open 결정)",
+      "description": "burst 중 fail이 1건 이상 발생한 burst 비율. 이 값이 50%+면 HALF_OPEN 3건 시도가 noise 큼 → permitted 5~7로 상향 검토. 10% 미만이면 3건도 충분.",
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (sum(changes(((sum(increase(quiz_generation_outcome_total{outcome=\"fail\"}[1m])) > bool 0))[$__range:1m])) / 2) / (sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m])) / 2)",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        }
+      }
     }
   ],
   "annotations": {
