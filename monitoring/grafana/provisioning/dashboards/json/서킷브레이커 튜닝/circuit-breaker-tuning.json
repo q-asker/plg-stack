@@ -625,7 +625,7 @@
       "gridPos": {
         "x": 0,
         "y": 44,
-        "w": 12,
+        "w": 24,
         "h": 5
       },
       "datasource": {
@@ -671,66 +671,6 @@
               {
                 "color": "red",
                 "value": 30
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 30,
-      "type": "stat",
-      "title": "fail 동반 burst 비율 (permitted-half-open 결정)",
-      "description": "burst 중 fail이 1건 이상 발생한 burst 비율. 이 값이 50%+면 HALF_OPEN 3건 시도가 noise 큼 → permitted 5~7로 상향 검토. 10% 미만이면 3건도 충분.",
-      "gridPos": {
-        "x": 12,
-        "y": 44,
-        "w": 12,
-        "h": 5
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "100 * (sum(changes(((sum(increase(quiz_generation_outcome_total{outcome=\"fail\"}[1m])) > bool 0))[$__range:1m])) / 2) / (sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m])) / 2)",
-          "instant": true
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 30
-              },
-              {
-                "color": "red",
-                "value": 50
               }
             ]
           }
