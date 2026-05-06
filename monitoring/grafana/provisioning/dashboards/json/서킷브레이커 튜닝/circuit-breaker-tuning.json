@@ -101,8 +101,8 @@
     },
     {
       "id": 5,
-      "title": "TTFQ 실측 분위수 (p50 / p95)",
-      "type": "timeseries",
+      "title": "TTFQ 실측 분위수 (선택 범위 누적)",
+      "type": "stat",
       "gridPos": {
         "x": 0,
         "y": 1,
@@ -116,33 +116,70 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))",
-          "legendFormat": "p50 (실측)"
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$__range])))",
+          "legendFormat": "p50 (실측)",
+          "instant": true
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))",
-          "legendFormat": "p95 (실측)"
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$__range])))",
+          "legendFormat": "p95 (실측)",
+          "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          }
         }
       },
-      "description": "첫 응답까지 시간(TTFQ)의 p50/p95 실측값. 30s 버킷 한계 내 신뢰 가능 영역."
+      "description": "선택한 시간 범위 누적 분포의 p50/p95. 30s 버킷 절단 한계 내 신뢰 가능.",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
     },
     {
       "id": 6,
-      "title": "TTFQ p99 추정값 (로그정규 vs 파레토 α=2.21)",
-      "type": "timeseries",
+      "title": "TTFQ p99 추정값 (선택 범위, 로그정규 / 파레토 α=2.21)",
+      "type": "stat",
       "gridPos": {
         "x": 12,
         "y": 1,
         "w": 12,
         "h": 8
       },
-      "description": "로그정규: 30s 이하 분포에서 fit (p50, p95에서 외삽). 파레토: 30s 초과 꼬리에서 fit (heavy-tail 보강). 빨간 가로선 = slow 임계 60s.",
+      "description": "선택 시간 범위 누적 분포에서 통계 외삽한 분위수. 로그정규: 30s 이하 fit. 파레토: 30s 초과 꼬리 fit. 60s 초과는 slow 임계 경고.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -150,34 +187,40 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "exp(ln(histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))) * 1.4136 + ln(histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$rate_window])))) * -0.4136)",
-          "legendFormat": "p99 (로그정규 추정)"
+          "expr": "exp(ln(histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$__range])))) * 1.4136 + ln(histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$__range])))) * -0.4136)",
+          "legendFormat": "p99 (로그정규)",
+          "instant": true
         },
         {
           "refId": "B",
-          "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))) / 0.01 ) ^ (1/2.21)",
-          "legendFormat": "p99 (파레토 추정)"
+          "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$__range]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range]))) / 0.01 ) ^ (1/2.21)",
+          "legendFormat": "p99 (파레토)",
+          "instant": true
         },
         {
           "refId": "C",
-          "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$rate_window]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$rate_window]))) / 0.001 ) ^ (1/2.21)",
-          "legendFormat": "p99.9 (파레토 추정)"
+          "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$__range]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range]))) / 0.001 ) ^ (1/2.21)",
+          "legendFormat": "p99.9 (파레토)",
+          "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {
-            "thresholdsStyle": {
-              "mode": "line"
-            }
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "transparent",
+                "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 45
               },
               {
                 "color": "red",
@@ -186,6 +229,20 @@
             ]
           }
         }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
       }
     },
     {
