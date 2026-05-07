@@ -314,53 +314,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "### 🔍 burst 판단 기준\n**12분(=720초) 윈도우에 TTFQ 호출이 5건 이상 들어온 시점 = burst 활성**\n\nPromQL 정의: `(sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5)`\n\nResilience4j 설정 `sliding-window-size=720s` × `minimum-number-of-calls=5`와 1:1 동기화 — **\"CB가 임계값을 평가할 수 있는 최소 조건이 만족된 구간\"**을 burst로 정의. q-asker 도메인 특성상 시험기간 트래픽 집중과 일치한다고 가정."
-      }
-    },
-    {
-      "id": 20,
-      "title": "분당 호출 수 — 트래픽이 언제 들어오나?",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 24,
-        "h": 7
-      },
-      "description": "1분 윈도우 RPS. 평소엔 거의 0, 시험기간 burst 시점만 spike. 노란선 0.0083 ops = 720s 윈도우에 5건(min-calls) 도달 가능선.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(gemini_request_first_quiz_duration_seconds_count[1m]))",
-          "legendFormat": "1분당 호출"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "transparent",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.0083
-              }
-            ]
-          },
-          "custom": {
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          }
-        }
+        "content": "### 🔍 burst 판단 기준\n**18분(=1080초) 윈도우에 TTFQ 호출이 5건 이상 들어온 시점 = burst 활성**\n\nPromQL 정의: `(sum(increase(gemini_request_first_quiz_duration_seconds_count[18m])) >= bool 5)`\n\nResilience4j 설정 `sliding-window-size=1080s` × `minimum-number-of-calls=5`와 1:1 동기화 — **\"CB가 임계값을 평가할 수 있는 최소 조건이 만족된 구간\"**을 burst로 정의. q-asker 도메인 특성상 시험기간 트래픽 집중과 일치한다고 가정."
       }
     },
     {
@@ -369,7 +323,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 21,
         "w": 8,
         "h": 5
       },
@@ -381,7 +335,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m])) / 2",
+          "expr": "sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[18m])) >= bool 5))[$__range:1m])) / 2",
           "instant": true
         }
       ],
@@ -421,7 +375,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 28,
+        "y": 21,
         "w": 8,
         "h": 5
       },
@@ -468,7 +422,7 @@
       "description": "선택 범위 내에서 가장 길었던 burst 지속 시간(분). 30분 sliding window 안의 활성 분 합계의 최대값. sliding-window-size 산정의 핵심 지표 — yml의 'max burst cover' 원칙. 이 값이 sliding-window-size를 초과하면 단일 burst가 분열될 위험.",
       "gridPos": {
         "x": 16,
-        "y": 28,
+        "y": 21,
         "w": 8,
         "h": 5
       },
@@ -479,7 +433,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max_over_time(sum_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[30m:1m])[$__range:])",
+          "expr": "max_over_time(sum_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[18m])) >= bool 5))[30m:1m])[$__range:])",
           "instant": true,
           "legendFormat": "최대 burst (분)"
         }
@@ -532,7 +486,7 @@
       "title": "3. CB 내부 옵션 결정 — 인프라 장애 / 회복 / sample",
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 26,
         "w": 24,
         "h": 1
       }
@@ -544,7 +498,7 @@
       "transparent": true,
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 27,
         "w": 24,
         "h": 3
       },
@@ -560,7 +514,7 @@
       "description": "outcome=fail / 전체 호출 비율. record-exceptions=GeminiInfraException과 거의 매칭. 30% 임계 빨간선 도달 빈도가 임계 적정성의 핵심 신호.",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 30,
         "w": 24,
         "h": 7
       },
@@ -610,7 +564,7 @@
       "description": "30% 임계 대비 baseline 위치. 30%/3 = 10% 미만이면 임계 헐거움 / 50%+면 빠른 차단 가치.",
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 37,
         "w": 24,
         "h": 5
       },
