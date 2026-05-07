@@ -122,14 +122,12 @@ limits_config:
   max_entries_limit_per_query: 5000
 
   # 역사 쿼리 최대 범위 (얼마나 오래된 로그까지 조회 가능)
-  # 336h = 14일 이전 로그는 조회 불가
-  max_query_lookback: 336h  # 14일
+  # 4320h = 180일 이전 로그는 조회 불가
+  max_query_lookback: 4320h  # 180일
 
   # 로그 보존 기간 (이보다 오래된 로그는 자동 삭제)
-  # 336h = 14일
-  # 메트릭: 15일 (prometheus.yml --storage.tsdb.retention.time=15d)
-  # 로그: 14일 (여유 1일)
-  retention_period: 336h    # 14일
+  # 4320h = 180일
+  retention_period: 4320h   # 180일
 
 # ═══════════════════════════════════════════════════════════
 # ⑦ 압축기(Compactor) 설정 (오래된 로그 정리)
