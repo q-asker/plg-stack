@@ -139,8 +139,10 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       # 메트릭 데이터 저장 위치
       - --storage.tsdb.path=/prometheus
-      # 메트릭 보관 기간 (15일 이상 저장)
-      - --storage.tsdb.retention.time=15d
+      # 메트릭 보관 기간 (180일 ≈ 6개월)
+      - --storage.tsdb.retention.time=180d
+      # 디스크 폭주 방지 안전판 (Loki/Grafana와 50GB 볼륨 공유)
+      - --storage.tsdb.retention.size=25GB
       # Remote Write 수신 활성화 (Alloy가 메트릭을 push 방식으로 전송)
       # Alloy → Prometheus의 HTTP POST 요청을 받기 위해 필수
       - --web.enable-remote-write-receiver
