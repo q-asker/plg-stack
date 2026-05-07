@@ -515,7 +515,7 @@
       "id": 700,
       "type": "row",
       "collapsed": false,
-      "title": "3. CB 내부 옵션 결정 — 진성 실패 / 회복 / sample",
+      "title": "3. CB 내부 옵션 결정 — 인프라 장애 / 회복 / sample",
       "gridPos": {
         "x": 0,
         "y": 33,
@@ -536,13 +536,13 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "### 🛠 CB 내부 옵션 결정 가이드\n이 Row는 **CB 메트릭 없이 외부에서 관측한 실패 패턴**으로 다음 3옵션을 추론.\n\n- **failure-rate-threshold (30%)** ← 진성 실패율 추세 (#27, #29). outcome=fail ≈ GeminiInfraException.\n- **wait-duration-in-open-state (60s)** ← 실패 군집 패턴 (#28). 군집 사이 간격 ≈ Gemini 회복 시간.\n- **permitted-half-open (3)** ← fail 동반 burst 비율 (#30). 50% 이상이면 3건은 noise 큼."
+        "content": "### 🛠 CB 내부 옵션 결정 가이드\n이 Row는 **CB 메트릭 없이 외부에서 관측한 실패 패턴**으로 다음 3옵션을 추론.\n\n- **failure-rate-threshold (30%)** ← 인프라 장애율 추세 (#27, #29). outcome=fail ≈ GeminiInfraException.\n- **wait-duration-in-open-state (60s)** ← 실패 군집 패턴 (#28). 군집 사이 간격 ≈ Gemini 회복 시간.\n- **permitted-half-open (3)** ← fail 동반 burst 비율 (#30). 50% 이상이면 3건은 noise 큼."
       }
     },
     {
       "id": 27,
       "type": "timeseries",
-      "title": "진성 실패율 추세 (failure-rate-threshold 결정)",
+      "title": "인프라 장애율 추세 (failure-rate-threshold 결정)",
       "description": "outcome=fail / 전체 호출 비율. record-exceptions=GeminiInfraException과 거의 매칭. 30% 임계 빨간선 도달 빈도가 임계 적정성의 핵심 신호.",
       "gridPos": {
         "x": 0,
@@ -558,7 +558,7 @@
         {
           "refId": "A",
           "expr": "100 * sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[$rate_window])) / sum(rate(quiz_generation_outcome_total[$rate_window]))",
-          "legendFormat": "진성 실패율 (%)"
+          "legendFormat": "인프라 장애율 (%)"
         }
       ],
       "fieldConfig": {
@@ -620,7 +620,7 @@
     {
       "id": 29,
       "type": "stat",
-      "title": "선택 범위 평균 진성 실패율",
+      "title": "선택 범위 평균 인프라 장애율",
       "description": "30% 임계 대비 baseline 위치. 30%/3 = 10% 미만이면 임계 헐거움 / 50%+면 빠른 차단 가치.",
       "gridPos": {
         "x": 0,
