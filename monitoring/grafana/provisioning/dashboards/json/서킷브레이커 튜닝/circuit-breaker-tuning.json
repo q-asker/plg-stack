@@ -417,7 +417,7 @@
     },
     {
       "id": 23,
-      "title": "평소 vs 몰릴 때 RPS 차이",
+      "title": "호출 간격 — 평소 vs 몰릴 때 (1회당 N초)",
       "type": "stat",
       "gridPos": {
         "x": 8,
@@ -425,7 +425,7 @@
         "w": 8,
         "h": 5
       },
-      "description": "burst peak ÷ 평시 평균. 차이가 클수록 평시 통계로 임계 산정 시 위험. 4월: peak 0.044 / 평균 0.0002 = 213배 차이.",
+      "description": "1 / RPS = 호출 1건 발생 간격(초). 평소 호출 간격(평균)과 몰릴 때 최소 호출 간격(burst peak 1분 최댓값)을 비교. 값이 작을수록 호출이 자주 들어옴. permitted-half-open과 sliding-window 산정의 트래픽 컨텍스트.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -433,26 +433,39 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max_over_time(sum(rate(gemini_request_first_quiz_duration_seconds_count[1m]))[$__range:1m])",
-          "legendFormat": "몰릴 때 (1분 최댓값)"
+          "expr": "1 / max_over_time(sum(rate(gemini_request_first_quiz_duration_seconds_count[1m]))[$__range:1m])",
+          "legendFormat": "몰릴 때 (최소 간격)"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(gemini_request_first_quiz_duration_seconds_count[$__range]))",
-          "legendFormat": "평소 (평균)"
+          "expr": "1 / sum(rate(gemini_request_first_quiz_duration_seconds_count[$__range]))",
+          "legendFormat": "평소 (평균 간격)"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ops"
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
         }
       }
     },
     {
       "id": 25,
       "type": "stat",
-      "title": "평균 burst 지속 시간 (선택 범위)",
-      "description": "burst 한 번이 평균 몇 분간 지속되는지. 평가 활성 분 합계 ÷ burst 횟수. 12분(=720초) 윈도우 기준으로 측정되므로 짧은 burst는 12분 근처, 긴 burst는 그 이상. sliding-window-size(720s)와 비교: burst가 720초보다 짧으면 평가가 burst 사이에 끊겨 부정확.",
+      "title": "최대 burst 구간 (선택 범위)",
+      "description": "선택 범위 내에서 가장 길었던 burst 지속 시간(분). 30분 sliding window 안의 활성 분 합계의 최대값. sliding-window-size 산정의 핵심 지표 — yml의 'max burst cover' 원칙. 이 값이 sliding-window-size를 초과하면 단일 burst가 분열될 위험.",
       "gridPos": {
         "x": 16,
         "y": 28,
@@ -466,8 +479,9 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "60 * sum_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m]) / (sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[$__range:1m])) / 2)",
-          "instant": true
+          "expr": "max_over_time(sum_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[12m])) >= bool 5))[30m:1m])[$__range:])",
+          "instant": true,
+          "legendFormat": "최대 burst (분)"
         }
       ],
       "options": {
@@ -486,7 +500,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "m",
           "decimals": 0,
           "color": {
             "mode": "thresholds"
@@ -495,16 +509,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "yellow",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "green",
-                "value": 300
+                "color": "yellow",
+                "value": 12
               },
               {
-                "color": "orange",
-                "value": 900
+                "color": "red",
+                "value": 15
               }
             ]
           }
@@ -536,7 +550,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "### 🛠 CB 내부 옵션 결정 가이드\n이 Row는 **CB 메트릭 없이 외부에서 관측한 실패 패턴**으로 다음 3옵션을 추론.\n\n- **failure-rate-threshold (30%)** ← 인프라 장애율 추세 (#27, #29). outcome=fail ≈ GeminiInfraException.\n- **wait-duration-in-open-state (60s)** ← 실패 군집 패턴 (#28). 군집 사이 간격 ≈ Gemini 회복 시간.\n- **permitted-half-open (3)** ← fail 동반 burst 비율 (#30). 50% 이상이면 3건은 noise 큼."
+        "content": "### 🛠 CB 내부 옵션 결정 가이드\n이 Row는 **CB 메트릭 없이 외부에서 관측한 실패 패턴**으로 옵션을 추론한다.\n\n- **failure-rate-threshold (30%)** ← 인프라 장애율 추세 (#27, #29). outcome=fail ≈ GeminiInfraException.\n- *wait-duration-in-open-state, permitted-half-open*: 이 대시보드로는 결정 자료 부족. 외부 인프라 회복 패턴·HALF_OPEN 행동 통계는 별도 측정·운영 데이터로 결정."
       }
     },
     {
@@ -547,7 +561,7 @@
       "gridPos": {
         "x": 0,
         "y": 37,
-        "w": 12,
+        "w": 24,
         "h": 7
       },
       "datasource": {
@@ -586,34 +600,6 @@
               "mode": "line"
             }
           }
-        }
-      }
-    },
-    {
-      "id": 28,
-      "type": "timeseries",
-      "title": "실패 발생 군집 (wait-duration-in-open-state 결정)",
-      "description": "5분 윈도우 fail 호출 rate. 군집 1개 = OPEN 진입 1회로 간주 가능. 군집 사이 평균 간격 ≈ Gemini 회복 시간 → 60s wait가 적정인지 판단.",
-      "gridPos": {
-        "x": 12,
-        "y": 37,
-        "w": 12,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[5m]))",
-          "legendFormat": "5분 fail rate"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
         }
       }
     },
