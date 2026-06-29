@@ -96,7 +96,8 @@ plg-stack/
 │   ├── loki/
 │   │   └── loki-config.yaml     ← Loki 설정 (라벨 인덱싱)
 │   ├── prometheus/
-│   │   └── prometheus.yml       ← Prometheus scrape 설정
+│   │   ├── prometheus.yml       ← Prometheus scrape 설정
+│   │   └── rules.yml            ← Recording rules (TTFQ 분위수/외삽, CB 헬스, breach 회복)
 │   ├── grafana/
 │   │   └── provisioning/
 │   │       └── datasources/

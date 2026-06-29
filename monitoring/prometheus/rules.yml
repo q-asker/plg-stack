@@ -1,0 +1,140 @@
+# Prometheus Recording Rules — aiServer Circuit Breaker Tuning
+# 적용 위치: prometheus.yml의 rule_files 항목으로 import
+# 검증일: 2026-05-06 (4월 전체 n=647 baseline)
+
+groups:
+  - name: ttfq_estimates
+    interval: 30s
+    rules:
+      # ─────────────────────────────────────────────────────────────
+      # 1) 직접 측정 가능한 분위수 (TTFQ 히스토그램, 30s 버킷까지 신뢰)
+      # ─────────────────────────────────────────────────────────────
+      - record: gemini:ttfq:p50
+        expr: histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[30d])))
+      - record: gemini:ttfq:p90
+        expr: histogram_quantile(0.90, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[30d])))
+      - record: gemini:ttfq:p95
+        expr: histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[30d])))
+
+      # ─────────────────────────────────────────────────────────────
+      # 2) 꼬리 직접 카운트 (히스토그램 30s 절단 우회)
+      # ─────────────────────────────────────────────────────────────
+      - record: gemini:ttfq:exceed30s_ratio
+        expr: |
+          (sum(increase(gemini_request_first_quiz_duration_seconds_count[30d]))
+           - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le="30.0"}[30d])))
+          / sum(increase(gemini_request_first_quiz_duration_seconds_count[30d]))
+
+      # 28.6s/22.9s 초과율 — fit 검증용 (3-point validation)
+      - record: gemini:ttfq:exceed28s_ratio
+        expr: |
+          (sum(increase(gemini_request_first_quiz_duration_seconds_count[30d]))
+           - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le="28.633115306"}[30d])))
+          / sum(increase(gemini_request_first_quiz_duration_seconds_count[30d]))
+
+      # ─────────────────────────────────────────────────────────────
+      # 3) Log-normal 외삽 P99 (30s 이하 fit 정확도 ~0.3%)
+      #    p99 = exp( ln(p95)*1.4136 + ln(p50)*-0.4136 )
+      #    1.4136 = Φ⁻¹(0.99) / Φ⁻¹(0.95)
+      # ─────────────────────────────────────────────────────────────
+      - record: gemini:ttfq:p99_lognormal
+        expr: exp(ln(gemini:ttfq:p95) * 1.4136 + ln(gemini:ttfq:p50) * -0.4136)
+
+      # P99.9 (계수 1.879 = Φ⁻¹(0.999)/Φ⁻¹(0.95))
+      - record: gemini:ttfq:p999_lognormal
+        expr: exp(ln(gemini:ttfq:p95) * 1.879 + ln(gemini:ttfq:p50) * -0.879)
+
+      # ─────────────────────────────────────────────────────────────
+      # 4) Pareto 꼬리 외삽 P99 (30s 초과 영역, α=2.21 고정)
+      #    α는 4월 baseline에서 산정 — 분기마다 재산정 권장
+      #    p99 = 30 * (exceed30s_ratio / 0.01)^(1/α)
+      # ─────────────────────────────────────────────────────────────
+      - record: gemini:ttfq:p99_pareto
+        expr: 30 * (gemini:ttfq:exceed30s_ratio / 0.01) ^ (1 / 2.21)
+
+      - record: gemini:ttfq:p999_pareto
+        expr: 30 * (gemini:ttfq:exceed30s_ratio / 0.001) ^ (1 / 2.21)
+
+      # ─────────────────────────────────────────────────────────────
+      # 5) Slow=60s 임계 도달 추정 비율 (Pareto)
+      #    P(>60) = exceed30s_ratio * (60/30)^(-α)
+      # ─────────────────────────────────────────────────────────────
+      - record: gemini:ttfq:exceed60s_pareto
+        expr: gemini:ttfq:exceed30s_ratio * (2 ^ -2.21)
+
+      # ─────────────────────────────────────────────────────────────
+      # 6) 모형 정합성 잔차 (mean 추정 vs 실측)
+      #    log-normal mean = exp(μ + σ²/2)
+      #    μ = ln(p50), σ = (ln(p95)-ln(p50))/1.645
+      #    σ² = (ln(p95/p50) / 1.645)^2
+      #    →   exp(ln(p50) + ((ln(p95/p50)/1.645)^2)/2)
+      # ─────────────────────────────────────────────────────────────
+      - record: gemini:ttfq:mean_actual
+        expr: |
+          sum(increase(gemini_request_first_quiz_duration_seconds_sum[30d]))
+          / sum(increase(gemini_request_first_quiz_duration_seconds_count[30d]))
+
+      - record: gemini:ttfq:mean_lognormal_estimate
+        expr: |
+          exp(
+            ln(gemini:ttfq:p50)
+            + ((ln(gemini:ttfq:p95) - ln(gemini:ttfq:p50)) / 1.645) ^ 2 / 2
+          )
+
+      - record: gemini:ttfq:fit_residual
+        expr: gemini:ttfq:mean_lognormal_estimate / gemini:ttfq:mean_actual
+
+  # ─────────────────────────────────────────────────────────────
+  # Circuit Breaker 헬스 alert용 derived metrics
+  # ─────────────────────────────────────────────────────────────
+  - name: cb_aiserver_health
+    interval: 30s
+    rules:
+      - record: cb_aiserver:open
+        expr: resilience4j_circuitbreaker_state{name="aiServer", state="open"}
+
+      - record: cb_aiserver:state_changes_1h
+        expr: changes(resilience4j_circuitbreaker_state{name="aiServer", state="open"}[1h])
+
+      # 평가 발동 가능 여부: buffered ≥ min-calls(5)
+      - record: cb_aiserver:evaluation_active
+        expr: |
+          (sum(resilience4j_circuitbreaker_buffered_calls{name="aiServer"})
+            >= bool 5)
+
+  # ─────────────────────────────────────────────────────────────
+  # 60s breach 회복 시간 (TTFQ가 60s 초과 → 다시 60s 이하로 복귀할 때까지)
+  #
+  # 측정 신호: gemini_request_first_quiz_duration_seconds_max
+  #   - Micrometer TimeWindowMax 게이지 (기본 2분 롤링 윈도우)
+  #   - 히스토그램 30s 절단 우회 — 60s 임계 직접 관측 가능
+  #   - >60: 직전 ~2분 내 60s 초과 TTFQ 발생 / ≤60: 슬로우콜 없음
+  # CB slow-call-duration-threshold(60s)와 정렬, 18분 sliding-window 꼬리는 포함하지 않음
+  # ─────────────────────────────────────────────────────────────
+  - name: ttfq_breach_recovery
+    interval: 30s
+    rules:
+      # 인스턴스 전체 max (스크래핑 시점 기준)
+      - record: gemini:ttfq:current_max
+        expr: max(gemini_request_first_quiz_duration_seconds_max)
+
+      # breach 활성 게이지 (1=현재 60s 초과 / 0=정상)
+      - record: gemini:ttfq:breach_60s_active
+        expr: (max(gemini_request_first_quiz_duration_seconds_max) > bool 60)
+
+      # 마지막으로 정상(max ≤ 60)이었던 timestamp.
+      # breach 진입 시 freeze → 회복 시 갱신 → duration 리셋 트리거.
+      # 6h 룩백: 단일 breach가 6h를 넘기면 recovery 추적 불가 (현실에서는 OPEN-state alert가 먼저 발동)
+      - record: gemini:ttfq:breach_60s_last_normal_ts
+        expr: |
+          last_over_time(
+            timestamp(max(gemini_request_first_quiz_duration_seconds_max) <= 60)[6h:30s]
+          )
+
+      # 현재 breach 지속 시간(초). breach 중일 때만 양수, 정상 시 0.
+      # = "TTFQ가 60s 초과한 이후 60s 이하로 회복할 때까지 걸린 시간"
+      # 회복 직후엔 0으로 떨어지고, max_over_time으로 직전 breach 길이 조회 가능.
+      - record: gemini:ttfq:breach_60s_duration_seconds
+        expr: |
+          (time() - gemini:ttfq:breach_60s_last_normal_ts)
+          * (max(gemini_request_first_quiz_duration_seconds_max) > bool 60)
