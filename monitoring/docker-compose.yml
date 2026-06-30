@@ -148,6 +148,7 @@ services:
       - --web.enable-remote-write-receiver
       # Lifecycle API 활성화 (reload, shutdown 등)
       - --web.enable-lifecycle
+      - --web.enable-admin-api
 
     # 네트워크 (monitoring 네트워크에 연결)
     networks:
