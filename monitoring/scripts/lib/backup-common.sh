@@ -350,6 +350,9 @@ ensure_tmp_dir() {
 
 # load_env <monitoring_dir>
 #   monitoring/.env 파일을 export 형태로 로드. 파일 부재 시 스킵.
+#   bash source 방식은 값에 `(`, `` ` ``, `$` 같은 특수문자가 있을 때
+#   subshell로 해석되어 syntax error를 낸다 (예: MYSQL_DSN=user:pw@tcp(host:3306)/db).
+#   정규식 라인 파싱으로 값 원문 그대로 export 하여 특수문자 안전.
 load_env() {
     local mon_dir="$1"
     local env_file="${mon_dir}/.env"
@@ -359,9 +362,21 @@ load_env() {
         return 0
     fi
 
-    set -a
-    # shellcheck disable=SC1090
-    source "$env_file"
-    set +a
+    local line key value
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # 주석·빈 라인 스킵
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line//[[:space:]]/}" ]] && continue
+        # KEY=VALUE 패턴만 수용
+        if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            # 양끝 큰따옴표/작은따옴표 제거 (있으면)
+            if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            fi
+            export "$key=$value"
+        fi
+    done < "$env_file"
     log INFO "환경 파일 로드: ${env_file}"
 }
