@@ -336,7 +336,60 @@ retention_cleanup() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑩ 초기화
+# ⑩ 복원용 유틸 (restore.sh / verify.sh 공용)
+# ═══════════════════════════════════════════════════════════
+
+# verify_local_hash <tar_file> <sha_file>
+#   .sha256 파일 형식은 `<hex>  <basename>` (sha256sum 표준).
+#   tar_file의 로컬 재계산 해시와 비교하여 일치 확인.
+verify_local_hash() {
+    local tar_file="$1"
+    local sha_file="$2"
+    local expected actual
+    expected="$(awk '{print $1}' "$sha_file")"
+    actual="$(hash_file "$tar_file")"
+    if [[ "$expected" != "$actual" ]]; then
+        log ERROR "로컬 해시 불일치: 기대=$expected, 실제=$actual"
+        return 1
+    fi
+    log INFO "로컬 해시 일치: $actual"
+    return 0
+}
+
+# health_poll <url> <max_attempts> <sleep_sec>
+#   curl -sf 성공까지 폴링. 매 시도 사이에 sleep_sec 대기.
+health_poll() {
+    local url="$1"
+    local max_attempts="$2"
+    local sleep_sec="$3"
+    local attempt
+
+    for (( attempt=1; attempt<=max_attempts; attempt++ )); do
+        if curl -sf --max-time 5 "$url" >/dev/null 2>&1; then
+            log INFO "헬스 OK (${url}, ${attempt}/${max_attempts})"
+            return 0
+        fi
+        (( attempt < max_attempts )) && sleep "$sleep_sec"
+    done
+    log ERROR "헬스 미도달 (${url}, ${max_attempts}회 × ${sleep_sec}s)"
+    return 1
+}
+
+# list_available_snapshots <profile> <bucket> <store>
+#   stdout: 해당 스토어의 스냅샷 timestamp(YYYYMMDD-HHMM)를 정렬해 한 줄에 하나씩.
+list_available_snapshots() {
+    local profile="$1"
+    local bucket="$2"
+    local store="$3"
+
+    list_object_keys "$profile" "$bucket" "${store}/" \
+        | grep -E "\.tar\.gz$" \
+        | grep -oE '[0-9]{8}-[0-9]{4}' \
+        | sort -u
+}
+
+# ═══════════════════════════════════════════════════════════
+# ⑪ 초기화
 # ═══════════════════════════════════════════════════════════
 
 # ensure_tmp_dir
