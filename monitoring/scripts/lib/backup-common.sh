@@ -141,13 +141,28 @@ upload_object() {
 }
 
 # download_object <profile> <bucket> <key> <local_file>
+#   실패 판정 강화 (T8 후속 개선):
+#   1. oci 명령 non-zero exit → 실패
+#   2. 결과 파일이 비어있음(0 byte) → 실패 (일부 실패 케이스에서 빈 파일이 남는 경우)
+#   restore.sh / verify.sh 모두 이 함수 결과에 의존하므로 여기서 정확히 걸러야
+#   상위 조기 return이 의도대로 작동한다.
 download_object() {
     local profile="$1" bucket="$2" key="$3" file="$4"
     log INFO "다운로드: ${bucket}/${key} → ${file}"
-    _oci_call "$profile" os object get \
+    if ! _oci_call "$profile" os object get \
         --bucket-name "$bucket" \
         --name "$key" \
-        --file "$file" >/dev/null
+        --file "$file" >/dev/null; then
+        log ERROR "다운로드 실패 (oci 명령 오류): ${bucket}/${key}"
+        rm -f "$file"
+        return 1
+    fi
+    if [[ ! -s "$file" ]]; then
+        log ERROR "다운로드 결과 파일 비어있음: ${file}"
+        rm -f "$file"
+        return 1
+    fi
+    return 0
 }
 
 # delete_object <profile> <bucket> <key>
@@ -392,17 +407,21 @@ list_available_snapshots() {
 }
 
 # get_bucket_usage_bytes <profile> <bucket>
-#   stdout: 버킷의 approximate-size (bytes). 오류 시 0.
+#   stdout: 버킷의 사용 용량 (bytes). 오류 시 0.
 #   T6 verify.sh의 저장소 사용량 임계 알림 및 메트릭용.
+#
+#   T8 후속 개선: OCI의 approximate-size는 활동 활발한 버킷에서 null을 지연 반환하는
+#   경우가 있어(T6 실측 확인) 실시간 정확값을 위해 object list --all로 각 객체 size를
+#   합산한다. 매일 verify.sh 실행 시 요청 1건 소비 (무료 한도 여유).
 get_bucket_usage_bytes() {
     local profile="$1"
     local bucket="$2"
 
-    _oci_call "$profile" os bucket get \
+    _oci_call "$profile" os object list \
         --bucket-name "$bucket" \
-        --fields approximateSize \
+        --all \
         --output json 2>/dev/null \
-        | jq -r '.data."approximate-size" // 0' \
+        | jq -r '[.data[]?.size // 0] | add // 0' \
         || echo 0
 }
 
