@@ -214,9 +214,9 @@ prometheus.exporter.unix "system" {
   enable_collectors = ["textfile"]
 
   textfile {
-    // 호스트 경로(/var/lib/node_exporter/textfile)를 컨테이너 안에 ro 마운트
+    // 호스트 경로(/var/lib/node_exporter/textfile_collector)를 컨테이너 안에 ro 마운트
     // (monitoring/docker-compose.yml alloy.volumes 참조)
-    directory = "/var/lib/node_exporter/textfile"
+    directory = "/var/lib/node_exporter/textfile_collector"
   }
 }
 
