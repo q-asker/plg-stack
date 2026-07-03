@@ -113,8 +113,22 @@ verify_store() {
         return 0
     fi
 
+    # 7일 이내 timestamp만 재검증 대상 (그 이후는 Archive tier로 이관되어
+    # GET 시 24h retrieval 필요, 자동 재검증에 부적합).
+    #   cutoff = YYYYMMDD (7일 전, UTC 기준)
+    #   객체 키의 timestamp 앞 8자리(YYYYMMDD)와 비교
+    local cutoff
+    cutoff="$(date -u -d '7 days ago' +%Y%m%d 2>/dev/null)"
+
     while IFS= read -r timestamp; do
         [[ -z "$timestamp" ]] && continue
+
+        # Archive 이관 판정: timestamp의 날짜 부분이 cutoff보다 오래됐으면 스킵
+        local ts_date="${timestamp%%-*}"
+        if [[ -n "$cutoff" && "$ts_date" < "$cutoff" ]]; then
+            log INFO "[${store}] ${timestamp} 7일 초과 (Archive tier) → 재검증 스킵"
+            continue
+        fi
 
         local tar_key="${store}/${timestamp}-${store}.tar.gz"
         local sha_key="${store}/${timestamp}-${store}.sha256"

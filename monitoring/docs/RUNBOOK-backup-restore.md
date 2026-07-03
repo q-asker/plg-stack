@@ -452,6 +452,55 @@ done
 
 ---
 
+## 8-A. Archive tier retrieval (8~14일 전 시점 복원)
+
+**보존 정책** (Terraform lifecycle):
+```
+0~6d   : Standard tier   (즉시 조회·복원 가능)
+7~14d  : Archive tier    (retrieval 24h 대기 후 복원)
+15d~   : 자동 삭제
+```
+
+8~14일 전 시점을 복원하려면 restore.sh 실행 전에 **Archive → Standard restore 요청**이 필요합니다.
+
+### 8-A.1 Archive tier인지 확인
+
+```bash
+oci --profile BACKUP_MON_READER os object list \
+  -bn qasker-monitoring-backup --prefix "prometheus/" --all \
+  | jq -r '.data[] | "\(."storage-tier")  \(.name)"' | grep -v Standard
+# → Archive로 표시되는 객체는 retrieval 필요
+```
+
+### 8-A.2 Restore 요청 (Archive → Standard 임시 복사)
+
+```bash
+TARGET_KEY=prometheus/20260625-0300-prometheus.tar.gz
+
+oci --profile BACKUP_MON_WRITER os object restore \
+  -bn qasker-monitoring-backup \
+  --name "$TARGET_KEY" \
+  --hours 24     # 임시 Standard 복사본 유지 시간
+```
+
+sha256도 동일하게. 응답 후 **약 24시간 뒤** GET 가능. 상태 조회:
+
+```bash
+oci --profile BACKUP_MON_READER os object head \
+  -bn qasker-monitoring-backup --name "$TARGET_KEY" \
+  | jq '{"storage-tier": ."storage-tier", "archival-state": ."archival-state"}'
+# → archival-state이 "Restored" 되면 24h 동안 GET 가능
+```
+
+### 8-A.3 restore.sh 실행
+
+Archive에서 restored 상태 확인 후:
+```bash
+sudo ./monitoring/scripts/restore.sh --target=prometheus --snapshot=20260625-0300
+```
+
+---
+
 ## 9. NSG 점검 (9090 외부 차단)
 
 ### 9.1 왜 필수인가
@@ -689,6 +738,7 @@ oci --profile BACKUP_MON_READER os object list \
 | `.env` 값에 `(` 포함하면서 따옴표 없음 | `load_env` 정규식 파싱 통과 필수 | 값 자체는 문제 없음. bash source 방식 회피 이유 |
 | 로컬 Mac에서 `docker compose up`로 검증 | `/mnt/monitoring` 없음 | OCI-3에서만 실측 |
 | 잘못된 `--snapshot` 형식 | exit 2 | 형식: `YYYYMMDD-HHMM` (예: `20260701-1447`) |
+| 8~14일 전 시점 복원 시 다운로드 실패 | Archive tier retrieval 필요 | §8-A 절차: `os object restore` 요청 후 24h 대기 |
 | verify.sh 손상 시나리오 테스트 후 원본 미복원 | 다음 verify에서 계속 알림 | §7.4 원위치 복원 or §7.5 sha 재생성 |
 | NSG 9090 공용 허용 | admin API 파괴 위험 노출 | §9 정기 점검 |
 
