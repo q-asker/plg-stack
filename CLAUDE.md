@@ -100,8 +100,16 @@ plg-stack/
 │   │   └── rules.yml            ← Recording rules (TTFQ 분위수/외삽, CB 헬스, breach 회복)
 │   ├── grafana/
 │   │   └── provisioning/
-│   │       └── datasources/
-│   │           └── datasources.yml
+│   │       ├── datasources/
+│   │       │   └── datasources.yml
+│   │       ├── dashboards/
+│   │       │   └── json/                    ← 카테고리 폴더별 대시보드 JSON
+│   │       │       ├── Q-Asker API 서버/    ← HTTP, JVM, 서킷브레이커, 로그, 인프라 등
+│   │       │       ├── 데이터베이스/        ← HeatWave MySQL, L2 백업
+│   │       │       ├── 모니터링 서버/       ← Alloy, Prometheus, 노드 인프라
+│   │       │       ├── 서킷브레이커 튜닝/
+│   │       │       └── 쿼리 튜닝/
+│   │       └── alerting/
 │   ├── alloy/
 │   │   └── config.alloy         ← MySQL exporter 설정
 │   └── local/                   ← 로컬 테스트용 모니터링 스택
