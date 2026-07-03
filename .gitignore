@@ -43,5 +43,6 @@ shrimp-rules.md
 .claude
 shrimp_data
 docs
+!monitoring/docs/
 .specify
 /specs
