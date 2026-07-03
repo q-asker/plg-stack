@@ -181,6 +181,12 @@ services:
       # Alloy가 docker 명령어를 통해 컨테이너 로그도 수집
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+      # textfile collector 디렉토리 마운트 (읽기 전용, T5)
+      # backup.sh(cron)가 원자적으로 write한 .prom 파일을
+      # Alloy가 매 scrape 시 read하여 /metrics에 노출
+      # 호스트 사전 준비: sudo mkdir -p /var/lib/node_exporter/textfile && sudo chmod 755 ...
+      - /var/lib/node_exporter/textfile:/var/lib/node_exporter/textfile:ro
+
     environment:
       # MySQL 접속 정보 (prometheus.exporter.mysql 용)
       # 환경 변수로 주입하여 .yml 파일에 노출되지 않게 함 (보안)

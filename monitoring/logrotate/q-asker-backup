@@ -1,0 +1,24 @@
+# =============================================================
+# q-asker 백업 로그 로테이션 (T5)
+# =============================================================
+# 배포 방법 (OCI-3 호스트에서):
+#   sudo cp monitoring/logrotate/q-asker-backup /etc/logrotate.d/q-asker-backup
+#   sudo chown root:root /etc/logrotate.d/q-asker-backup
+#   sudo chmod 644     /etc/logrotate.d/q-asker-backup
+#
+# 검증:
+#   sudo logrotate -d /etc/logrotate.d/q-asker-backup
+#
+# 정책: 주 1회 회전, 최대 4주 보존 (약 1개월치)
+
+/var/log/q-asker-backup.log {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 root root
+    dateext
+    dateformat -%Y%m%d
+}

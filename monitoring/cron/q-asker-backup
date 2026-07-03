@@ -1,0 +1,26 @@
+# =============================================================
+# q-asker 모니터링 스택 백업/검증 cron 스케줄 (T5)
+# (plg-stack: specs/001-prometheus-loki-backup-recovery)
+# =============================================================
+# 배포 방법 (OCI-3 호스트에서):
+#   sudo cp monitoring/cron/q-asker-backup /etc/cron.d/q-asker-backup
+#   sudo chown root:root /etc/cron.d/q-asker-backup
+#   sudo chmod 644     /etc/cron.d/q-asker-backup
+#
+# 로그 확인:
+#   sudo tail -f /var/log/q-asker-backup.log
+#
+# TZ=Asia/Seoul로 KST 03:00 확정 실행 (spec Q4).
+# 컨테이너 timezone(UTC)에 의존하지 않아 배포 환경 이식성이 높다.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TZ=Asia/Seoul
+
+# ─── 백업: 매일 KST 03:00 (spec Q4) ───
+0 3 * * * root /home/ubuntu/plg-stack/monitoring/scripts/backup.sh --target=both >> /var/log/q-asker-backup.log 2>&1
+
+# ─── 검증(verify.sh): 매일 KST 04:00 ───
+# T6에서 verify.sh 완성 후 아래 한 줄의 선두 '#'을 제거해 활성화한다:
+#   sudo sed -i 's|^# 0 4|0 4|' /etc/cron.d/q-asker-backup
+# 0 4 * * * root /home/ubuntu/plg-stack/monitoring/scripts/verify.sh --scope=all >> /var/log/q-asker-backup.log 2>&1

@@ -205,6 +205,19 @@ prometheus.remote_write "local_prometheus" {
 // broker-1/2/3, springboot와 동일한 패턴
 prometheus.exporter.unix "system" {
   // 기본 수집기가 자동으로 CPU, 메모리, 디스크, 네트워크, 부하 지표를 포함
+
+  // textfile collector 활성화 (T5) — cron 배치 작업(backup.sh)의 메트릭 노출용
+  //   backup.sh가 원자적으로 write하는 .prom 파일을 매 scrape 시 read하여
+  //   /metrics 엔드포인트에 노출한다. 별도 pushgateway 없이 배치 → Prometheus 연결.
+  //   노출 메트릭: q_asker_backup_last_success_timestamp{store}, duration_seconds,
+  //               size_bytes, loki_downtime_seconds
+  enable_collectors = ["textfile"]
+
+  textfile {
+    // 호스트 경로(/var/lib/node_exporter/textfile)를 컨테이너 안에 ro 마운트
+    // (monitoring/docker-compose.yml alloy.volumes 참조)
+    directory = "/var/lib/node_exporter/textfile"
+  }
 }
 
 // ----- Step 2: exporter에서 15초마다 메트릭 스크래프 -----
