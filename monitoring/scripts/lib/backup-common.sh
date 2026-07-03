@@ -265,12 +265,15 @@ notify_slack() {
 # ⑧ Prometheus textfile collector 메트릭 노출
 # ═══════════════════════════════════════════════════════════
 
-# write_metrics_atomic <metrics_content>
-#   TEXTFILE_DIR/q_asker_backup.prom 을 atomic write.
-#   내용은 여러 줄 문자열로 전달 (호출자가 조립).
+# write_metrics_atomic <metrics_content> [filename]
+#   TEXTFILE_DIR/<filename> 을 atomic write.
+#   filename 기본값: q_asker_backup.prom (backup.sh 산출물).
+#   verify.sh 등 다른 스크립트는 별도 파일명(예: q_asker_verify.prom) 지정하여
+#   backup.sh와의 파일 쓰기 충돌을 회피한다 (T6 Q1=b).
 write_metrics_atomic() {
     local content="$1"
-    local target="${TEXTFILE_DIR}/q_asker_backup.prom"
+    local filename="${2:-q_asker_backup.prom}"
+    local target="${TEXTFILE_DIR}/${filename}"
     local tmp
 
     if [[ ! -d "$TEXTFILE_DIR" ]]; then
@@ -386,6 +389,21 @@ list_available_snapshots() {
         | grep -E "\.tar\.gz$" \
         | grep -oE '[0-9]{8}-[0-9]{4}' \
         | sort -u
+}
+
+# get_bucket_usage_bytes <profile> <bucket>
+#   stdout: 버킷의 approximate-size (bytes). 오류 시 0.
+#   T6 verify.sh의 저장소 사용량 임계 알림 및 메트릭용.
+get_bucket_usage_bytes() {
+    local profile="$1"
+    local bucket="$2"
+
+    _oci_call "$profile" os bucket get \
+        --bucket-name "$bucket" \
+        --fields approximateSize \
+        --output json 2>/dev/null \
+        | jq -r '.data."approximate-size" // 0' \
+        || echo 0
 }
 
 # ═══════════════════════════════════════════════════════════
