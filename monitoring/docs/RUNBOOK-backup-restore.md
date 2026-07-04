@@ -452,6 +452,64 @@ done
 
 ---
 
+## 8-B. 월간 아카이브 (옛날 로그 장기 보존)
+
+Prometheus/Loki 자체가 180일 retention이라 그보다 오래된 데이터는 매일 백업에도 담기지 않는다. 옛날 로그를 장기 보존하려면 **매월 대표본 하나만 별도 접두사에 영구 보관**한다.
+
+### 8-B.1 자동 실행
+
+- 스크립트: `monitoring/scripts/archive-monthly.sh`
+- cron: 매월 1일 KST 05:00 (`/etc/cron.d/q-asker-backup`)
+- 동작: 전월 마지막 백업 4개(prom+loki tar.gz + sha256)를 `monthly-archive/YYYYMM-<store>.<ext>`로 복사 후 Archive tier로 이관
+
+### 8-B.2 저장 크기 · 정책
+
+- 매월 4개 객체 ≈ 1 GiB (Prom 927 MiB + Loki 117 MiB + 소량 sha256)
+- **자동 삭제 없음** (Terraform lifecycle에서 `monthly-archive/*` 제외)
+- verify.sh의 90% 임계 알림이 저장소 압박 감지 시 알림 → 운영자 수동 정리 (아래 8-B.4)
+
+### 8-B.3 아카이브 상태 확인
+
+```bash
+# 모든 월간 아카이브 목록 + tier
+oci --profile BACKUP_MON_READER os object list \
+  -bn qasker-monitoring-backup --prefix "monthly-archive/" --all \
+  | jq -r '.data[] | "\(."storage-tier")  \(."time-created" | .[:10])  \(.name)"' \
+  | sort
+```
+
+### 8-B.4 오래된 아카이브 수동 정리 (임계 알림 발생 시)
+
+```bash
+# 가장 오래된 아카이브부터 삭제 (예: 2년 이상 된 것)
+CUTOFF_YM=$(TZ=Asia/Seoul date --date='24 months ago' +%Y%m)
+
+for KEY in $(oci --profile BACKUP_MON_READER os object list \
+              -bn qasker-monitoring-backup --prefix "monthly-archive/" --all \
+              | jq -r '.data[].name' \
+              | awk -F'/' '{ split($2, a, "-"); if (a[1] < "'$CUTOFF_YM'") print $0 }'); do
+    echo "삭제 예정: $KEY"
+    # 실제 삭제는 수동 확인 후:
+    # oci --profile BACKUP_MON_WRITER os object delete -bn qasker-monitoring-backup --name "$KEY" --force
+done
+```
+
+### 8-B.5 옛날 아카이브 복원
+
+`monthly-archive/*`는 Archive tier이므로 §8-A와 동일한 절차 (retrieval 요청 → 24h 대기 → GET).
+
+```bash
+# 예: 2년 전 데이터 복원
+oci --profile BACKUP_MON_WRITER os object restore \
+  -bn qasker-monitoring-backup \
+  --name "monthly-archive/202506-prometheus.tar.gz" \
+  --hours 24
+
+# 24시간 후 restore.sh와 별도로 수동 tar-x + Prometheus 격리 컨테이너 확인
+```
+
+---
+
 ## 8-A. Archive tier retrieval (8~14일 전 시점 복원)
 
 **보존 정책** (Terraform lifecycle):
