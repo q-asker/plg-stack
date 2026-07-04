@@ -456,6 +456,38 @@ done
 
 Prometheus/Loki 자체가 180일 retention이라 그보다 오래된 데이터는 매일 백업에도 담기지 않는다. 옛날 로그를 장기 보존하려면 **매월 대표본 하나만 별도 접두사에 영구 보관**한다.
 
+### 8-B.0 아카이브 대상 상세
+
+**매월 1일 KST 05:00에 아카이브되는 것은 다음 4개 객체입니다.**
+
+| 원본 위치 (Standard tier) | 아카이브 위치 (Archive tier) |
+|---------------------------|-------------------------------|
+| `prometheus/YYYYMMDD-HHMM-prometheus.tar.gz` | `monthly-archive/YYYYMM-prometheus.tar.gz` |
+| `prometheus/YYYYMMDD-HHMM-prometheus.sha256` | `monthly-archive/YYYYMM-prometheus.sha256` |
+| `loki/YYYYMMDD-HHMM-loki.tar.gz` | `monthly-archive/YYYYMM-loki.tar.gz` |
+| `loki/YYYYMMDD-HHMM-loki.sha256` | `monthly-archive/YYYYMM-loki.sha256` |
+
+- 4개 객체 합계 **약 1 GiB/월** (Prom 927 MiB + Loki 117 MiB + 소량 sha256)
+- 파일명은 원본 timestamp 대신 `YYYYMM` 태그로 단순화 (예: `202607-prometheus.tar.gz`)
+- 원본 timestamp는 그 달의 **마지막 백업 시점**이 자동 선택됨 (`list_available_snapshots`에서 `YYYYMM-*`로 시작하는 것 중 최신)
+
+**각 아카이브 파일이 담고 있는 데이터 범위**:
+
+| 아카이브 | tar.gz 안의 실제 데이터 범위 |
+|----------|-------------------------------|
+| `202606-*.tar.gz` (2026-06 마지막 백업) | 2025-12 말 ~ 2026-06 말 (약 180일) |
+| `202607-*.tar.gz` (2026-07 마지막 백업) | 2026-01 말 ~ 2026-07 말 |
+| `202608-*.tar.gz` (2026-08 마지막 백업) | 2026-02 말 ~ 2026-08 말 |
+
+**옛날 로그 유지 원리**: full backup의 특성상 각 아카이브 파일에 그 시점까지의 최대 180일치가 담긴다. 오래된 시점의 아카이브 파일을 삭제하지 않으면 **그 시점의 데이터가 무기한 살아있다**. 예를 들어 2025-12 데이터를 5년 후에도 조회하려면 `202606-*` 파일만 있으면 됨.
+
+**실행 예시** (2026-08-01 KST 05:00):
+1. YYYY_MM = `202607`
+2. `prometheus/`에서 `20260731-*` 중 최신 조회 → 예: `20260731-0300`
+3. 4개 원본 객체를 `monthly-archive/202607-<store>.<ext>`로 `os object copy`
+4. 4개 모두 `os object update-storage-tier --storage-tier Archive`
+5. Slack SUCCESS 알림 발송
+
 ### 8-B.1 자동 실행
 
 - 스크립트: `monitoring/scripts/archive-monthly.sh`
