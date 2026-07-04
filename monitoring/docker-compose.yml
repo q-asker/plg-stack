@@ -12,7 +12,7 @@ services:
   # ═══════════════════════════════════════════════════════════
   loki:
     # Grafana 공식 Loki 이미지, 버전 3.6.0 (최신 안정 버전)
-    image: grafana/loki:3.6.0
+    image: grafana/loki:3.7.3
     # 컨테이너 이름 (docker logs loki 로 로그 확인)
     container_name: loki
     # 컨테이너 자동 재시작 (OCI 인스턴스 재부팅 시에도 자동 시작)
