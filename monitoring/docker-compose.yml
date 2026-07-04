@@ -54,7 +54,7 @@ services:
   # ═══════════════════════════════════════════════════════════
   grafana:
     # Grafana 공식 이미지, 버전 12.4.0
-    image: grafana/grafana:12.4.0
+    image: grafana/grafana:12.4.5
     # 컨테이너 이름
     container_name: grafana
     # 자동 재시작
