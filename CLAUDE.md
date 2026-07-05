@@ -12,9 +12,9 @@
 | | Java | 21 (ARM 지원) | JVM 런타임 |
 | | LibreOffice | 7.x | OCI-2 문서 변환 (UNO TCP) |
 | **에이전트/수집** | Grafana Alloy | latest | 로그+메트릭 수집 (Promtail 후속) |
-| **로그 저장소** | Loki | 3.6.0 | 라벨 기반 로그 인덱싱 및 저장 |
-| **메트릭 저장소** | Prometheus | v3.10.0 | 시계열 메트릭 저장 및 PromQL 쿼리 |
-| **시각화** | Grafana | 12.4.0 | 대시보드 및 알림 |
+| **로그 저장소** | Loki | 3.7.3 | 라벨 기반 로그 인덱싱 및 저장 |
+| **메트릭 저장소** | Prometheus | v3.13.0 | 시계열 메트릭 저장 및 PromQL 쿼리 |
+| **시각화** | Grafana | 13.1.0 | 대시보드 및 알림 |
 | **데이터베이스** | OCI HeatWave MySQL | 관리형 | 애플리케이션 및 메타데이터 저장 |
 | **백업 저장소** | OCI Object Storage | Always Free | Prometheus/Loki 백업 tarball (버킷 `qasker-monitoring-backup`) |
 | **배포/오케스트레이션** | Docker | 24.x+ | 컨테이너 런타임 |
