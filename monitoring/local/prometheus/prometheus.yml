@@ -23,3 +23,15 @@ scrape_configs:
       - targets: ["host.docker.internal:9090"]
         labels:
           instance: "springboot-local"
+
+  # ----- cAdvisor: 컨테이너 CPU/메모리 (q-asker-db 등) -----
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["local-cadvisor:8080"]
+
+  # ----- mysqld_exporter: MySQL 서버 메트릭 (전송량·InnoDB 카운터) -----
+  - job_name: "mysql"
+    static_configs:
+      - targets: ["local-mysqld-exporter:9104"]
+        labels:
+          instance: "q-asker-db"
