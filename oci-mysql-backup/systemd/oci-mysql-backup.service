@@ -1,0 +1,46 @@
+[Unit]
+Description=OCI MySQL HeatWave L2 backup to Object Storage
+Documentation=https://github.com/q-asker/api/blob/develop/specs/001-oci-mysql-backup-restore/spec.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=oci-mysql-backup
+Group=oci-mysql-backup
+
+EnvironmentFile=/etc/oci-mysql-backup/env
+
+# OCI CLI가 ~/.oci/config를 찾을 수 있도록 HOME 지정
+Environment=HOME=/var/lib/oci-mysql-backup
+
+ExecStart=/opt/oci-mysql-backup/backup.sh
+
+StandardOutput=journal
+StandardError=journal
+
+# 보안 강화
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+
+# 쓰기 허용 경로
+ReadWritePaths=/var/lib/oci-mysql-backup
+ReadWritePaths=/var/lib/node_exporter/textfile_collector
+ReadWritePaths=/var/lock
+
+# 리소스 제한 (Always Free 인스턴스 부하 완화)
+CPUQuota=50%
+MemoryMax=512M
+
+# 실패 시 즉시 종료 (재시도는 다음 timer 시각에)
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

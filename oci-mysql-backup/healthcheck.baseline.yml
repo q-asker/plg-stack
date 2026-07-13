@@ -1,0 +1,36 @@
+{
+  "_note": "T7 헬스체크 베이스라인. JSON in .yml (jq 파싱 안정성). 스키마·테이블·대표 테이블별 허용 오차 정의. tolerance = max(tolerance_abs, tolerance_ratio * expected).",
+  "_last_reviewed": "2026-07-01",
+
+  "schemas": {
+    "expected": 1,
+    "tolerance_abs": 0,
+    "_note": "복구본 관점: mysqldump는 qaskerdb만 백업하므로 복구된 격리 환경엔 qaskerdb 하나만 존재. OCI 관리형 스키마는 접근 권한 없어 백업 대상 아님."
+  },
+
+  "tables": {
+    "tolerance_abs": 2,
+    "_note": "기대값은 backup 시점 meta.json.tables 사용. 마이그레이션 여유로 ±2 허용."
+  },
+
+  "representative_tables": [
+    {
+      "name": "user",
+      "tolerance_abs": 100,
+      "tolerance_ratio": 0.10,
+      "_note": "사용자 규모 대비 6h RPO 여유"
+    },
+    {
+      "name": "problem_set",
+      "tolerance_abs": 500,
+      "tolerance_ratio": 0.10,
+      "_note": "Q-Asker 도메인 핵심 (문제 세트)"
+    },
+    {
+      "name": "quiz_history",
+      "tolerance_abs": 5000,
+      "tolerance_ratio": 0.15,
+      "_note": "쓰기 트래픽 가장 큰 테이블. 6h 사이 대량 증가 여유"
+    }
+  ]
+}

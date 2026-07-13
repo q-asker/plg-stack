@@ -16,10 +16,10 @@
 | **메트릭 저장소** | Prometheus | v3.13.0 | 시계열 메트릭 저장 및 PromQL 쿼리 |
 | **시각화** | Grafana | 13.1.0 | 대시보드 및 알림 |
 | **데이터베이스** | OCI HeatWave MySQL | 관리형 | 애플리케이션 및 메타데이터 저장 |
-| **백업 저장소** | OCI Object Storage | Always Free | Prometheus/Loki 백업 tarball (버킷 `qasker-monitoring-backup`) |
+| **백업 저장소** | OCI Object Storage | Always Free | Prometheus/Loki 백업 tarball (버킷 `qasker-monitoring-backup`) + MySQL L2 덤프 (버킷 `qasker-mysql-backup`) |
 | **배포/오케스트레이션** | Docker | 24.x+ | 컨테이너 런타임 |
 | | Docker Compose | 2.x+ | 다중 서비스 오케스트레이션 |
-| **스케줄러** | 호스트 cron | Ubuntu 기본 | 매일 KST 03:00 백업, 04:00 재검증 (TZ=Asia/Seoul) |
+| **스케줄러** | 호스트 cron + systemd timer | Ubuntu 기본 | cron: 매일 KST 03:00 백업·04:00 재검증 (TZ=Asia/Seoul) / systemd: MySQL L2 백업 6시간 주기 |
 | **인프라** | OCI Always Free | — | 3개 ARM 인스턴스 + 관리형 MySQL |
 
 ## 명령어 (Scripts)
@@ -115,6 +115,8 @@ curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_verify_fail_to
       └────────────────────────────┘
 ```
 
+**MySQL L2 백업 (별도 서브시스템, spec 001-oci-mysql-backup-restore)**: OCI-3에서 systemd timer가 6시간 주기(UTC 00·06·12·18 = KST 09·15·21·03)로 `oci-mysql-backup/backup.sh`를 실행 → HeatWave MySQL을 `mysqldump`(gzip+sha256)하여 별도 버킷 `qasker-mysql-backup`에 PUT한다. PLG 백업(cron)과 독립적으로 동작하며, flock으로 백업/복구/GameDay를 직렬화하고 Prometheus textfile 컬렉터로 결과 메트릭을 노출한다.
+
 ### 디렉토리 구조
 
 ```
@@ -170,6 +172,22 @@ plg-stack/
 │       ├── docker-compose.yml   ← Prometheus + Grafana (로컬)
 │       └── prometheus/
 │           └── prometheus.yml   ← Spring Boot Actuator 스크래핑
+│
+├── oci-mysql-backup/            ← HeatWave MySQL L2 백업 (systemd, spec 001-oci-mysql-backup-restore)
+│   ├── backup.sh                ← mysqldump → gzip+sha256 → Object Storage PUT (6시간 주기)
+│   ├── restore.sh               ← 재해 복구 진입점 (원격 호스트용)
+│   ├── restore-local.sh         ← 로컬 Docker MySQL로 복원 (분석용)
+│   ├── masked-export.sh         ← 민감정보 마스킹 덤프
+│   ├── healthcheck.sh           ← baseline 대비 스키마/테이블 헬스체크
+│   ├── deploy.sh                ← /opt 배치 + systemd unit 등록 (sudo)
+│   ├── env.example              ← EnvironmentFile 템플릿
+│   ├── healthcheck.baseline.yml ← 헬스체크 기준선
+│   ├── lib/
+│   │   ├── metadata.sh          ← DB 메타데이터(스키마/row 카운트) JSON
+│   │   └── metrics.sh           ← Prometheus textfile 메트릭 갱신
+│   └── systemd/
+│       ├── oci-mysql-backup.service  ← oneshot 백업 (User=oci-mysql-backup)
+│       └── oci-mysql-backup.timer    ← 6시간 주기 (UTC 00·06·12·18)
 │
 ├── remote-node.env.example      ← 원격 노드 공통 환경 변수
 └── .claude/                     ← Claude Code 설정 디렉토리

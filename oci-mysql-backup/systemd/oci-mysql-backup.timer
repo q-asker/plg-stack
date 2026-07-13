@@ -1,0 +1,23 @@
+[Unit]
+Description=Trigger OCI MySQL L2 backup every 6 hours
+Documentation=https://github.com/q-asker/api/blob/develop/specs/001-oci-mysql-backup-restore/spec.md
+Requires=oci-mysql-backup.service
+
+[Timer]
+# 6시간 주기 (UTC 00, 06, 12, 18시)
+# = KST 09, 15, 21, 03시
+OnCalendar=*-*-* 00,06,12,18:00:00
+
+# 시스템이 꺼져있어 놓친 실행이 있으면 부팅 후 즉시 1회 실행
+Persistent=true
+
+# 시각 정확도 완화 (부하 분산)
+AccuracySec=1min
+
+# 실행 간 최소 간격 안전 장치
+RandomizedDelaySec=30s
+
+Unit=oci-mysql-backup.service
+
+[Install]
+WantedBy=timers.target
