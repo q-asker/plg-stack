@@ -4,15 +4,20 @@
 # (restore.sh 는 GameDay용 유니크 격리 컨테이너 / 이건 분석용 고정 컨테이너)
 # ============================================================
 # 목적:
-#   OCI 백업(.sql.gz)을 다운로드해, 스크립트가 관리하는 고정 로컬 MySQL
-#   컨테이너(기본 local-mysql-prod:3307)에 qaskerdb로 적재한다.
+#   OCI 버킷의 "마스킹본"(masked/ prefix)을 다운로드해, 스크립트가 관리하는 고정
+#   로컬 MySQL 컨테이너(기본 local-mysql-prod:3307)에 qaskerdb로 적재한다.
 #   개발용 q-asker-db(3306)는 건드리지 않는다. EXPLAIN·인덱스·테이블크기 분석용.
 #
+# 기본 소스는 마스킹본(--source=masked)이라 개발자는 옵션 없이 실행해도 원본 PII가
+# 로컬에 닿지 않는다. 원본(DR) 적재는 트러스트 존 전용으로 --source=dr 를 명시해야 한다
+# (masked-export.sh 에 먹일 staging 준비 등).
+#
 # 사용법:
-#   ./restore-local.sh --latest                              # 최신 백업 자동
-#   ./restore-local.sh 2026/07/12/qasker-mysql-...Z.sql.gz   # 특정 객체
-#   ./restore-local.sh --file=/tmp/prod.sql.gz               # 이미 받은 덤프
-#   옵션: --container=NAME --port=N --database=DB --root-pwd=PW --no-verify --keep -h
+#   ./restore-local.sh --latest                              # 최신 마스킹본 자동
+#   ./restore-local.sh masked/2026/07/12/qasker-masked-...Z.sql.gz  # 특정 마스킹 객체
+#   ./restore-local.sh --file=/tmp/masked.sql.gz             # 이미 받은 덤프
+#   ./restore-local.sh --source=dr --latest                  # ⚠️ 트러스트 존: 원본 DR 적재
+#   옵션: --source=masked|dr --container=NAME --port=N --database=DB --root-pwd=PW --no-verify --keep -h
 #
 # 흐름:
 #   1. 덤프 확보(--file 그대로 / 아니면 OCI 다운로드) + sha256 검증
@@ -28,6 +33,7 @@ set -uo pipefail
 : "${OCI_PROFILE:=BACKUP_READER}"
 : "${DOCKER_IMAGE:=mysql:8.0}"
 : "${WORK_BASE_DIR:=/tmp}"
+: "${MASKED_PREFIX:=masked/}"
 
 CONTAINER="local-mysql-prod"
 HOST_PORT="3307"
@@ -37,6 +43,7 @@ NO_VERIFY=0
 KEEP_DB=0
 OBJECT_KEY=""
 FILE=""
+SOURCE="masked"   # 기본 소스: 마스킹본(masked/ prefix). dr 은 트러스트 존 전용 원본.
 
 log()  { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
 fail() { log "[FAIL] stage=$1 exit=$2"; exit "$2"; }
@@ -52,6 +59,8 @@ while (( $# > 0 )); do
   case "$1" in
     --latest)      OBJECT_KEY="__LATEST__" ;;
     --file=*)      FILE="${1#--file=}" ;;
+    --source=*)    SOURCE="${1#--source=}" ;;
+    --dr)          SOURCE="dr" ;;
     --container=*) CONTAINER="${1#--container=}" ;;
     --port=*)      HOST_PORT="${1#--port=}" ;;
     --database=*)  DATABASE="${1#--database=}" ;;
@@ -68,6 +77,21 @@ done
 command -v docker >/dev/null || fail "no-docker" 12
 [[ -n "$FILE" || -n "$OBJECT_KEY" ]] || usage 1
 
+# ─── 소스 검증 (기본 masked, dr 은 트러스트 존 전용) ───
+case "$SOURCE" in
+  masked)
+    # masked 모드에서 명시 객체키는 반드시 masked/ 로 시작해야 함(실수로 DR 키 지정 차단)
+    if [[ -n "$OBJECT_KEY" && "$OBJECT_KEY" != "__LATEST__" && "$OBJECT_KEY" != "$MASKED_PREFIX"* ]]; then
+      log "[ERR] --source=masked 인데 객체키가 ${MASKED_PREFIX} 로 시작하지 않음: $OBJECT_KEY"
+      log "      원본 DR 을 적재하려면 --source=dr 을 명시하세요(트러스트 존 전용)."
+      exit 1
+    fi ;;
+  dr)
+    log "[WARN] ⚠️  --source=dr: 원본(비마스킹) PII 를 로컬에 적재합니다. 트러스트 존에서만 사용하세요." ;;
+  *)
+    log "[ERR] 알 수 없는 --source: $SOURCE (masked|dr)"; exit 1 ;;
+esac
+
 WORK_DIR="$(mktemp -d "$WORK_BASE_DIR/oci-mysql-restore-local.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
@@ -80,10 +104,18 @@ if [[ -n "$FILE" ]]; then
 else
   command -v oci >/dev/null || fail "no-oci" 1
   if [[ "$OBJECT_KEY" == "__LATEST__" ]]; then
-    log "[1/4] --latest: 최신 sql.gz 조회..."
-    OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" \
-      --query 'sort_by(data,&"time-created")[?ends_with(name,`sql.gz`)]|[-1].name' \
-      --raw-output 2>/dev/null)"
+    log "[1/4] --latest($SOURCE): 최신 sql.gz 조회..."
+    if [[ "$SOURCE" == "masked" ]]; then
+      # masked/ prefix 로 서버측 제한 → DR 객체는 애초에 조회 대상 아님
+      OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" --prefix "$MASKED_PREFIX" \
+        --query 'sort_by(data,&"time-created")[?ends_with(name,`sql.gz`)]|[-1].name' \
+        --raw-output 2>/dev/null)"
+    else
+      # dr: masked/ prefix 는 제외하고 DR 백업(YYYY/MM/DD/) 중 최신
+      OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" \
+        --query 'sort_by(data,&"time-created")[?ends_with(name,`sql.gz`) && !starts_with(name,`masked/`)]|[-1].name' \
+        --raw-output 2>/dev/null)"
+    fi
     [[ -z "$OBJECT_KEY" || "$OBJECT_KEY" == "null" ]] && fail "no-backup" 6
     log "[1/4] 선택: $OBJECT_KEY"
   fi
