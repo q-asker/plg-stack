@@ -68,9 +68,21 @@ command -v docker >/dev/null || { log "[ERR] docker 없음"; exit 1; }
 mexec()  { docker exec -i "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" 2>/dev/null; }
 mquery() { docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" -N -e "$1" 2>/dev/null; }
 
-# pii_classification 존재 확인
+# ── 사전 점검: 실패 원인을 단계별로 정확히 진단 ──
+# (기존엔 접속·DB 실패까지 전부 "pii_classification 없음"으로 오도됐다)
+docker ps --format '{{.Names}}' | grep -qx "$CONTAINER" \
+  || { log "[ERR] 컨테이너 '$CONTAINER' 실행 중 아님 — restore-local.sh --source=dr --latest 로 staging 먼저 적재"; exit 1; }
+
+docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" -N -e "SELECT 1" >/dev/null 2>&1 \
+  || { log "[ERR] '$CONTAINER' 접속 실패 — root 비밀번호(--root-pwd) 확인"; exit 1; }
+
+if [ -z "$(docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" -N -e "SHOW DATABASES LIKE '$DB'" 2>/dev/null)" ]; then
+  log "[ERR] '$CONTAINER' 에 DB '$DB' 없음 — restore-local.sh --source=dr --latest 로 최신 DR 적재 먼저"; exit 1
+fi
+
+# pii_classification 존재 확인 (여기까지 왔으면 접속·DB 는 정상)
 if [ -z "$(mquery "SELECT 1 FROM information_schema.tables WHERE table_schema='$DB' AND table_name='pii_classification'")" ]; then
-  log "[ERR] $DB.pii_classification 없음 — V15 마이그레이션 미적용?"; exit 1
+  log "[ERR] $DB.pii_classification 없음 — 이 staging 이 V14 이전의 오래된 DR 일 수 있음. 최신 DR 재적재 필요."; exit 1
 fi
 
 # ── 커버리지 가드: 미분류 컬럼(분류표에 아예 없음) 검출 ──
