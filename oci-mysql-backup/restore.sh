@@ -92,8 +92,9 @@ while [[ $# -gt 0 ]]; do
     --env) ENV_TYPE="$2"; shift 2 ;;
     --latest) OBJECT_KEY="__LATEST__"; shift ;;
     --list)
-      oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" \
-        --query 'data[?ends_with(name,`sql.gz`)].name' --output table
+      # --all: 페이지네이션으로 최신 목록이 잘리는 것 방지. masked/ 는 DR 대상 아니라 제외.
+      oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" --all \
+        --query 'sort_by(data[?ends_with(name,`sql.gz`) && !starts_with(name,`masked/`)],&name)[].name' --output table
       exit 0 ;;
     -h|--help) usage; exit 0 ;;
     *) OBJECT_KEY="$1"; shift ;;
@@ -123,8 +124,10 @@ fi
 # ─── --latest 해석 ───
 if [[ "$OBJECT_KEY" == "__LATEST__" ]]; then
   log "[INFO] --latest: 가장 최근 sql.gz 조회..."
-  OBJECT_KEY=$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" \
-    --query 'sort_by(data,&"time-created")[?ends_with(name,`sql.gz`)]|[-1].name' \
+  # --all: 페이지네이션(≈1000개 컷)으로 최신이 잘리는 것 방지. 정렬은 name 기준(이름순=시간순).
+  # masked/ 는 DR 복구 대상이 아니므로 제외.
+  OBJECT_KEY=$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" --all \
+    --query 'sort_by(data,&name)[?ends_with(name,`sql.gz`) && !starts_with(name,`masked/`)]|[-1].name' \
     --raw-output 2>/dev/null)
   if [[ -z "$OBJECT_KEY" || "$OBJECT_KEY" == "null" ]]; then
     fail "no-backup" 6

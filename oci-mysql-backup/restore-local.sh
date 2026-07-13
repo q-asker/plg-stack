@@ -105,15 +105,18 @@ else
   command -v oci >/dev/null || fail "no-oci" 1
   if [[ "$OBJECT_KEY" == "__LATEST__" ]]; then
     log "[1/4] --latest($SOURCE): 최신 sql.gz 조회..."
+    # --all: 페이지네이션(기본 ≈1000개 컷)으로 최신이 잘리는 것 방지.
+    # 정렬은 name 기준 — 키가 YYYY/MM/DD/...<UTC> 라 이름순=시간순이고, time-created 필드
+    # 미반환 시 정렬이 깨지는 문제도 함께 피한다.
     if [[ "$SOURCE" == "masked" ]]; then
       # masked/ prefix 로 서버측 제한 → DR 객체는 애초에 조회 대상 아님
-      OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" --prefix "$MASKED_PREFIX" \
-        --query 'sort_by(data,&"time-created")[?ends_with(name,`sql.gz`)]|[-1].name' \
+      OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" --prefix "$MASKED_PREFIX" --all \
+        --query 'sort_by(data,&name)[?ends_with(name,`sql.gz`)]|[-1].name' \
         --raw-output 2>/dev/null)"
     else
       # dr: masked/ prefix 는 제외하고 DR 백업(YYYY/MM/DD/) 중 최신
-      OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" \
-        --query 'sort_by(data,&"time-created")[?ends_with(name,`sql.gz`) && !starts_with(name,`masked/`)]|[-1].name' \
+      OBJECT_KEY="$(oci --profile "$OCI_PROFILE" os object list -bn "$BUCKET" --all \
+        --query 'sort_by(data,&name)[?ends_with(name,`sql.gz`) && !starts_with(name,`masked/`)]|[-1].name' \
         --raw-output 2>/dev/null)"
     fi
     [[ -z "$OBJECT_KEY" || "$OBJECT_KEY" == "null" ]] && fail "no-backup" 6
@@ -149,7 +152,8 @@ fi
 log "[2/4] mysqld ready 대기..."
 ready=0
 for _ in $(seq 1 40); do
-  if docker exec "$CONTAINER" mysqladmin -uroot -p"$ROOT_PWD" ping >/dev/null 2>&1; then ready=1; break; fi
+  # ping 은 초기화 중에도 alive 를 반환 → 인증 SELECT 성공까지 대기(직후 DROP/CREATE 레이스 방지)
+  if docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" -N -e "SELECT 1" >/dev/null 2>&1; then ready=1; break; fi
   sleep 2
 done
 (( ready )) || fail "mysql-not-ready" 12
