@@ -30,10 +30,11 @@
         "name": "rate_window",
         "type": "custom",
         "label": "Rate Window",
-        "query": "5m,15m,1h,6h,24h,7d",
+        "query": "5m,15m,1h,6h,24h,7d,30d,90d",
         "current": {
-          "text": "1h",
-          "value": "1h"
+          "text": "30d",
+          "value": "30d",
+          "selected": true
         },
         "options": [
           {
@@ -49,7 +50,7 @@
           {
             "text": "1h",
             "value": "1h",
-            "selected": true
+            "selected": false
           },
           {
             "text": "6h",
@@ -64,6 +65,16 @@
           {
             "text": "7d",
             "value": "7d",
+            "selected": false
+          },
+          {
+            "text": "30d",
+            "value": "30d",
+            "selected": true
+          },
+          {
+            "text": "90d",
+            "value": "90d",
             "selected": false
           }
         ]
@@ -88,534 +99,946 @@
   },
   "panels": [
     {
-      "id": 200,
+      "id": 750,
       "type": "row",
-      "title": "1. 응답 시간 — 얼마나 빠른가?",
+      "collapsed": true,
+      "title": "옵션 1: sliding-window-type: COUNT_BASED (토글)",
       "gridPos": {
         "x": 0,
         "y": 0,
         "w": 24,
         "h": 1
       },
-      "collapsed": false
+      "panels": [
+        {
+          "id": 760,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 16,
+            "w": 24,
+            "h": 7
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 1: `sliding-window-type: COUNT_BASED`\n\n**설정 의미** — 실패율을 계산하는 모수를 \"최근 N개 호출\"(`COUNT_BASED`)로 할지 \"최근 N초 동안의 호출\"(`TIME_BASED`)로 할지 결정한다.\n\n**판단 근거: 일일 생성 요청 수 분포** (아래 차트)\n\n- **`TIME_BASED` 불가능** — 최근 N초의 요청을 보며 관찰하는데, 우리 서비스엔 표본이 너무 적은 구간이 존재한다. 적은 요청으로 지속적인 인프라 장애를 입증하기는 어려우므로 불가능. TIME 구간을 길게 잡으면 `COUNT_BASED`와 유사해진다.\n- **`COUNT_BASED` 채택** — 최근 N개의 요청을 보며 관찰. 시간 관점에선 길어질 수 있지만 '제일 최근 모아진 표본'이라는 관점에서 `TIME_BASED`보다 그 의미가 크다."
+          }
+        },
+        {
+          "id": 770,
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "title": "일일 생성 요청 수",
+          "description": "하루 단위 퀴즈 생성 요청 수(완료 기준). 트래픽 밀도의 대순환(시험기간 vs 평시)을 보는 축 — 표본이 적은 구간이 존재해 TIME_BASED가 지속 장애를 입증하기 어렵다는 COUNT_BASED 채택 근거.",
+          "gridPos": {
+            "x": 0,
+            "y": 23,
+            "w": 24,
+            "h": 9
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 60,
+                "lineWidth": 1
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "showLegend": true,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(gemini_request_first_quiz_duration_seconds_count[1d]))",
+              "legendFormat": "일일 요청 수",
+              "interval": "1d"
+            }
+          ]
+        }
+      ]
     },
     {
-      "id": 5,
-      "title": "응답 시간 (중앙값 / 95% 사용자 경험)",
-      "type": "stat",
+      "id": 800,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 2: slow-call 비활성 — 타임아웃 = 단일 실패 모수 (토글)",
       "gridPos": {
         "x": 0,
         "y": 1,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$__range])))",
-          "legendFormat": "중앙값 (p50)",
-          "instant": true
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(gemini_request_first_quiz_duration_seconds_bucket[$__range])))",
-          "legendFormat": "95% 경험 (p95)",
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "decimals": 2,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 25
-              },
-              {
-                "color": "red",
-                "value": 30
-              }
-            ]
-          }
-        }
-      },
-      "description": "선택 범위 누적. p50=절반의 사용자가 이 시간 이내, p95=95% 사용자가 이 시간 이내. 30s 이상은 측정 한계로 다음 패널 참고.",
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 6,
-      "title": "최악 1% 응답 시간 — 추정 (파레토 외삽)",
-      "type": "stat",
-      "gridPos": {
-        "x": 12,
-        "y": 1,
-        "w": 12,
-        "h": 8
-      },
-      "description": "히스토그램이 30s에서 잘려 있어 p99/p99.9를 통계 외삽. 시험기간 long-tail을 반영하는 파레토(α=2.21) 모형. slow 임계 60s 빨간선 기준으로 위치 확인.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "B",
-          "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$__range]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range]))) / 0.01 ) ^ (1/2.21)",
-          "legendFormat": "p99 (1% 사용자가 이 시간 초과)",
-          "instant": true
-        },
-        {
-          "refId": "C",
-          "expr": "30 * ( ((sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range])) - sum(increase(gemini_request_first_quiz_duration_seconds_bucket{le=\"30.0\"}[$__range]))) / sum(increase(gemini_request_first_quiz_duration_seconds_count[$__range]))) / 0.001 ) ^ (1/2.21)",
-          "legendFormat": "p99.9 (0.1% 초과)",
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "decimals": 1,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 45
-              },
-              {
-                "color": "red",
-                "value": 60
-              }
-            ]
-          }
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 8,
-      "title": "관측된 가장 느린 응답 (long-tail 감시)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 9,
         "w": 24,
-        "h": 8
+        "h": 1
       },
-      "description": "실측 최댓값. baseline 119초를 넘으면 시험기간에 더 심한 long-tail 발생 → 임계 재검토 필요.",
+      "panels": [
+        {
+          "id": 810,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 16,
+            "w": 24,
+            "h": 5
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 2: `slow-call` 비활성 — 타임아웃을 단일 실패 모수로\n\n**결정** — slow-call 감지를 끄고, 병리적 느림을 타임아웃 계층이 실패로 변환해 **실패율 경로 하나로 집계**한다.\n\n**타임아웃 3계층** (ai-setting.yml): connect 10s(연결 실패) · read 150s(무음 갭 컷) · **call 300s(절대 총 시한)** → 모두 GeminiInfraException(실패)으로 변환.\n\n**왜 뺐나**\n- call-timeout 300s가 절대 상한 → 성공은 ≤300s만 가능(**관측 최대 274.3s · 마진 ~26s**) → '느린 성공' 밴드가 사실상 없음(300s 넘으면 실패로 변환)\n- 그 띠 호출은 어차피 성공(사용자는 결과 받음) → 이걸로 열면 성공 중 서비스로 타 사용자 차단(과잉 반응)\n- 심한 느림은 read/call-timeout이 실패로 변환 → 실패율 경로가 처리 → slow는 **중복**\n- 리트머스 '느린 성공이 빠른 실패보다 나쁜가?' → **아니오** (고지연이 정상 · 폴백 없음)\n\n**구현** — Resilience4j엔 비활성 플래그가 없고 slowCallRateThreshold는 [1,100]만 허용 → slow-duration을 도달불가 센티널 **9999s**로 둬 무력화."
+          }
+        },
+        {
+          "id": 820,
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "title": "관측 최대 성공 호출 소요 274.3s — call-timeout 300s 아래(마진 ~26s) · '느린 성공' 밴드 없음",
+          "description": "장애가 아닌 정상 '성공' 호출 중 가장 오래 걸린 소요(초). 관측 최대 274.3s가 call-timeout(300s) 아래(마진 ~26s) → 300s 넘으면 성공이 아니라 실패(timeout)로 변환돼 '느린 성공' 밴드가 없음 → slow 판정 비활성. 주황(290) 접근 시 마진 경고, 빨강(300=call-timeout)에 성공이 닿으면 그 위는 전부 실패로 잘림을 뜻함.",
+          "gridPos": {
+            "x": 0,
+            "y": 21,
+            "w": 24,
+            "h": 6
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "suffix: s",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 290
+                  },
+                  {
+                    "color": "red",
+                    "value": 300
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "value_and_name"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(max_over_time(resilience4j_circuitbreaker_calls_seconds_max{name=\"aiServer\",kind=\"successful\"}[$__range]))",
+              "legendFormat": "최대 성공 호출 소요",
+              "instant": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1000,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 3: slow-call-rate-threshold — 옵션 2에 종속(비활성) (토글)",
+      "gridPos": {
+        "x": 0,
+        "y": 2,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 1010,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 3,
+            "w": 24,
+            "h": 8
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 3: `slow-call-rate-threshold` — 옵션 2에 종속(비활성)\n\n**설정 의미** — 윈도우 내 느린 호출 비율이 이 값 이상이면 OPEN (백분율, Resilience4j 검증 [1,100]).\n\n**결정: 독립 자유도 없음 → 비활성**\n- 옵션 2에서 slow-call-duration을 도달불가 센티널(9999s)로 둠 → 어떤 호출도 slow 라벨 안 됨 → **slow_call_rate 항상 0/-1**\n- 그러면 rate 임계를 1~100 무엇으로 둬도 **0 ≥ 임계 불성립 → 절대 트립 안 함** → rate의 남은 자유도 = 0\n- 논리적 '자연값'은 -1(비활성)이지만 라이브러리가 [1,100]만 허용 → **duration 센티널로 우회 달성**\n- config엔 **명시적으로 100** (moot — duration 센티널에 지배 · 센티널 제거 시에도 만장일치 요구하는 안전값/defense-in-depth). 아래 패널이 slow_call_rate ≤ 0(절대 트립 없음)임을 실증.\n\n→ 옵션 3은 독립 결정이 아니라 **옵션 2의 종속 결과** — 값 무관하게 비활성."
+          }
+        },
+        {
+          "id": 1020,
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "title": "현재 slow_call_rate (≤ 0 = 절대 트립 안 함)",
+          "description": "resilience4j slow_call_rate 게이지. -1=min-calls 미달, 0=느린 호출 없음. slow-duration 9999s 센티널 때문에 항상 ≤0이라 rate 임계(무엇이든)에 절대 안 닿음 → slow 경로 死重 실증.",
+          "gridPos": {
+            "x": 0,
+            "y": 11,
+            "w": 24,
+            "h": 5
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resilience4j_circuitbreaker_slow_call_rate{name=\"aiServer\"})",
+              "legendFormat": "slow_call_rate",
+              "instant": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 710,
+      "type": "row",
+      "collapsed": false,
+      "title": "옵션 4: wait-duration-in-open-state = 60s — 결말 투영 (피크 RPM 가변 · 2시간 장애 가정)",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 730,
+      "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max by (max_chunks) (max_over_time(gemini_request_first_quiz_duration_seconds_max[$rate_window]))",
-          "legendFormat": "max_chunks={{max_chunks}}"
-        }
-      ],
+      "title": "피크 RPM (λ, 시간 범위 내 1분 최대) — 표의 λ 입력값",
+      "description": "표에 들어가는 도착률 λ = 대시보드 시간 범위 내 1분 최대 rate(버스트 피크). 우상단 시간 선택기로 조절 — 30일이면 시험기간 피크 4건/분 포착.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 3
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "suffix: 건/분",
+          "decimals": 2,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "transparent",
+                "color": "green",
                 "value": null
               },
               {
                 "color": "orange",
-                "value": 119
+                "value": 4
               },
               {
                 "color": "red",
-                "value": 180
+                "value": 10
               }
             ]
-          },
-          "custom": {
-            "thresholdsStyle": {
-              "mode": "line+area"
-            }
           }
-        }
-      }
-    },
-    {
-      "id": 600,
-      "type": "row",
-      "title": "2. 시험기간 트래픽 — 서킷브레이커가 언제 일하나?",
-      "gridPos": {
-        "x": 0,
-        "y": 17,
-        "w": 24,
-        "h": 1
+        },
+        "overrides": []
       },
-      "collapsed": false
-    },
-    {
-      "id": 690,
-      "type": "text",
-      "title": "",
-      "transparent": true,
-      "gridPos": {
-        "x": 0,
-        "y": 18,
-        "w": 24,
-        "h": 3
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "### 🔍 burst 판단 기준\n**18분(=1080초) 윈도우에 TTFQ 호출이 5건 이상 들어온 시점 = burst 활성**\n\nPromQL 정의: `(sum(increase(gemini_request_first_quiz_duration_seconds_count[18m])) >= bool 5)`\n\nResilience4j 설정 `sliding-window-size=1080s` × `minimum-number-of-calls=5`와 1:1 동기화 — **\"CB가 임계값을 평가할 수 있는 최소 조건이 만족된 구간\"**을 burst로 정의. q-asker 도메인 특성상 시험기간 트래픽 집중과 일치한다고 가정."
-      }
-    },
-    {
-      "id": 22,
-      "title": "시험기간 트래픽 몰림 횟수 (burst event count)",
-      "type": "stat",
-      "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 8,
-        "h": 5
-      },
-      "description": "선택 범위 내 burst 진입 횟수. q-asker 도메인: burst = 시험기간 트래픽 = 운영 critical event. 이 횟수가 곧 임계 튜닝의 ground truth sample 크기.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(changes(((sum(increase(gemini_request_first_quiz_duration_seconds_count[18m])) >= bool 5))[$__range:1m])) / 2",
-          "instant": true
-        }
-      ],
       "options": {
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
         },
-        "colorMode": "background"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "green",
-                "value": 5
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 23,
-      "title": "호출 간격 — 평소 vs 몰릴 때 (1회당 N초)",
-      "type": "stat",
-      "gridPos": {
-        "x": 8,
-        "y": 21,
-        "w": 8,
-        "h": 5
-      },
-      "description": "1 / RPS = 호출 1건 발생 간격(초). 평소 호출 간격(평균)과 몰릴 때 최소 호출 간격(burst peak 1분 최댓값)을 비교. 값이 작을수록 호출이 자주 들어옴. permitted-half-open과 sliding-window 산정의 트래픽 컨텍스트.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "orientation": "horizontal"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "1 / max_over_time(sum(rate(gemini_request_first_quiz_duration_seconds_count[1m]))[$__range:1m])",
-          "legendFormat": "몰릴 때 (최소 간격)"
+          "expr": "max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m])*60",
+          "legendFormat": "피크 RPM",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 740,
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "#### 결말 투영의 값 (λ는 가변 피크 · 나머지 고정)\n\n| 값 | 뜻 | 근거 |\n|---|---|---|\n| **λ = 피크 RPM (가변)** | 도착률(버스트) | 대시보드 시간 범위 내 1분 최대 rate(위 스탯) · 시간 선택기로 조절 · 30일이면 시험기간 피크 4건/분 |\n| **D = 120분 (고정)** | 장애 지속 시간 | Vertex AI 장애 최대 1h58m ≈ 2시간 |\n| **P = 3 (고정)** | 탐침 정원 | permitted-number-of-calls-in-half-open-state · HALF_OPEN당 늦은 실패 건수 |\n| **g = 6분 (고정)** | HALF_OPEN 지속 | 저트래픽 탐침 3건 도착 대기(3/λ) · P↑이면 g↑라 늦은 실패는 거의 안 늘어남 |\n\n**공식** — 늦은 = min(λD, P·D/(W+g)) · 즉시 = λD − 늦은 · 박탈 = λW/2"
+      }
+    },
+    {
+      "id": 720,
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "title": "W별 결말 건수 투영 — 피크 RPM(가변, 시간 범위 1분 최대) 기준 · 2시간 장애 가정",
+      "description": "피크 RPM(λ, 선택 창 1분 최대)로 '2시간 장애 시' 각 W의 결말 건수 투영(최악 케이스). 가정: D=120분, P=3, g=6분(위 고정값 표). 공식: 늦은=min(λD,P·D/(W+g)) · 즉시=λD−늦은 · 박탈=λW/2. 피크 RPM이 클수록 박탈 열이 λ에 비례해 커진다. W↑이면 늦은 실패↓·박탈↑ — 60s가 골짜기.",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(clamp_max(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120,58.4),\"W\",\"10s\",\"\",\"\") or label_replace(clamp_max(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120,51.4),\"W\",\"60s\",\"\",\"\") or label_replace(clamp_max(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120,22.5),\"W\",\"10m\",\"\",\"\") or label_replace(clamp_max(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120,5.45),\"W\",\"1h\",\"\",\"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
         },
         {
           "refId": "B",
-          "expr": "1 / sum(rate(gemini_request_first_quiz_duration_seconds_count[$__range]))",
-          "legendFormat": "평소 (평균 간격)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 25,
-      "type": "stat",
-      "title": "최대 burst 구간 (선택 범위)",
-      "description": "선택 범위 내에서 가장 길었던 burst 지속 시간(분). 30분 sliding window 안의 활성 분 합계의 최대값. sliding-window-size 산정의 핵심 지표 — yml의 'max burst cover' 원칙. 이 값이 sliding-window-size를 초과하면 단일 burst가 분열될 위험.",
-      "gridPos": {
-        "x": 16,
-        "y": 21,
-        "w": 8,
-        "h": 5
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max_over_time(sum_over_time(((sum(increase(gemini_request_first_quiz_duration_seconds_count[18m])) >= bool 5))[30m:1m])[$__range:])",
+          "expr": "label_replace(clamp_min(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120-58.4,0),\"W\",\"10s\",\"\",\"\") or label_replace(clamp_min(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120-51.4,0),\"W\",\"60s\",\"\",\"\") or label_replace(clamp_min(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120-22.5,0),\"W\",\"10m\",\"\",\"\") or label_replace(clamp_min(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*120-5.45,0),\"W\",\"1h\",\"\",\"\")",
+          "format": "table",
           "instant": true,
-          "legendFormat": "최대 burst (분)"
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "expr": "label_replace(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*0.0833333,\"W\",\"10s\",\"\",\"\") or label_replace(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*0.5,\"W\",\"60s\",\"\",\"\") or label_replace(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*5,\"W\",\"10m\",\"\",\"\") or label_replace(((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60)*30,\"W\",\"1h\",\"\",\"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
         }
       ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
         },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "W": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3
+            },
+            "renameByName": {
+              "W": "W (OPEN 유지)",
+              "Value #A": "N_늦은실패",
+              "Value #B": "N_즉시실패",
+              "Value #C": "N_박탈"
+            }
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "m",
-          "decimals": 0,
-          "color": {
-            "mode": "thresholds"
+          "unit": "short",
+          "decimals": 1,
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "N_박탈"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 5
+                    },
+                    {
+                      "color": "red",
+                      "value": 30
+                    }
+                  ]
+                }
+              }
+            ]
           },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "N_늦은실패"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
               },
               {
-                "color": "yellow",
-                "value": 12
-              },
-              {
-                "color": "red",
-                "value": 15
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 40
+                    }
+                  ]
+                }
               }
             ]
           }
-        }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "N_박탈",
+            "desc": false
+          }
+        ]
       }
     },
     {
-      "id": 700,
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      },
+      "id": 950,
+      "panels": [
+        {
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 24
+          },
+          "id": 960,
+          "type": "text",
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션: `minimum-number-of-calls: 3`\n\n**설정 의미** — 슬라이딩 윈도우에 최소 이 개수만큼 호출이 쌓여야 실패율을 판정한다(그 전엔 -1, OPEN 불가).\n\n**판단 근거 — 두 힘의 교점 (과반 성립 × 저트래픽)**\n\n| 창 M | 실패:성공 경우 | 과반(2:1) 성립? |\n|---|---|---|\n| M=1 | 전부 / 전무 | ✗ 소수·과반 개념 없음 |\n| M=2 | 2:0 전멸 · **1:1 동점** · 0:2 | ✗ 과반=전멸로 붕괴 |\n| **M=3** | 3:0 · **2:1 과반** · 1:2 소수 · 0:3 | ✅ 첫 성립 |\n\n- **하한** — 단발 1건이 동점(M=2, 1:1=50%)·100%(M=1)가 아니라 **명확한 소수(1/3=33%)** 가 되고, 과반이 처음 서는 최소 창 = **3**\n- **상한** — 버스트조차 4 RPM 저트래픽(**아래 피크 RPM 패널** · 시간당 중앙값 0) → 기본 창 100은 장애 중 도달 불가 → **최소 표본으로 판정**\n- **위험 바닥 1/M = 33%** 가 임계(≥34%) 아래 → **임계 미확정과 무관하게 단발 관용**\n\n→ **3** = 과반이 성립하는 가장 작은 창.  (도식: `docs/circuit-breaker/min-calls-enumeration.svg`)\n\n> 참고: '과반 성립'은 트립을 과반으로 하자는 뜻이 아니라, 단발 1건이 동점이 아니라 명확한 소수가 되는 최소 창을 의미."
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "description": "선택 시간 범위 내 1분 최대 도착률(버스트 피크 RPM). 피크조차 낮으면(버스트조차 저트래픽) 큰 창(기본 min-calls=100)은 장애 중 도달 불가 → 작은 M(=3)의 상한 근거. 30일 범위면 시험기간 피크 ~4건/분.",
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 2,
+              "unit": "suffix: 건/분",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 4
+                  },
+                  {
+                    "color": "red",
+                    "value": 10
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 24,
+            "x": 0,
+            "y": 34
+          },
+          "id": 970,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "value_and_name",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m])*60",
+              "legendFormat": "버스트 피크 RPM",
+              "instant": true
+            }
+          ],
+          "title": "버스트 구간 피크 RPM — 버스트조차 저트래픽 (작은 창 근거)",
+          "type": "stat"
+        }
+      ],
+      "title": "옵션 5: minimum-number-of-calls: 3 (토글)",
+      "type": "row"
+    },
+    {
+      "id": 1100,
       "type": "row",
-      "collapsed": false,
-      "title": "3. CB 내부 옵션 결정 — 인프라 장애 / 회복 / sample",
+      "collapsed": true,
+      "title": "옵션 6: sliding-window-size: 10 (토글)",
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 1110,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 8
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 6: `sliding-window-size: 10`\n\n**설정 의미** — 실패율을 계산하는 창 크기 = 최근 N개 호출 (성공·실패 모두 채움).\n\n**판단 근거**\n- 피크 4 RPM 기준: **기본값 100은 채우는 데 25분**(아래 패널) → 창이 25분치 호출을 담아 '최근 상태'가 아님\n- **10은 2.5분**에 충전 → 버스트 내 도달, '최근'\n- **10의 배수**라 실패율(6/10=60% 등)이 직관적으로 계산됨\n- 큰 창은 새 실패를 옛 성공으로 희석해 트립 지연 (min-calls=3와 동일 근거)\n\n→ **10**."
+          }
+        },
+        {
+          "id": 1120,
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "title": "기본값 100 충전 시간(분) = 100 / 피크RPM — 25분이면 '최근' 아님",
+          "description": "기본값 sliding-window-size=100을 피크 RPM으로 채우는 데 걸리는 시간(분). 25분이면 창이 25분치 호출을 담아 '최근 상태'가 아님 → 큰 창 부적합. 우리는 10(=2.5분, 버스트 내 도달)으로 둠. 공식: 100 / 피크RPM.",
+          "gridPos": {
+            "x": 0,
+            "y": 8,
+            "w": 24,
+            "h": 5
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "suffix: 분",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 10
+                  },
+                  {
+                    "color": "red",
+                    "value": 20
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "instant": true,
+              "legendFormat": "100 충전 시간",
+              "expr": "100 / clamp_min((max_over_time((sum(rate(gemini_request_first_quiz_duration_seconds_count[1m])))[$__range:1m]) or vector(0))*60, 0.1)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 1
+      },
+      "id": 900,
+      "panels": [
+        {
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 23
+          },
+          "id": 910,
+          "options": {
+            "content": "### 옵션 7: `failure-rate-threshold: 51%`\n\n> **지속 장애인지 확실히 알 수 없기에, 하나의 실패는 우연이어도 과반의 실패는 신호이므로 [ 성공 | 실패 ]를 말하는 호출들의 과반수 논리를 따른다.**\n\n**설정 의미** — 슬라이딩 윈도우 내 실패율이 이 값 이상이면 OPEN.\n\n**판단 근거 — 최소 과반선**\n- **51% = 동점(50%) 바로 위** → 만창(N=10)에서 5/10(5:5 동점)은 통과, **6/10(과반)만 차단**. 바닥(M=3)에선 1/3(33%) 관용 · 2/3(67%) 트립.\n- 모든 창의 '딱 과반'까지 포착 — 임계 ≤ 55.6%면 4/7(57%)·5/9(56%) 같은 부분 창의 딱-과반도 트립. 51%는 **모든 과반을 잡고 모든 동점을 거부하는 최소값** (기본 50%는 5:5 동점에도 열림, 60%는 4/7·5/9를 놓침).\n- 노이즈 위: 관측 `failure_rate` 천장 **33%**(실패 비군집, 아래 패널) 한참 위 → 평시 오탐 0. 진짜 장애 ≈100%만 트립.\n\n→ **51%** = '동점 아닌 과반'을 순수하게 구현한 최소 트립선.",
+            "mode": "markdown"
+          },
+          "type": "text"
+        },
+        {
+          "id": 870,
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "title": "관측 failure_rate 천장 (범위 내 최대) — 임계 51% 아래 = 노이즈",
+          "description": "서킷이 실제 트립 판정에 쓰는 윈도우 실패율 게이지의 관측 최대. 90일 33%(=1실패/3콜, 실패 비군집)로 임계 51% 한참 아래 → 노이즈로는 과반(51%)에 절대 못 닿음을 실증. 51%(빨강)에 닿으면 실제 과반 실패 = 트립. -1은 min-calls 미달(판정 보류).",
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 29
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 34
+                  },
+                  {
+                    "color": "red",
+                    "value": 51
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(max_over_time(resilience4j_circuitbreaker_failure_rate{name=\"aiServer\"}[$__range]))",
+              "legendFormat": "failure_rate 천장",
+              "instant": true
+            }
+          ]
+        }
+      ],
+      "title": "옵션 7: failure-rate-threshold: 51% (토글)",
+      "type": "row"
+    },
+    {
+      "id": 850,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 8: permitted-number-of-calls-in-half-open-state: 3 (토글)",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 860,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 22,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 8: `permitted-number-of-calls-in-half-open-state: 3`\n\n**설정 의미** — HALF_OPEN에서 회복을 시험하려 통과시키는 탐침 호출 수(P). P개 탐침의 실패율을 failure-rate-threshold(51%)와 비교해 CLOSE/REOPEN 판정.\n\n**판단 근거 — HALF_OPEN 과반 (min-calls=3과 동일 모델)**\n- **P=3 + 51%**: 1/3(33%) 관용 · **2/3(67%) 과반 → REOPEN** · 동점 없음. CLOSED의 min-calls=3과 한 모델.\n- **임계-강건**: 1/3·2/3이 (33,67] 어디든 판정 불변. P=2는 1/2=50% 동점이라 임계에 뒤집힘.\n- **행운 탐침 내성**: 아직 장애인데 탐침 1개가 우연히 성공 → P=2는 1/2<51%로 잘못 CLOSE, P=3은 2/3 여전히 REOPEN.\n- vs 기본값 10: 탐침은 늦은 실패의 선형 배수(P·D/(W+g)) → 10은 과함. 저트래픽이라 P=3의 절대 비용은 작음.\n\n→ **P=3** = 탐침 최소화(P=2)보다 1개 비싸지만 저트래픽서 marginal, 대신 **임계-독립 · 과반 일관**을 산 값."
+          }
+        }
+      ]
+    },
+    {
+      "id": 1200,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 9: max-wait-duration-in-half-open-state: 0 (무한 대기) (토글)",
       "gridPos": {
         "x": 0,
         "y": 26,
         "w": 24,
         "h": 1
-      }
+      },
+      "panels": [
+        {
+          "id": 1210,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 9: `max-wait-duration-in-half-open-state: 0` (무한 대기)\n\n**설정 의미** — HALF_OPEN에서 탐침 P건 완료를 기다리는 최대 시간. **0 = 무한 대기**(시한 없음).\n\n**판단 근거**\n- 저트래픽이라 탐침 3건 도착이 느릴 수 있음.\n- 시한(>0)을 두면 그 안에 P건을 못 채울 때 강제 전이(→OPEN) → **실패가 아니라 '트래픽 부족'으로 회복 판정을 포기**하는 오작동.\n- P=3(탐침 3건 대기)과 정합 — 탐침이 올 때까지 기다린다.\n\n→ **0(무한 대기)**. ⚠ '안전하게 시한 두자'는 미래 실수 방지 — 저트래픽선 시한이 오히려 해로움."
+          }
+        }
+      ]
     },
     {
-      "id": 790,
-      "type": "text",
-      "title": "",
-      "transparent": true,
+      "id": 1300,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 10: automatic-transition-from-open-to-half-open: true (토글)",
       "gridPos": {
         "x": 0,
         "y": 27,
         "w": 24,
-        "h": 3
+        "h": 1
       },
-      "options": {
-        "mode": "markdown",
-        "content": "### 🛠 CB 내부 옵션 결정 가이드\n이 Row는 **CB 메트릭 없이 외부에서 관측한 실패 패턴**으로 옵션을 추론한다.\n\n- **failure-rate-threshold (30%)** ← 인프라 장애율 추세 (#27, #29). outcome=fail ≈ GeminiInfraException.\n- *wait-duration-in-open-state, permitted-half-open*: 이 대시보드로는 결정 자료 부족. 외부 인프라 회복 패턴·HALF_OPEN 행동 통계는 별도 측정·운영 데이터로 결정."
-      }
-    },
-    {
-      "id": 27,
-      "type": "timeseries",
-      "title": "인프라 장애율 추세 (failure-rate-threshold 결정)",
-      "description": "outcome=fail / 전체 호출 비율. record-exceptions=GeminiInfraException과 거의 매칭. 30% 임계 빨간선 도달 빈도가 임계 적정성의 핵심 신호.",
-      "gridPos": {
-        "x": 0,
-        "y": 30,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
+      "panels": [
         {
-          "refId": "A",
-          "expr": "100 * sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[$rate_window])) / sum(rate(quiz_generation_outcome_total[$rate_window]))",
-          "legendFormat": "인프라 장애율 (%)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 15
-              },
-              {
-                "color": "red",
-                "value": 30
-              }
-            ]
+          "id": 1310,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 6
           },
-          "custom": {
-            "thresholdsStyle": {
-              "mode": "line"
-            }
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 10: `automatic-transition-from-open-to-half-open-enabled: true`\n\n**설정 의미** — wait-duration 만료 시 OPEN→HALF_OPEN 전이를 **스케줄러가 자동**(true)으로 할지, **다음 호출이 올 때**(false, 기본) 할지.\n\n**판단 근거 (정직)**\n- lazy(기본 false)여도 다음 호출이 승격시키고 그 호출은 거부 안 됨(탐침 admit) → **'갇힘'은 없음.**\n- true의 실제 이점은 **관측성** — 상태·메트릭이 만료 즉시 HALF_OPEN으로 정확히 반영 → 이 대시보드가 정확.\n- 스케줄러 비용 미미.\n\n→ 모니터링 대시보드를 쓰는 맥락에서 **true 유지**. (기능적 보호는 lazy와 동일)"
           }
         }
-      }
+      ]
     },
     {
-      "id": 29,
-      "type": "stat",
-      "title": "선택 범위 평균 인프라 장애율",
-      "description": "30% 임계 대비 baseline 위치. 30%/3 = 10% 미만이면 임계 헐거움 / 50%+면 빠른 차단 가치.",
+      "id": 1400,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 11: event-consumer-buffer-size: 10 (토글)",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 28,
         "w": 24,
-        "h": 5
+        "h": 1
       },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
+      "panels": [
         {
-          "refId": "A",
-          "expr": "100 * sum(rate(quiz_generation_outcome_total{outcome=\"fail\"}[$__range])) / sum(rate(quiz_generation_outcome_total[$__range]))",
-          "instant": true
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "decimals": 2,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 15
-              },
-              {
-                "color": "red",
-                "value": 30
-              }
-            ]
+          "id": 1410,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 11: `event-consumer-buffer-size: 10`\n\n**설정 의미** — 상태전이·호출 이벤트를 담는 링버퍼 크기 (모니터링/리스너용).\n\n**판단 근거**\n- **동작과 무관** (튜닝 파라미터 아님).\n- 최근 10개 이벤트면 저트래픽 디버깅에 충분.\n\n→ **10**."
           }
         }
-      }
+      ]
+    },
+    {
+      "id": 1500,
+      "type": "row",
+      "collapsed": true,
+      "title": "옵션 12: record-exceptions = GeminiInfraException (실패의 정의)",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 1510,
+          "type": "text",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 9
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### 옵션 12: `record-exceptions: GeminiInfraException` — 실패의 정의(공리)\n\n**설정 의미** — 화이트리스트: 등록된 예외만 '실패'로 세고 나머지는 성공 취급.\n\n**GeminiInfraException = 두 필터 통과**\n\n| 필터 | 실패로 셈 | 안 셈 |\n|---|---|---|\n| ① 종류 | 인프라 예외(타임아웃·SDK·NPE) | CustomException(비즈니스·사용자 오류) |\n| ② 진행도 | delivered==0(첫 문제 못 냄) | delivered>0(부분 전달 후 오류→보존) |\n\n→ **실패 = '인프라 예외로 첫 문제조차 못 내놓음'**.\n\n**왜 화이트리스트** — 서킷은 인프라 보호용. 기본값(모든 예외=실패)이면 사용자 불량입력 급증이 서킷을 열어 전체 차단(인프라 멀쩡한데 오작동) → 인프라 예외만 센다.\n\n**뿌리** — 33% 천장·51% 임계·과반 논리·0.2~0.4% 실패율 전부 이 정의 위. 정의가 엄격('인프라·출력0')해 실패가 희소·비군집 → 과반 신호가 깨끗."
+          }
+        },
+        {
+          "id": 1520,
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "title": "GeminiInfraException 실패 건수 (범위 내) — 이 정의로 분류된 실패",
+          "description": "record-exceptions 정의(인프라 예외 + delivered==0)로 '실패'로 분류돼 서킷이 센 건수. 극소(0.2~0.4%)일수록 과반 신호가 깨끗. 급증 시 인프라 장애 또는 오분류(비즈니스 오류가 새는지) 점검.",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 5
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "suffix: 건",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 20
+                  },
+                  {
+                    "color": "red",
+                    "value": 100
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "instant": true,
+              "legendFormat": "실패 건수",
+              "expr": "sum(increase(resilience4j_circuitbreaker_calls_seconds_count{name=\"aiServer\",kind=\"failed\"}[$__range]))"
+            }
+          ]
+        }
+      ]
     }
   ],
   "annotations": {
