@@ -23,6 +23,13 @@ scrape_configs:
       - targets: ["host.docker.internal:9090"]
         labels:
           instance: "springboot-local"
+    # repository·method가 있는 시계열(spring_data_repository_invocations)에 결합 라벨 rm="레포.메서드" 부여
+    # → label_values(rm)로 (레포×메서드) 조합마다 대시보드 패널 반복 (같은 이름 메서드도 레포별 분리)
+    metric_relabel_configs:
+      - source_labels: [repository, method]
+        regex: (.+);(.+)
+        target_label: rm
+        replacement: ${1}.${2}
 
   # ----- cAdvisor: 컨테이너 CPU/메모리 (q-asker-db 등) -----
   - job_name: "cadvisor"
@@ -35,3 +42,14 @@ scrape_configs:
       - targets: ["local-mysqld-exporter:9104"]
         labels:
           instance: "q-asker-db"
+
+  # ----- mysqld_exporter (seed별): 스케일 레벨별 digest 지표 (perf_schema.eventsstatements) -----
+  # 각 시드 컨테이너(x1/x10/x132)에 붙은 exporter를 seed 라벨로 스크레이프 → seed축 bar chart 데이터
+  - job_name: "mysql-seed"
+    static_configs:
+      - targets: ["local-mysqld-exporter-x1:9104"]
+        labels: { instance: "x1", seed: "x1" }
+      - targets: ["local-mysqld-exporter-x10:9104"]
+        labels: { instance: "x10", seed: "x10" }
+      - targets: ["local-mysqld-exporter-x132:9104"]
+        labels: { instance: "x132", seed: "x132" }

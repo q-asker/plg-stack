@@ -1,0 +1,436 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0,211,255,1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "통합 진단. ① 스케일 축(prometheus): 어느 레포 메서드가 크기 따라 O(n)인가. ② 요청 축(trace_snapshot/MySQL): 그 쿼리를 누가(엔드포인트) 부르고 요청당 얼마나 훑나. ③ 드릴다운: 요청의 SQL 시퀀스. 위(무엇이 O(n)) → 아래(누가·얼마나) → 시퀀스(확진).",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "① 스케일 축 — 크기 따라 O(n)인가 (prometheus · x1/x10/x132)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "title": "RefreshTokenRepository.findByRtHash (O(n) 후보)",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "description": "스케일별 요청당 평균 응답시간(app측). 계단이면 O(n).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "showValue": "always",
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
+          "legendFormat": "{{seed}}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "title": "ProblemSetRepository.findByGenerationStatus… (O(n) 후보)",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "id": 3,
+      "description": "스케일별 요청당 평균 응답시간(app측). 계단이면 O(n).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "showValue": "always",
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
+          "legendFormat": "{{seed}}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "title": "레포·메서드 x132 평균 (느린 순) — 크기 축 랭킹",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "id": 4,
+      "description": "프로덕션 규모(x132)에서 각 레포 메서드 평균시간. O(n) 미싱인덱스가 상위.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sort_desc(sum by(rm)(max_over_time(spring_data_repository_invocations_seconds_sum{seed=\"x132\", rm!=\"\"}[6h])) / sum by(rm)(max_over_time(spring_data_repository_invocations_seconds_count{seed=\"x132\", rm!=\"\"}[6h])) * 1000)",
+          "legendFormat": "{{rm}}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 5,
+      "panels": [],
+      "title": "② 요청 축 — 누가·요청당 비용 (traceId · trace_snapshot)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "bfrwvbnu3162ob"
+      },
+      "title": "엔드포인트별 요청당 쿼리수 (N+1)",
+      "description": "높으면 N+1. history_long이라 빠른 쿼리까지.",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 6,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "bfrwvbnu3162ob"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req FROM trace_snapshot GROUP BY uri ORDER BY queries_per_req DESC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "bfrwvbnu3162ob"
+      },
+      "title": "엔드포인트별 요청당 스캔행수",
+      "description": "refresh는 1쿼리인데 풀스캔 2만행.",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 7,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "bfrwvbnu3162ob"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT uri, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req FROM trace_snapshot GROUP BY uri ORDER BY examined_per_req DESC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "bfrwvbnu3162ob"
+      },
+      "title": "reqId별 요청 (스캔·N+1 랭킹)",
+      "description": "한 요청의 쿼리수·총스캔·무인덱스·시간. 드롭다운에 reqId 넣어 시퀀스 확인.",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 8,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "bfrwvbnu3162ob"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT reqId, uri, COUNT(*) AS queries, SUM(examined) AS examined, SUM(no_index) AS no_index_q, ROUND(SUM(ms),1) AS ms FROM trace_snapshot GROUP BY reqId, uri ORDER BY examined DESC, queries DESC LIMIT 60",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 9,
+      "panels": [],
+      "title": "③ 드릴다운 — 선택 reqId의 쿼리 시퀀스",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "bfrwvbnu3162ob"
+      },
+      "title": "$reqId 쿼리 시퀀스",
+      "description": "선택 요청이 시간순으로 쏜 쿼리·스캔행·무인덱스. SQL이 위 스케일 축의 레포 메서드와 대응.",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 10,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "bfrwvbnu3162ob"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT event_id, sql_stripped, ms, examined, no_index FROM trace_snapshot WHERE reqId='$reqId' ORDER BY event_id LIMIT 300",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [
+    "query-tuning",
+    "unified"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "reqId",
+        "label": "reqId",
+        "type": "query",
+        "datasource": {
+          "type": "mysql",
+          "uid": "bfrwvbnu3162ob"
+        },
+        "query": "SELECT DISTINCT reqId AS __text, reqId AS __value FROM trace_snapshot ORDER BY reqId LIMIT 300",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "current": {}
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "[쿼리튜닝] 통합 진단 — 스케일 + traceId",
+  "uid": "q-asker-unified-diagnosis",
+  "version": 1,
+  "weekStart": ""
+}
