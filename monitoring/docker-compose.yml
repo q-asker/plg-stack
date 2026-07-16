@@ -108,7 +108,7 @@ services:
   # ═══════════════════════════════════════════════════════════
   prometheus:
     # Prometheus 공식 이미지, 버전 v3.13.0
-    image: prom/prometheus:v3.13.0
+    image: prom/prometheus:v3.13.1
     # 컨테이너 이름
     container_name: prometheus
     # 자동 재시작
