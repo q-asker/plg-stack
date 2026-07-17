@@ -316,6 +316,6 @@ if (( failures > 0 )); then
     exit 1
 fi
 
-# 정상 종료 시에도 성공 알림은 옵션 (매일 스팸 방지). WARN 상태만 알림.
 log INFO "backup.sh 정상 종료"
+notify_slack SUCCESS "backup" "target=${TARGET} 백업·검증 완료. TIMESTAMP=${TIMESTAMP}, 총 ${TOTAL_DURATION}s"
 exit 0

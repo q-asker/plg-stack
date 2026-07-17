@@ -7,7 +7,7 @@
 #   sudo bash monitoring/scripts/gameday.sh
 #   sudo bash monitoring/scripts/gameday.sh 20260901-0300   # 다른 SNAPSHOT
 #
-# 실행 중 SLACK_WEBHOOK_URL을 임시 무력화하고 완료 후 원복한다.
+# 실행 중 SLACK_BACKUP_WEBHOOK_URL을 임시 무력화하고 완료 후 원복한다.
 #
 # 흐름:
 #   1) 사전 헬스 · Slack 무력화
@@ -39,8 +39,8 @@ curl -sf http://localhost:3100/ready   && echo loki-ok
 echo
 echo "=== Slack 무력화 ==="
 cp "$ENV_FILE" "$ENV_BAK"
-sed -i 's|^SLACK_WEBHOOK_URL=.*|SLACK_WEBHOOK_URL=|' "$ENV_FILE"
-grep '^SLACK_WEBHOOK_URL=' "$ENV_FILE"
+sed -i 's|^SLACK_BACKUP_WEBHOOK_URL=.*|SLACK_BACKUP_WEBHOOK_URL=|' "$ENV_FILE"
+grep '^SLACK_BACKUP_WEBHOOK_URL=' "$ENV_FILE"
 
 GAMEDAY_START_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M:%S)
 GIT_SHA=$(cd /home/ubuntu/plg-stack && git rev-parse --short HEAD)
@@ -81,7 +81,7 @@ du -sh /mnt/monitoring/*.bak.* 2>/dev/null || true
 echo
 echo "=== Slack 원복 ==="
 cp "$ENV_BAK" "$ENV_FILE"
-grep '^SLACK_WEBHOOK_URL=' "$ENV_FILE"
+grep '^SLACK_BACKUP_WEBHOOK_URL=' "$ENV_FILE"
 
 GAMEDAY_END_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M:%S)
 

@@ -48,12 +48,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/metrics.sh"
 # shellcheck source=lib/metadata.sh
 source "$SCRIPT_DIR/lib/metadata.sh"
+# shellcheck source=lib/notify.sh
+source "$SCRIPT_DIR/lib/notify.sh"
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
 fail() {
   local stage="$1" code="$2"
   log "[FAIL] stage=$stage exit=$code"
   metric_increment_fail
+  notify_slack ERROR "백업 실패 stage=$stage exit=$code object_key=${OBJECT_KEY:-?}"
   exit "$code"
 }
 
@@ -183,4 +186,5 @@ upload "$SHA_FILE"  "$SHA_KEY"   || { log "[ERR] upload sha: $(cat "$WORK_DIR/up
 FINAL_DURATION=$(($(date +%s) - START_TS))
 metric_record_success "$DUMP_SIZE" "$FINAL_DURATION" "$OBJECT_KEY"
 log "[OK] $OBJECT_KEY uploaded ($DUMP_SIZE bytes, ${FINAL_DURATION}s)"
+notify_slack SUCCESS "백업 완료 object_key=$OBJECT_KEY size=${DUMP_SIZE}B ${FINAL_DURATION}s"
 exit 0

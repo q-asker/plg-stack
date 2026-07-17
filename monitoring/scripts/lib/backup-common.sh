@@ -228,7 +228,7 @@ verify_object() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑦ Slack 알림 (SLACK_WEBHOOK_URL 부재 시 로그만 남기고 스킵)
+# ⑦ Slack 알림 (SLACK_BACKUP_WEBHOOK_URL 부재 시 로그만 남기고 스킵)
 # ═══════════════════════════════════════════════════════════
 
 # notify_slack <status> <target> <detail>
@@ -236,8 +236,8 @@ verify_object() {
 notify_slack() {
     local status="$1" target="$2" detail="$3"
 
-    if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
-        log WARN "SLACK_WEBHOOK_URL 미설정 — Slack 알림 스킵: [${status}] ${target} — ${detail}"
+    if [[ -z "${SLACK_BACKUP_WEBHOOK_URL:-}" ]]; then
+        log WARN "SLACK_BACKUP_WEBHOOK_URL 미설정 — Slack 알림 스킵: [${status}] ${target} — ${detail}"
         return 0
     fi
 
@@ -272,7 +272,7 @@ notify_slack() {
     curl -sf -X POST \
         -H 'Content-Type: application/json' \
         --data "$payload" \
-        "$SLACK_WEBHOOK_URL" >/dev/null \
+        "$SLACK_BACKUP_WEBHOOK_URL" >/dev/null \
         || log WARN "Slack 알림 전송 실패 (webhook 응답 이상)"
 }
 
