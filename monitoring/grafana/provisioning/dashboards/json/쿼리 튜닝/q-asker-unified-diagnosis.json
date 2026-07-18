@@ -32,24 +32,40 @@
       },
       "id": 1,
       "panels": [],
-      "title": "① 스케일 축 — 크기 따라 O(n)인가 (prometheus · x1/x10/x132)",
+      "title": "① 스케일 축 — 크기 따라 O(n)인가 (prometheus · 레포지토리 선택 → 메서드 전부)",
       "type": "row"
+    },
+    {
+      "type": "text",
+      "title": "",
+      "id": 900,
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**역할 · 탐지** — 데이터 크기를 x1→x10→x100로 키우며 레포·메서드별 지연을 잰다. 크기 따라 계단처럼 튀면(배수 ≫1) 무인덱스 O(n) 스캔 후보. 코드리뷰·단일 부하가 못 보는 '크기 의존 이상'을 거르는 1차 필터.\n\n**측정 원리 (Micrometer→3레벨 DB):**\n\n① 계측 — Spring Data가 레포 메서드 호출마다 `spring_data_repository_invocations` Timer 기록(_sum=누적시간, _count=건수).\n\n② 3레벨 — x1(3308)·x10(3309)·x100(3307) 물리적으로 크기 다른 DB에 앱을 각각 붙여 같은 부하를 돌리고 seed 태그로 구분.\n\n③ 지표 — `_sum/_count`로 평균 ms 산출, seed축(x1→x10→x100)으로 나열. 캡처 시점 고정 앵커(@2026-07-16)."
+      }
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "title": "RefreshTokenRepository.findByRtHash (O(n) 후보)",
+      "title": "$method (x1→x10→x100)",
       "type": "barchart",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 1
+        "y": 9
       },
-      "id": 2,
-      "description": "스케일별 요청당 평균 응답시간(app측). 계단이면 O(n).",
+      "id": 101,
+      "description": "선택 레포의 각 메서드별 x1/x10/x100 평균. 부하 캡처 고정 스냅샷(@2026-07-16). 크기 따라 계단↑면 O(n).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -80,115 +96,15 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
+          "expr": "sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d] @ 1784385847)) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d] @ 1784385847)) * 1000",
           "legendFormat": "{{seed}}",
-          "instant": true,
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "title": "ProblemSetRepository.findByGenerationStatus… (O(n) 후보)",
-      "type": "barchart",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "id": 3,
-      "description": "스케일별 요청당 평균 응답시간(app측). 계단이면 O(n).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 1
-          },
-          "unit": "ms"
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "vertical",
-        "showValue": "always",
-        "legend": {
-          "showLegend": true,
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
-          "legendFormat": "{{seed}}",
-          "instant": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "title": "레포·메서드 x132 평균 (느린 순) — 크기 축 랭킹",
-      "type": "barchart",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "id": 4,
-      "description": "프로덕션 규모(x132)에서 각 레포 메서드 평균시간. O(n) 미싱인덱스가 상위.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 1
-          },
-          "unit": "ms"
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal",
-        "showValue": "always",
-        "legend": {
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "sort_desc(sum by(rm)(max_over_time(spring_data_repository_invocations_seconds_sum{seed=\"x132\", rm!=\"\"}[6h])) / sum by(rm)(max_over_time(spring_data_repository_invocations_seconds_count{seed=\"x132\", rm!=\"\"}[6h])) * 1000)",
-          "legendFormat": "{{rm}}",
-          "instant": true,
-          "refId": "A"
-        }
-      ]
+      ],
+      "repeat": "method",
+      "repeatDirection": "h",
+      "maxPerRow": 3
     },
     {
       "collapsed": false,
@@ -196,12 +112,28 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 17
       },
       "id": 5,
       "panels": [],
-      "title": "② 요청 축 — 누가·요청당 비용 (traceId · trace_snapshot)",
+      "title": "② 요청 축 — 선택 레포지토리($repo)를 건드리는 엔드포인트만 (traceId · trace_snapshot)",
       "type": "row"
+    },
+    {
+      "type": "text",
+      "title": "",
+      "id": 901,
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**역할 · 귀속** — 탐지된 쿼리가 어느 실제 엔드포인트에서 요청당 몇 번(N+1)·몇 행 스캔으로 비용을 내는지 연결한다. 선택 레포($repo)를 건드리는 엔드포인트만 표시 → 크기 축 이상을 사용자 요청 경로에 매핑.\n\n**귀속 원리 (trace_snapshot):**\n\n① 매핑 — 각 SQL의 테이블명을 레포로 매핑한 `repo` 컬럼에 `WHERE repo='$repo'` → 선택 레포를 건드리는 행만.\n\n② 지표 — 요청당 쿼리수 = `COUNT(*)/COUNT(DISTINCT reqId)`(>1이면 N+1), 요청당 스캔행 = `SUM(examined)/요청수`.\n\n③ 랭킹 — 엔드포인트(uri)별로 `요청당 쿼리수`(N+1)·`요청당 스캔행`을 집계해 어디가 비싼지 examined 내림차순으로 나열. 실제 SQL과 문장별 비용은 §③에서 본다."
+      }
     },
     {
       "datasource": {
@@ -215,7 +147,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 26
       },
       "id": 6,
       "fieldConfig": {
@@ -249,7 +181,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req FROM trace_snapshot GROUP BY uri ORDER BY queries_per_req DESC",
+          "rawSql": "SELECT uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY queries_per_req DESC",
           "refId": "A"
         }
       ]
@@ -266,7 +198,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 26
       },
       "id": 7,
       "fieldConfig": {
@@ -300,7 +232,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT uri, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req FROM trace_snapshot GROUP BY uri ORDER BY examined_per_req DESC",
+          "rawSql": "SELECT uri, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY examined_per_req DESC",
           "refId": "A"
         }
       ]
@@ -310,14 +242,14 @@
         "type": "mysql",
         "uid": "bfrwvbnu3162ob"
       },
-      "title": "reqId별 요청 (스캔·N+1 랭킹)",
-      "description": "한 요청의 쿼리수·총스캔·무인덱스·시간. 드롭다운에 reqId 넣어 시퀀스 확인.",
+      "title": "엔드포인트별 요청당 비용 (탐지·랭킹)",
+      "description": "컬럼 설명 — uri: 엔드포인트(HTTP메서드:경로템플릿) · queries_per_req: 요청당 쿼리수(전체÷고유요청수, >1이면 N+1) · examined_per_req: 요청당 스캔행수(SUM(examined)÷요청수, 클수록 풀스캔) · reqs: 고유 요청수(표본 크기). examined 내림차순 랭킹.",
       "type": "table",
       "gridPos": {
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 34
       },
       "id": 8,
       "fieldConfig": {
@@ -327,7 +259,72 @@
             "filterable": true
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uri"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "엔드포인트 = HTTP메서드:경로템플릿 (예: GET:/history/{id}). 요청을 처리한 컨트롤러 매핑."
+              },
+              {
+                "id": "displayName",
+                "value": "엔드포인트"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queries_per_req"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "요청당 실행 쿼리 수 = 전체 쿼리수 ÷ 고유 요청수. 1보다 크면 N+1 의심."
+              },
+              {
+                "id": "displayName",
+                "value": "요청당 쿼리수(N+1)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "examined_per_req"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "요청당 스캔한 행수 = SUM(examined) ÷ 요청수. 클수록 풀스캔·인덱스 부재."
+              },
+              {
+                "id": "displayName",
+                "value": "요청당 스캔행"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reqs"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "이 엔드포인트를 친 고유 요청(reqId) 수 = 평균의 표본 크기."
+              },
+              {
+                "id": "displayName",
+                "value": "요청수(표본)"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true
@@ -340,10 +337,11 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT reqId, uri, COUNT(*) AS queries, SUM(examined) AS examined, SUM(no_index) AS no_index_q, ROUND(SUM(ms),1) AS ms FROM trace_snapshot GROUP BY reqId, uri ORDER BY examined DESC, queries DESC LIMIT 60",
+          "rawSql": "SELECT uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req, COUNT(DISTINCT reqId) AS reqs FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY examined_per_req DESC",
           "refId": "A"
         }
-      ]
+      ],
+      "pluginVersion": "13.1.0"
     },
     {
       "collapsed": false,
@@ -351,26 +349,41 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 43
       },
       "id": 9,
       "panels": [],
-      "title": "③ 드릴다운 — 선택 reqId의 쿼리 시퀀스",
+      "title": "③ 드릴다운 — 선택 레포($repo) 범위의 엔드포인트별 대표 쿼리 시퀀스",
       "type": "row"
+    },
+    {
+      "type": "text",
+      "title": "",
+      "id": 902,
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**역할 · 확진** — 선택한 엔드포인트(uri)의 대표 요청이 시간순으로 실행한 실제 SQL·스캔행·무인덱스 여부를 본다. 이상의 근본 원인을 SQL 레벨에서 최종 확인(예: `refresh_token` FOR UPDATE 풀스캔).\n\n**reqId로 쿼리를 가져오는 원리 (앱→DB→스냅샷):**\n\n① 앱 — Hibernate StatementInspector가 실행되는 모든 SQL 앞에 `/* reqId=.. uri=.. */` 주석을 붙인다(요청마다 MdcRequestFilter가 UUID로 reqId 생성).\n\n② MySQL — performance_schema.events_statements_history_long가 실행 문장을 주석째 기록(SQL_TEXT + 스캔행·시간·무인덱스 비용까지).\n\n③ 스냅샷 — trace-capture.sh가 주석에서 reqId를 파싱해 trace_snapshot으로 굳힌다.\n\n선택 레포($repo)를 건드리는 각 엔드포인트의 대표 요청(최다 쿼리)을 뽑아, 그 요청이 쏜 SQL을 문장 하나씩 나열한다. 각 행 = 실제 SQL·repo·문장별 스캔행·무인덱스·시간. §②가 \"어디가 비싼가\"라면, 여기선 \"무슨 SQL이라 비싼가\"를 SQL 레벨로 확진한다."
+      }
     },
     {
       "datasource": {
         "type": "mysql",
         "uid": "bfrwvbnu3162ob"
       },
-      "title": "$reqId 쿼리 시퀀스",
-      "description": "선택 요청이 시간순으로 쏜 쿼리·스캔행·무인덱스. SQL이 위 스케일 축의 레포 메서드와 대응.",
+      "title": "$repo 쿼리 시퀀스 — 문장별 상세 (확진)",
       "type": "table",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 52
       },
       "id": 10,
       "fieldConfig": {
@@ -380,7 +393,120 @@
             "filterable": true
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uri"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "엔드포인트 = HTTP메서드:경로템플릿."
+              },
+              {
+                "id": "displayName",
+                "value": "엔드포인트"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "repo"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "이 SQL이 접근한 레포지토리. 주석 repoMethod= 값 우선, 없으면(레포 안 거친 Hibernate 자동 SQL) from 절 테이블명으로 복원."
+              },
+              {
+                "id": "displayName",
+                "value": "레포지토리"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "method"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "레포 메서드(주석 repoMethod= 파싱). 레포를 안 거친 Hibernate 자동 SQL(lazy-load 연관 초기화·dirty-check UPDATE)은 'Hibernate query'로 표시."
+              },
+              {
+                "id": "displayName",
+                "value": "메서드"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sql_stripped"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "실행된 실제 SQL (reqId 주석 제거, 앞 150자)."
+              },
+              {
+                "id": "displayName",
+                "value": "실행 SQL"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ms"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "이 문장 하나의 실행 시간(밀리초, TIMER_WAIT)."
+              },
+              {
+                "id": "displayName",
+                "value": "실행시간(ms)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "examined"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "이 문장이 스캔한 행수(ROWS_EXAMINED). 클수록 풀스캔."
+              },
+              {
+                "id": "displayName",
+                "value": "스캔행"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "no_index"
+            },
+            "properties": [
+              {
+                "id": "description",
+                "value": "인덱스 미사용 여부(1=인덱스 못 씀→풀스캔, 0=인덱스 사용)."
+              },
+              {
+                "id": "displayName",
+                "value": "무인덱스(1=풀스캔)"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true
@@ -393,8 +519,166 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT event_id, sql_stripped, ms, examined, no_index FROM trace_snapshot WHERE reqId='$reqId' ORDER BY event_id LIMIT 300",
+          "rawSql": "WITH per_req AS (SELECT reqId, uri, COUNT(*) cnt FROM trace_snapshot WHERE repo='$repo' GROUP BY reqId, uri), top AS (SELECT reqId, ROW_NUMBER() OVER (PARTITION BY uri ORDER BY cnt DESC, reqId) rn FROM per_req) SELECT ts.uri, ts.repo, ts.method, ts.sql_stripped, ts.ms, ts.examined, ts.no_index FROM trace_snapshot ts WHERE ts.repo='$repo' AND ts.reqId IN (SELECT reqId FROM top WHERE rn=1) ORDER BY ts.uri, ts.event_id LIMIT 500",
           "refId": "A"
+        }
+      ],
+      "pluginVersion": "13.1.0",
+      "description": "컬럼 설명 — uri: 엔드포인트 · repo: SQL 접근 테이블의 레포지토리 · sql_stripped: 실행된 실제 SQL(주석 제거 150자) · ms: 문장 실행시간 · examined: 문장 스캔행수 · no_index: 인덱스 미사용(1=풀스캔,0=인덱스). 각 uri 대표요청의 문장을 실행순으로."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 40,
+      "panels": [],
+      "title": "④ 레포지토리별 읽기/쓰기 호출 비율 (실사용자 · springboot-oci)",
+      "type": "row"
+    },
+    {
+      "type": "text",
+      "title": "",
+      "id": 903,
+      "transparent": true,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**역할 · 성격 판단** — 프로덕션 실사용자 레포별 읽기:쓰기 비율. 인덱스는 읽기를 가속하되 쓰기마다 유지비를 물린다. 판단 기준은 비율이 아니라 **'그 인덱스를 뜨거운 쿼리의 WHERE가 쓰는가'** — 읽기·쓰기 어느 WHERE에도 쓰이면(쓰기의 행 탐색·`FOR UPDATE` 포함) 걸고, 어느 뜨거운 쿼리도 안 쓰면 순수 쓰기 세금이라 걸지 않는다. 즉 읽기 주도는 인덱스가 남는 장사, 쓰기 주도는 이득 없는 인덱스를 선별해 배제(쓰기 자신이 스캔하면 오히려 필수). 부하 아닌 90일 실측.\n\n**집계 원리 (프로덕션 실측):**\n\n① 소스 — `instance=\"springboot-oci\"`(운영 인스턴스) 메트릭. 부하 seed가 아닌 실사용자 트래픽.\n\n② 분류 — method 정규식으로 읽기(find/get..)·쓰기(save/delete..) 나눠 `joinByField`로 합쳐 100% 스택.\n\n③ 고정 — `[90d] @ 앵커`로 대시보드 시간범위와 무관한 90일 고정 스냅샷."
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "title": "$repo — 읽기 vs 쓰기 비중 (100% 스택)",
+      "description": "실사용자(springboot-oci) 90일 누적 읽기/쓰기 비율. 대시보드 시간범위와 무관한 고정 스냅샷(@2026-07-13, 프로덕션 마지막 데이터 직후 앵커).",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 1
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "읽기"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "쓰기"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "읽기"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "쓰기"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "percent",
+        "xField": "repository",
+        "legend": {
+          "showLegend": true,
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum by(repository)(last_over_time(spring_data_repository_invocations_seconds_count{method=~\"(find|get|exists|count|read|list).*\",repository=\"$repo\",instance=\"springboot-oci\"}[90d] @ 1783900800))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sum by(repository)(last_over_time(spring_data_repository_invocations_seconds_count{method=~\"(save|delete|insert|update|flush|remove|persist).*\",repository=\"$repo\",instance=\"springboot-oci\"}[90d] @ 1783900800))",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "repository",
+            "mode": "outer"
+          }
         }
       ]
     }
@@ -408,18 +692,56 @@
   "templating": {
     "list": [
       {
-        "name": "reqId",
-        "label": "reqId",
+        "name": "repo",
+        "label": "레포지토리",
         "type": "query",
         "datasource": {
-          "type": "mysql",
-          "uid": "bfrwvbnu3162ob"
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
         },
-        "query": "SELECT DISTINCT reqId AS __text, reqId AS __value FROM trace_snapshot ORDER BY reqId LIMIT 300",
+        "definition": "label_values(spring_data_repository_invocations_seconds_count, repository)",
+        "query": {
+          "query": "label_values(spring_data_repository_invocations_seconds_count, repository)",
+          "refId": "repo"
+        },
         "refresh": 2,
-        "includeAll": false,
+        "sort": 1,
         "multi": false,
-        "current": {}
+        "includeAll": false,
+        "current": {
+          "text": "RefreshTokenRepository",
+          "value": "RefreshTokenRepository"
+        },
+        "options": []
+      },
+      {
+        "name": "method",
+        "label": "메서드",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "definition": "label_values(spring_data_repository_invocations_seconds_count{repository=\"$repo\",seed=~\"x1|x10|x100\"}, method)",
+        "query": {
+          "query": "label_values(spring_data_repository_invocations_seconds_count{repository=\"$repo\",seed=~\"x1|x10|x100\"}, method)",
+          "refId": "method"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 2
       }
     ]
   },

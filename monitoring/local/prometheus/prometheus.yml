@@ -44,12 +44,12 @@ scrape_configs:
           instance: "q-asker-db"
 
   # ----- mysqld_exporter (seed별): 스케일 레벨별 digest 지표 (perf_schema.eventsstatements) -----
-  # 각 시드 컨테이너(x1/x10/x132)에 붙은 exporter를 seed 라벨로 스크레이프 → seed축 bar chart 데이터
+  # 각 시드 컨테이너(x1/x10/x100)에 붙은 exporter를 seed 라벨로 스크레이프 → seed축 bar chart 데이터
   - job_name: "mysql-seed"
     static_configs:
       - targets: ["local-mysqld-exporter-x1:9104"]
         labels: { instance: "x1", seed: "x1" }
       - targets: ["local-mysqld-exporter-x10:9104"]
         labels: { instance: "x10", seed: "x10" }
-      - targets: ["local-mysqld-exporter-x132:9104"]
-        labels: { instance: "x132", seed: "x132" }
+      - targets: ["local-mysqld-exporter-x100:9104"]
+        labels: { instance: "x100", seed: "x100" }

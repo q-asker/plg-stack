@@ -84,7 +84,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.findByCategory\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.findByCategory\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.findByCategory\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.findByCategory\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -142,7 +142,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -200,7 +200,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.findByIdWithReplies\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.findByIdWithReplies\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.findByIdWithReplies\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.findByIdWithReplies\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -258,7 +258,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -316,7 +316,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"BoardRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"BoardRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -387,7 +387,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -445,7 +445,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.findLatestByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.findLatestByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.findLatestByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.findLatestByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -503,7 +503,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -561,7 +561,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"EssayGradeLogRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"EssayGradeLogRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -632,7 +632,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"FeedbackBoardRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"FeedbackBoardRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"FeedbackBoardRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"FeedbackBoardRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -690,7 +690,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"FeedbackBoardRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"FeedbackBoardRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"FeedbackBoardRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"FeedbackBoardRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -748,7 +748,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"FeedbackBoardRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"FeedbackBoardRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"FeedbackBoardRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"FeedbackBoardRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -819,7 +819,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemRepository.findByIdProblemSetId\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemRepository.findByIdProblemSetId\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemRepository.findByIdProblemSetId\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemRepository.findByIdProblemSetId\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -877,7 +877,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -935,7 +935,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemRepository.saveAll\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemRepository.saveAll\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemRepository.saveAll\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemRepository.saveAll\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1006,7 +1006,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findAllById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findAllById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findAllById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findAllById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1064,7 +1064,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findByGenerationStatusInAndCreatedAtBefore\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1122,7 +1122,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1180,7 +1180,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1238,7 +1238,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ProblemSetRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ProblemSetRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1309,7 +1309,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.findAllByUserIdOrderByCreatedAtDesc\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.findAllByUserIdOrderByCreatedAtDesc\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.findAllByUserIdOrderByCreatedAtDesc\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.findAllByUserIdOrderByCreatedAtDesc\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1367,7 +1367,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1425,7 +1425,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.findByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.findByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.findByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.findByUserIdAndProblemSetId\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1483,7 +1483,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1541,7 +1541,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"QuizHistoryRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"QuizHistoryRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1612,7 +1612,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.findByRtHash\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1670,7 +1670,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1728,7 +1728,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"RefreshTokenRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"RefreshTokenRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1799,7 +1799,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ReplyRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ReplyRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ReplyRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ReplyRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1857,7 +1857,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ReplyRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ReplyRepository.delete\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ReplyRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ReplyRepository.delete\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1915,7 +1915,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ReplyRepository.save\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ReplyRepository.save\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"ReplyRepository.save\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"ReplyRepository.save\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
@@ -1986,7 +1986,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"UserRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"UserRepository.findById\", seed=~\"x1|x10|x132\"}[1h])) * 1000, \"seed\")",
+          "expr": "sort_by_label(sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{rm=\"UserRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{rm=\"UserRepository.findById\", seed=~\"x1|x10|x132\"}[6h])) * 1000, \"seed\")",
           "legendFormat": "{{seed}}",
           "instant": true,
           "refId": "A"
