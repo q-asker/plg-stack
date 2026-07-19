@@ -32,7 +32,7 @@
       },
       "id": 1,
       "panels": [],
-      "title": "① 스케일 축 — 크기 따라 O(n)인가 (prometheus · 레포지토리 선택 → 메서드 전부)",
+      "title": "① 스케일 관점 — 데이터 크기 따라 O(n)인가 (x1→x10→x100 · prometheus)",
       "type": "row"
     },
     {
@@ -96,7 +96,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d] @ 1784385847)) / sum by(seed)(max_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d] @ 1784385847)) * 1000",
+          "expr": "sum by(seed)(last_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d])) / sum by(seed)(last_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d])) * 1000",
           "legendFormat": "{{seed}}",
           "refId": "A",
           "instant": true
@@ -116,7 +116,7 @@
       },
       "id": 5,
       "panels": [],
-      "title": "② 요청 축 — 선택 레포지토리($repo)를 건드리는 엔드포인트만 (traceId · trace_snapshot)",
+      "title": "② 레포지토리 관점 — 선택 레포지토리($repo)를 건드리는 엔드포인트만 (traceId · trace_snapshot)",
       "type": "row"
     },
     {
@@ -353,7 +353,7 @@
       },
       "id": 9,
       "panels": [],
-      "title": "③ 드릴다운 — 선택 레포($repo) 범위의 엔드포인트별 대표 쿼리 시퀀스",
+      "title": "③ 엔드포인트 관점 — 선택 레포($repo) 범위의 엔드포인트별 대표 쿼리 시퀀스",
       "type": "row"
     },
     {
@@ -536,7 +536,7 @@
       },
       "id": 40,
       "panels": [],
-      "title": "④ 레포지토리별 읽기/쓰기 호출 비율 (실사용자 · springboot-oci)",
+      "title": "④ 실사용 관점 — 레포지토리별 읽기/쓰기 호출 비율 (프로덕션 springboot-oci)",
       "type": "row"
     },
     {
@@ -681,6 +681,145 @@
           }
         }
       ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "id": 904,
+      "panels": [],
+      "title": "부록 — 슬로우 쿼리 로그 (>0.1s · mysql.slow_log · 이번 실행)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "mysql",
+        "uid": "bfrwvbnu3162ob"
+      },
+      "title": "슬로우 쿼리 (query_time 내림차순)",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 80
+      },
+      "id": 905,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "start_time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "시각"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "query_ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "쿼리시간(ms)"
+              },
+              {
+                "id": "description",
+                "value": "이 실행이 걸린 시간(ms). long_query_time=0.1s 초과분만 기록."
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rows_examined"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "스캔행"
+              },
+              {
+                "id": "description",
+                "value": "스캔한 행수(클수록 풀스캔)."
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rows_sent"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "반환행"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uri"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "엔드포인트"
+              },
+              {
+                "id": "description",
+                "value": "sqlcommenter /* uri= */ 태그에서 파싱."
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sql_stripped"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "SQL"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "bfrwvbnu3162ob"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT start_time, ROUND((TIME_TO_SEC(query_time)+MICROSECOND(query_time)/1e6)*1000,1) AS query_ms, rows_examined, rows_sent, SUBSTRING_INDEX(SUBSTRING_INDEX(CONVERT(sql_text USING utf8mb4),'uri=',-1),' ',1) AS uri, LEFT(TRIM(SUBSTRING_INDEX(CONVERT(sql_text USING utf8mb4),'*/',-1)),150) AS sql_stripped FROM mysql.slow_log ORDER BY query_time DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "pluginVersion": "13.1.0",
+      "description": "mysql.slow_log 원문. run-level 이 부하 전 slow_query_log=ON(0.1s)+truncate 하므로 이번 실행의 느린 쿼리만. digest·trace_snapshot 과 달리 '실제 임계값(>0.1s) 초과 실행'을 원문으로 본다."
     }
   ],
   "refresh": "",
@@ -749,7 +888,9 @@
     "from": "now-6h",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "hidden": true
+  },
   "timezone": "browser",
   "title": "[쿼리튜닝] 통합 진단 — 스케일 + traceId",
   "uid": "q-asker-unified-diagnosis",
