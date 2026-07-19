@@ -53,6 +53,7 @@ install -m 755 "$SRC_DIR/restore.sh" "$INSTALL_DIR/restore.sh"
 install -m 755 "$SRC_DIR/healthcheck.sh" "$INSTALL_DIR/healthcheck.sh"
 install -m 644 "$SRC_DIR/lib/metrics.sh" "$INSTALL_DIR/lib/metrics.sh"
 install -m 644 "$SRC_DIR/lib/metadata.sh" "$INSTALL_DIR/lib/metadata.sh"
+install -m 644 "$SRC_DIR/lib/notify.sh" "$INSTALL_DIR/lib/notify.sh"
 
 # Docker 설치 확인 (T8 restore.sh 사전 요구)
 if ! command -v docker >/dev/null 2>&1; then
