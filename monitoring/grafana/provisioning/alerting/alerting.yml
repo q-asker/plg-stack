@@ -18,7 +18,7 @@ contactPoints:
         type: slack
         settings:
           # Slack Incoming Webhook URL
-          url: $SLACK_WEBHOOK_URL
+          url: $SLACK_ERROR_WEBHOOK_URL
           # 알림을 보낼 Slack 채널
           recipient: "#알림-에러"
           # Slack 메시지 제목
