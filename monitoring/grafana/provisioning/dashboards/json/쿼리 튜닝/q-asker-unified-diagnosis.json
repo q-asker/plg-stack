@@ -181,7 +181,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY queries_per_req DESC",
+          "rawSql": "SELECT REGEXP_REPLACE(uri, '[{][^}]+[}]', '{}') AS uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY queries_per_req DESC",
           "refId": "A"
         }
       ]
@@ -232,7 +232,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT uri, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY examined_per_req DESC",
+          "rawSql": "SELECT REGEXP_REPLACE(uri, '[{][^}]+[}]', '{}') AS uri, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY examined_per_req DESC",
           "refId": "A"
         }
       ]
