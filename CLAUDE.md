@@ -125,6 +125,8 @@ plg-stack/
 ├── README.md                    ← 배포 가이드
 ├── .gitignore                   ← Git 무시 목록
 ├── .mcp.json                    ← MCP 서버 설정
+├── docs/                        ← 로컬 전용 기록 (gitignored)
+│   └── patch-notes/             ← 의존성 승격 사이클별 패치노트 (YYYY-MM-DD-<대상>.md)
 │
 ├── springboot/                  ← OCI-2 Spring Boot 애플리케이션
 │   ├── docker-compose.yml       ← Alloy 에이전트 (Docker 소켓 기반 로그 수집)
