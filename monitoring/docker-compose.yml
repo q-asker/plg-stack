@@ -107,8 +107,8 @@ services:
   # 역할: broker-1/2/3, springboot, mysql 메트릭 저장 및 PromQL 쿼리 제공
   # ═══════════════════════════════════════════════════════════
   prometheus:
-    # Prometheus 공식 이미지, 버전 v3.13.0
-    image: prom/prometheus:v3.13.0
+    # Prometheus 공식 이미지, 버전 v3.13.1
+    image: prom/prometheus:v3.13.1
     # 컨테이너 이름
     container_name: prometheus
     # 자동 재시작
