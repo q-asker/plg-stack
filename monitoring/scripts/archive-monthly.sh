@@ -17,11 +17,11 @@
 #
 # 자동 삭제 정책:
 #   - Terraform lifecycle의 delete-after-15d rule은 monthly-archive/*를 제외 처리
-#   - verify.sh의 90% 임계 알림이 저장소 압박 감지 시 알림 → 운영자 수동 정리
+#   - backup.sh의 90% 임계 알림이 저장소 압박 감지 시 알림 → 운영자 수동 정리
 #   - 자동 삭제 없음 (사고 방지, 실무 표준 안전 정책)
 #
 # 실행: /etc/cron.d/q-asker-backup에서 매월 1일 KST 05:00 자동 실행
-#      (backup.sh 03:00, verify.sh 04:00 이후)
+#      (backup.sh 03:00 이후)
 
 set -uo pipefail
 

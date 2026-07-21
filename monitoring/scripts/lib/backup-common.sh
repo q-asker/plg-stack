@@ -6,7 +6,7 @@
 # 사용법:
 #   source "$(dirname "${BASH_SOURCE[0]}")/lib/backup-common.sh"
 #
-# 이 파일은 스탠드얼론 실행하지 않는다. backup.sh / restore.sh / verify.sh가
+# 이 파일은 스탠드얼론 실행하지 않는다. backup.sh / restore.sh가
 # source 로 불러다 쓴다.
 #
 # 의존:
@@ -144,7 +144,7 @@ upload_object() {
 #   실패 판정 강화 (T8 후속 개선):
 #   1. oci 명령 non-zero exit → 실패
 #   2. 결과 파일이 비어있음(0 byte) → 실패 (일부 실패 케이스에서 빈 파일이 남는 경우)
-#   restore.sh / verify.sh 모두 이 함수 결과에 의존하므로 여기서 정확히 걸러야
+#   backup.sh / restore.sh 모두 이 함수 결과에 의존하므로 여기서 정확히 걸러야
 #   상위 조기 return이 의도대로 작동한다.
 download_object() {
     local profile="$1" bucket="$2" key="$3" file="$4"
@@ -283,8 +283,7 @@ notify_slack() {
 # write_metrics_atomic <metrics_content> [filename]
 #   TEXTFILE_DIR/<filename> 을 atomic write.
 #   filename 기본값: q_asker_backup.prom (backup.sh 산출물).
-#   verify.sh 등 다른 스크립트는 별도 파일명(예: q_asker_verify.prom) 지정하여
-#   backup.sh와의 파일 쓰기 충돌을 회피한다 (T6 Q1=b).
+#   filename 파라미터로 다른 파일명을 지정하면 파일 쓰기 충돌 없이 확장 가능.
 write_metrics_atomic() {
     local content="$1"
     local filename="${2:-q_asker_backup.prom}"
@@ -354,7 +353,7 @@ retention_cleanup() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑩ 복원용 유틸 (restore.sh / verify.sh 공용)
+# ⑩ 복원용 유틸 (restore.sh / archive-monthly.sh 공용)
 # ═══════════════════════════════════════════════════════════
 
 # verify_local_hash <tar_file> <sha_file>
@@ -408,11 +407,11 @@ list_available_snapshots() {
 
 # get_bucket_usage_bytes <profile> <bucket>
 #   stdout: 버킷의 사용 용량 (bytes). 오류 시 0.
-#   T6 verify.sh의 저장소 사용량 임계 알림 및 메트릭용.
+#   backup.sh의 저장소 사용량 임계 알림 및 메트릭용.
 #
-#   T8 후속 개선: OCI의 approximate-size는 활동 활발한 버킷에서 null을 지연 반환하는
-#   경우가 있어(T6 실측 확인) 실시간 정확값을 위해 object list --all로 각 객체 size를
-#   합산한다. 매일 verify.sh 실행 시 요청 1건 소비 (무료 한도 여유).
+#   OCI의 approximate-size는 활동 활발한 버킷에서 null을 지연 반환하는 경우가 있어
+#   (실측 확인) 실시간 정확값을 위해 object list --all로 각 객체 size를 합산한다.
+#   매일 backup.sh 실행 시 요청 1건 소비 (무료 한도 여유).
 get_bucket_usage_bytes() {
     local profile="$1"
     local bucket="$2"

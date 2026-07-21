@@ -13,8 +13,9 @@
 #   2) --target 별 handler 호출 (독립 시도, 하나 실패해도 다른 것 계속)
 #   3) 인라인 무결성 검증(FR-009 1단계): 업로드 직후 GET + 해시 재비교
 #   4) retention_cleanup (FR-008): 7일 초과 객체 자동 삭제
-#   5) textfile collector 메트릭 갱신 (FR-010, T5에서 활성화됨)
-#   6) 하나라도 실패했으면 Slack ERROR + exit 1
+#   5) 저장소 사용량 90% 임계 알림 (FR-013)
+#   6) textfile collector 메트릭 갱신 (FR-010, T5에서 활성화됨)
+#   7) 하나라도 실패했으면 Slack ERROR + exit 1
 #
 # 대응 FR: 001, 002, 003, 004, 007, 008, 009(1단계), 010, 012, 013
 
@@ -68,7 +69,7 @@ require_env \
     OCI_READER_PROFILE \
     BACKUP_RETENTION_DAYS
 
-require_cmd oci curl jq tar gzip sha256sum
+require_cmd oci curl jq tar gzip sha256sum awk
 
 ensure_tmp_dir
 
@@ -81,6 +82,13 @@ COMPOSE_FILE="${MONITORING_DIR}/docker-compose.yml"
 
 # 결과 누적 (메트릭 조립용)
 declare -A STORE_STATUS STORE_SIZE STORE_HASH STORE_DURATION STORE_DOWNTIME
+
+# 저장소 임계 (무료 한도 90% 도달 시 Slack 경고)
+BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-21474836480}"  # 20 GiB
+THRESHOLD_FLAG="${BACKUP_TMP_DIR}/threshold-alerted.flag"
+THRESHOLD_RATIO="0.90"
+STORAGE_USAGE_BYTES=0
+STORAGE_USAGE_RATIO=0
 
 # ═══════════════════════════════════════════════════════════
 # Prometheus 핸들러
@@ -234,6 +242,47 @@ backup_loki() {
 }
 
 # ═══════════════════════════════════════════════════════════
+# 저장소 임계 확인 (FR-013)
+#   무료 한도 90% 도달 시 Slack WARN. 상태 파일로 1회 억제, 회복 시 해제.
+# ═══════════════════════════════════════════════════════════
+
+check_storage_threshold() {
+    log INFO "===== 저장소 사용량 확인 ====="
+
+    STORAGE_USAGE_BYTES="$(get_bucket_usage_bytes "$READER" "$BUCKET" || echo 0)"
+    [[ -z "$STORAGE_USAGE_BYTES" ]] && STORAGE_USAGE_BYTES=0
+
+    STORAGE_USAGE_RATIO="$(awk -v u="$STORAGE_USAGE_BYTES" -v l="$BACKUP_FREE_LIMIT_BYTES" \
+        'BEGIN { if (l > 0) printf "%.4f", u/l; else print "0" }')"
+
+    log INFO "사용량: ${STORAGE_USAGE_BYTES} bytes / 한도 ${BACKUP_FREE_LIMIT_BYTES} bytes (ratio=${STORAGE_USAGE_RATIO})"
+
+    local above_threshold
+    above_threshold="$(awk -v r="$STORAGE_USAGE_RATIO" -v t="$THRESHOLD_RATIO" \
+        'BEGIN { print (r >= t) ? 1 : 0 }')"
+
+    if [[ "$above_threshold" == "1" ]]; then
+        if [[ -f "$THRESHOLD_FLAG" ]]; then
+            log INFO "임계 이미 알림됨 (재발송 억제, 회복 시 상태 파일 자동 삭제)"
+        else
+            if (( DRY_RUN )); then
+                log WARN "[DRY-RUN] 임계 알림 스킵"
+            else
+                notify_slack WARN "storage-threshold" \
+                    "저장소 사용량이 한도의 ${STORAGE_USAGE_RATIO} 도달 (${STORAGE_USAGE_BYTES} / ${BACKUP_FREE_LIMIT_BYTES} bytes)"
+                touch "$THRESHOLD_FLAG"
+                log INFO "임계 알림 발송 + 상태 파일 생성: ${THRESHOLD_FLAG}"
+            fi
+        fi
+    else
+        if [[ -f "$THRESHOLD_FLAG" ]]; then
+            rm -f "$THRESHOLD_FLAG"
+            log INFO "임계 회복 → 상태 파일 삭제: ${THRESHOLD_FLAG}"
+        fi
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════
 # 메트릭 조립
 # ═══════════════════════════════════════════════════════════
 
@@ -251,6 +300,12 @@ emit_metrics() {
     content+="# TYPE q_asker_backup_size_bytes gauge"$'\n'
     content+="# HELP q_asker_backup_loki_downtime_seconds Loki container downtime during backup"$'\n'
     content+="# TYPE q_asker_backup_loki_downtime_seconds gauge"$'\n'
+    content+="# HELP q_asker_backup_storage_usage_bytes Bucket usage in bytes"$'\n'
+    content+="# TYPE q_asker_backup_storage_usage_bytes gauge"$'\n'
+    content+="# HELP q_asker_backup_storage_usage_ratio Usage / free-tier limit"$'\n'
+    content+="# TYPE q_asker_backup_storage_usage_ratio gauge"$'\n'
+    content+="# HELP q_asker_backup_storage_limit_bytes Configured free-tier limit"$'\n'
+    content+="# TYPE q_asker_backup_storage_limit_bytes gauge"$'\n'
 
     local s
     for s in prometheus loki; do
@@ -264,6 +319,10 @@ emit_metrics() {
     if [[ -n "${STORE_DOWNTIME[loki]:-}" ]]; then
         content+="q_asker_backup_loki_downtime_seconds ${STORE_DOWNTIME[loki]}"$'\n'
     fi
+
+    content+="q_asker_backup_storage_usage_bytes ${STORAGE_USAGE_BYTES}"$'\n'
+    content+="q_asker_backup_storage_usage_ratio ${STORAGE_USAGE_RATIO}"$'\n'
+    content+="q_asker_backup_storage_limit_bytes ${BACKUP_FREE_LIMIT_BYTES}"$'\n'
 
     write_metrics_atomic "$content"
 }
@@ -305,6 +364,9 @@ else
             || log WARN "retention_cleanup 실패: ${prefix} (계속 진행)"
     done
 fi
+
+# ─── 저장소 임계 확인 ───
+check_storage_threshold || log WARN "저장소 임계 확인 실패 (계속 진행)"
 
 # ─── 메트릭 노출 ───
 emit_metrics

@@ -42,17 +42,16 @@ docker compose up -d
 
 ### 백업·복구 (spec 001-prometheus-loki-backup-recovery)
 
-Prometheus/Loki 데이터를 매일 KST 03:00 OCI Object Storage에 자동 백업. 무결성은 매일 KST 04:00 재검증.
+Prometheus/Loki 데이터를 매일 KST 03:00 OCI Object Storage에 자동 백업. 업로드 직후 인라인 무결성 검증과 저장소 90% 임계 알림을 함께 수행.
 
 - **배경 지식·흐름도**: [monitoring/docs/프로메테우스로키백업복구설명.md](monitoring/docs/프로메테우스로키백업복구설명.md)
 - **운영 RUNBOOK (평시·장애·복원·GameDay)**: [monitoring/docs/RUNBOOK-backup-restore.md](monitoring/docs/RUNBOOK-backup-restore.md)
-- **스크립트**: `monitoring/scripts/{backup,restore,verify}.sh` (자세한 사용법은 CLAUDE.md 명령어 섹션)
+- **스크립트**: `monitoring/scripts/{backup,restore}.sh` (자세한 사용법은 CLAUDE.md 명령어 섹션)
 
 수동 실행 예시:
 ```bash
 sudo ./monitoring/scripts/backup.sh --target=both
 sudo ./monitoring/scripts/restore.sh --target=prometheus --snapshot=YYYYMMDD-HHMM
-sudo ./monitoring/scripts/verify.sh --scope=all
 ```
 
 ### 대시보드
@@ -94,9 +93,9 @@ sudo ./monitoring/scripts/verify.sh --scope=all
                                     ▼                                   │
                        ┌─────────────────────────────────────┐          │
                        │ OCI Object Storage Standard 20 GiB │◀─────────┘
-                       │ qasker-monitoring-backup (7일 보존) │  매일 04:00
-                       │ IAM Writer/Reader 분리              │  verify.sh
-                       └─────────────────────────────────────┘  재검증
+                       │ qasker-monitoring-backup (7일 보존) │  인라인 검증
+                       │ IAM Writer/Reader 분리              │  +90% 임계 알림
+                       └─────────────────────────────────────┘
 ```
 
 ---
@@ -113,10 +112,9 @@ plg-stack/
 │   ├── loki/loki-config.yaml
 │   ├── prometheus/prometheus.yml
 │   ├── grafana/provisioning/
-│   ├── scripts/            # 백업·복구·검증 (spec 001)
+│   ├── scripts/            # 백업·복구 (spec 001)
 │   │   ├── backup.sh
 │   │   ├── restore.sh
-│   │   ├── verify.sh
 │   │   └── lib/backup-common.sh
 │   ├── cron/               # /etc/cron.d/ 배포 참조본
 │   ├── logrotate/          # /etc/logrotate.d/ 배포 참조본
