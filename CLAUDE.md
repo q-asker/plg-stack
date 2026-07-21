@@ -104,7 +104,7 @@ curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_storage_usage_
                  ▼
       ┌────────────────────────────┐
       │ OCI Object Storage         │
-      │ Standard tier 20 GiB Free  │
+      │ Standard tier 20 GB Free   │
       │ qasker-monitoring-backup   │
       │ Lifecycle: 7일 후 DELETE   │
       │ IAM Writer/Reader 분리     │
@@ -261,7 +261,7 @@ OCI_CONFIG_FILE=/home/ubuntu/.oci/config       # API Key 방식 (instance princi
 OCI_WRITER_PROFILE=BACKUP_MON_WRITER           # PUT/DELETE 전용 IAM (T2 분리)
 OCI_READER_PROFILE=BACKUP_MON_READER           # GET 전용 IAM
 BACKUP_RETENTION_DAYS=7                        # backup.sh + lifecycle 이중 안전망
-BACKUP_FREE_LIMIT_BYTES=21474836480            # 20 GiB, backup.sh 90% 임계 기준
+BACKUP_FREE_LIMIT_BYTES=20000000000            # 20 GB(≈18.6 GiB, OCI 무료 한도), backup.sh 90% 임계 기준
 ```
 
 ## 개발 워크플로우

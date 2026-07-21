@@ -92,7 +92,7 @@ sudo ./monitoring/scripts/restore.sh --target=prometheus --snapshot=YYYYMMDD-HHM
                                     │ backup.sh                         │
                                     ▼                                   │
                        ┌─────────────────────────────────────┐          │
-                       │ OCI Object Storage Standard 20 GiB │◀─────────┘
+                       │ OCI Object Storage Standard 20 GB  │◀─────────┘
                        │ qasker-monitoring-backup (7일 보존) │  인라인 검증
                        │ IAM Writer/Reader 분리              │  +90% 임계 알림
                        └─────────────────────────────────────┘
