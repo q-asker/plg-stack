@@ -53,6 +53,7 @@ curl http://monitoring:3000/api/health    # Grafana
 # 수동 백업 (호스트 cron이 매일 KST 03:00 자동 실행)
 sudo ./monitoring/scripts/backup.sh --target=both
 sudo ./monitoring/scripts/backup.sh --target=prometheus --dry-run
+sudo ./monitoring/scripts/backup.sh --target=both --retention-days=3   # 저장소 압박 시 보관일 단축(판단 레버)
 
 # 복원 (사용자 개입 필요, --snapshot 필수)
 sudo ./monitoring/scripts/restore.sh --target=prometheus              # 사용 가능 목록 조회 후 exit 2

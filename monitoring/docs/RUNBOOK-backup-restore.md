@@ -653,9 +653,10 @@ sudo tail -100 /var/log/q-asker-backup.log
 sudo ./monitoring/scripts/backup.sh --target=both
 ```
 
-### 10.2 `⚠️ [q-asker-backup] WARN — storage-threshold`
+### 10.2 `⚠️/❌ [q-asker-backup] storage-threshold`
 
-**저장소 사용률 90% 초과**.
+**저장소 사용률 2단계 경고** — 80% 도달 시 `⚠️ WARN`(조기), 90% 도달 시 `❌ ERROR`(임박).
+단계가 올라갈 때만 발송되고(재발송 억제), 회복 시 다시 무장된다.
 
 ```bash
 # 현재 사용량 확인
@@ -671,10 +672,15 @@ oci --profile BACKUP_MON_READER os object list \
 ```
 
 대응 옵션:
-1. **정상 성장**: FREE 논리 문서 참조하여 Archive tier 이관 (Terraform lifecycle rule 추가)
-2. **retention 미동작**: `/var/log/q-asker-backup.log`에서 retention_cleanup 로그 확인
-3. **quarantine 누적**: §7.7 정기 정리
-4. **테스트 잔여물**: GameDay/디버깅 산출물 삭제
+1. **리텐션 단축(개발자 판단 레버)**: 보관일을 줄여 발자국 축소. 다음 실행부터 반영.
+   ```bash
+   sudo ./monitoring/scripts/backup.sh --target=both --retention-days=3
+   ```
+   상시 적용하려면 `monitoring/.env`의 `BACKUP_RETENTION_DAYS`를 낮춘다.
+2. **정상 성장**: FREE 논리 문서 참조하여 Archive tier 이관 (Terraform lifecycle rule 추가) / 유료 전환 판단
+3. **retention 미동작**: `/var/log/q-asker-backup.log`에서 retention_cleanup 로그 확인
+4. **quarantine 누적**: §7.7 정기 정리
+5. **테스트 잔여물**: GameDay/디버깅 산출물 삭제
 
 ### 10.3 `⚠️ [q-asker-backup] WARN — loki-downtime`
 

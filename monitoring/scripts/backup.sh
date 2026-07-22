@@ -4,16 +4,17 @@
 # (plg-stack: specs/001-prometheus-loki-backup-recovery)
 # =============================================================
 # 사용법:
-#   ./backup.sh [--target=prometheus|loki|both] [--dry-run] [--debug]
+#   ./backup.sh [--target=prometheus|loki|both] [--retention-days=N] [--dry-run] [--debug]
 #
-# 기본값: --target=both
+# 기본값: --target=both, --retention-days=BACKUP_RETENTION_DAYS(.env)
+#   --retention-days: 보관 기간(일) override. 저장소 압박 시 개발자가 판단해 단축하는 레버.
 #
 # 흐름:
 #   1) .env 로드 + 필수 검증
 #   2) --target 별 handler 호출 (독립 시도, 하나 실패해도 다른 것 계속)
 #   3) 인라인 무결성 검증(FR-009 1단계): 업로드 직후 GET + 해시 재비교
 #   4) retention_cleanup (FR-008): 7일 초과 객체 자동 삭제
-#   5) 저장소 사용량 90% 임계 알림 (FR-013)
+#   5) 저장소 사용량 2단계 임계 알림 (80% 조기 / 90% 임박, FR-013)
 #   6) textfile collector 메트릭 갱신 (FR-010, T5에서 활성화됨)
 #   7) 하나라도 실패했으면 Slack ERROR + exit 1
 #
@@ -32,10 +33,12 @@ source "${SCRIPT_DIR}/lib/backup-common.sh"
 TARGET="both"
 DRY_RUN=0
 DEBUG=0
+RETENTION_DAYS_ARG=""
 
 while (( $# > 0 )); do
     case "$1" in
-        --target=*) TARGET="${1#--target=}" ;;
+        --target=*)         TARGET="${1#--target=}" ;;
+        --retention-days=*) RETENTION_DAYS_ARG="${1#--retention-days=}" ;;
         --dry-run)  DRY_RUN=1 ;;
         --debug)    DEBUG=1 ;;
         -h|--help)
@@ -63,6 +66,16 @@ esac
 # ─── 환경 로드 + 필수 검증 ───
 load_env "$MONITORING_DIR"
 
+# --retention-days는 .env의 BACKUP_RETENTION_DAYS보다 우선한다 (개발자 판단 override).
+if [[ -n "$RETENTION_DAYS_ARG" ]]; then
+    if [[ ! "$RETENTION_DAYS_ARG" =~ ^[0-9]+$ ]] || (( RETENTION_DAYS_ARG < 1 )); then
+        log ERROR "--retention-days 값 오류: '${RETENTION_DAYS_ARG}' (1 이상의 정수 필요)"
+        exit 2
+    fi
+    export BACKUP_RETENTION_DAYS="$RETENTION_DAYS_ARG"
+    log INFO "보관 기간 override: ${BACKUP_RETENTION_DAYS}일 (--retention-days)"
+fi
+
 require_env \
     OCI_BUCKET_NAME \
     OCI_WRITER_PROFILE \
@@ -83,10 +96,11 @@ COMPOSE_FILE="${MONITORING_DIR}/docker-compose.yml"
 # 결과 누적 (메트릭 조립용)
 declare -A STORE_STATUS STORE_SIZE STORE_HASH STORE_DURATION STORE_DOWNTIME
 
-# 저장소 임계 (무료 한도 90% 도달 시 Slack 경고)
+# 저장소 임계 (무료 한도 도달 경고 — 2단계)
 BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-20000000000}"  # 20 GB (OCI 무료 한도, ≈18.6 GiB)
-THRESHOLD_FLAG="${BACKUP_TMP_DIR}/threshold-alerted.flag"
-THRESHOLD_RATIO="0.90"
+STORAGE_WARN_RATIO="0.80"   # 조기 경고 (여유 축소 — 리텐션 단축 검토)
+STORAGE_CRIT_RATIO="0.90"   # 임박 경고 (즉시 조치)
+STORAGE_TIER_STATE="${BACKUP_TMP_DIR}/storage-alert-tier.state"  # 마지막 알림 단계 (ok|warn|crit)
 STORAGE_USAGE_BYTES=0
 STORAGE_USAGE_RATIO=0
 
@@ -242,8 +256,9 @@ backup_loki() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# 저장소 임계 확인 (FR-013)
-#   무료 한도 90% 도달 시 Slack WARN. 상태 파일로 1회 억제, 회복 시 해제.
+# 저장소 임계 확인 (FR-013) — 2단계 경고
+#   80% 조기 경고 → 90% 임박 경고. 단계 상향 시에만 발송(재발송 억제),
+#   회복 시 상태만 갱신. 대응은 개발자가 --retention-days로 판단.
 # ═══════════════════════════════════════════════════════════
 
 check_storage_threshold() {
@@ -257,28 +272,46 @@ check_storage_threshold() {
 
     log INFO "사용량: ${STORAGE_USAGE_BYTES} bytes / 한도 ${BACKUP_FREE_LIMIT_BYTES} bytes (ratio=${STORAGE_USAGE_RATIO})"
 
-    local above_threshold
-    above_threshold="$(awk -v r="$STORAGE_USAGE_RATIO" -v t="$THRESHOLD_RATIO" \
-        'BEGIN { print (r >= t) ? 1 : 0 }')"
+    # 현재 단계 판정 (crit > warn > ok)
+    local cur_tier
+    cur_tier="$(awk -v r="$STORAGE_USAGE_RATIO" -v w="$STORAGE_WARN_RATIO" -v c="$STORAGE_CRIT_RATIO" \
+        'BEGIN { if (r >= c) print "crit"; else if (r >= w) print "warn"; else print "ok" }')"
 
-    if [[ "$above_threshold" == "1" ]]; then
-        if [[ -f "$THRESHOLD_FLAG" ]]; then
-            log INFO "임계 이미 알림됨 (재발송 억제, 회복 시 상태 파일 자동 삭제)"
+    # 마지막 알림 단계 로드 (기본 ok)
+    local last_tier="ok"
+    [[ -f "$STORAGE_TIER_STATE" ]] && last_tier="$(cat "$STORAGE_TIER_STATE" 2>/dev/null || echo ok)"
+
+    local -A rank=( [ok]=0 [warn]=1 [crit]=2 )
+    local cur_rank="${rank[$cur_tier]:-0}" last_rank="${rank[$last_tier]:-0}"
+
+    if (( cur_rank > last_rank )); then
+        # 단계 상향(악화) → 경고 발송
+        if (( DRY_RUN )); then
+            log WARN "[DRY-RUN] 저장소 ${cur_tier} 경고 스킵 (상태 미갱신)"
         else
-            if (( DRY_RUN )); then
-                log WARN "[DRY-RUN] 임계 알림 스킵"
+            local pct headroom
+            pct="$(awk -v r="$STORAGE_USAGE_RATIO" 'BEGIN { printf "%.1f", r*100 }')"
+            headroom=$(( BACKUP_FREE_LIMIT_BYTES - STORAGE_USAGE_BYTES ))
+            if [[ "$cur_tier" == "crit" ]]; then
+                notify_slack ERROR "storage-threshold" \
+                    "🚨 저장소 ${pct}% 임박 (잔여 ${headroom}B). 즉시 조치: 오래된 아카이브 정리 / 리텐션 단축(backup.sh --retention-days=N) / 유료 전환 판단."
             else
                 notify_slack WARN "storage-threshold" \
-                    "저장소 사용량이 한도의 ${STORAGE_USAGE_RATIO} 도달 (${STORAGE_USAGE_BYTES} / ${BACKUP_FREE_LIMIT_BYTES} bytes)"
-                touch "$THRESHOLD_FLAG"
-                log INFO "임계 알림 발송 + 상태 파일 생성: ${THRESHOLD_FLAG}"
+                    "⚠️ 저장소 ${pct}% 도달 (잔여 ${headroom}B). 여유 축소 — 리텐션 단축 검토(backup.sh --retention-days=N)."
             fi
+            printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
+            log INFO "저장소 경고 상향: ${last_tier} → ${cur_tier}"
+        fi
+    elif (( cur_rank < last_rank )); then
+        # 단계 하향(회복) → 상태만 갱신 (스팸 방지)
+        if (( DRY_RUN )); then
+            log INFO "[DRY-RUN] 저장소 회복 감지 (상태 미갱신)"
+        else
+            printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
+            log INFO "저장소 단계 회복: ${last_tier} → ${cur_tier}"
         fi
     else
-        if [[ -f "$THRESHOLD_FLAG" ]]; then
-            rm -f "$THRESHOLD_FLAG"
-            log INFO "임계 회복 → 상태 파일 삭제: ${THRESHOLD_FLAG}"
-        fi
+        log INFO "저장소 단계 유지: ${cur_tier} (재발송 억제)"
     fi
 }
 
