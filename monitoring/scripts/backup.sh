@@ -414,5 +414,11 @@ if (( failures > 0 )); then
 fi
 
 log INFO "backup.sh 정상 종료"
-notify_slack SUCCESS "backup" "target=${TARGET} 백업·검증 완료. TIMESTAMP=${TIMESTAMP}, 총 ${TOTAL_DURATION}s"
+# 경고가 아니어도 현재 총량%를 성공 메시지에 항상 표기 (조회 실패=0바이트면 생략)
+STORAGE_SUFFIX=""
+if (( ${STORAGE_USAGE_BYTES:-0} > 0 )); then
+    STORAGE_PCT="$(awk -v r="${STORAGE_USAGE_RATIO:-0}" 'BEGIN { printf "%.1f", r*100 }')"
+    STORAGE_SUFFIX=". 저장소 총량 ${STORAGE_PCT}%"
+fi
+notify_slack SUCCESS "backup" "target=${TARGET} 백업·검증 완료. TIMESTAMP=${TIMESTAMP}, 총 ${TOTAL_DURATION}s${STORAGE_SUFFIX}"
 exit 0

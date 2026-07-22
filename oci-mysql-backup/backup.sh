@@ -98,6 +98,7 @@ check_storage_threshold() {
   [[ "$usage" =~ ^[0-9]+$ ]] || usage=0
   ratio="$(awk -v u="$usage" -v l="$BACKUP_FREE_LIMIT_BYTES" 'BEGIN{ if(l>0) printf "%.4f", u/l; else print "0" }')"
   pct="$(awk -v r="$ratio" 'BEGIN{ printf "%.1f", r*100 }')"
+  STORAGE_PCT="$pct"   # 전역: 성공 메시지에 현재 총량% 표기용
   headroom=$(( BACKUP_FREE_LIMIT_BYTES - usage ))
   log "[storage] 사용량 ${usage}/${BACKUP_FREE_LIMIT_BYTES} bytes (ratio=${ratio})"
 
@@ -241,8 +242,10 @@ upload "$SHA_FILE"  "$SHA_KEY"   || { log "[ERR] upload sha: $(cat "$WORK_DIR/up
 FINAL_DURATION=$(($(date +%s) - START_TS))
 metric_record_success "$DUMP_SIZE" "$FINAL_DURATION" "$OBJECT_KEY"
 log "[OK] $OBJECT_KEY uploaded ($DUMP_SIZE bytes, ${FINAL_DURATION}s)"
-notify_slack SUCCESS "백업 완료 object_key=$OBJECT_KEY size=${DUMP_SIZE}B ${FINAL_DURATION}s"
 
-# 저장소 사용량 2단계 경고 (실패해도 백업 자체는 성공이므로 종료코드에 영향 없음)
+# 저장소 사용량 2단계 경고 + 현재 총량%(STORAGE_PCT) 산출. 실패해도 백업은 성공이므로 무시.
+STORAGE_PCT=""
 check_storage_threshold || log "[storage] 임계 확인 실패 (계속 진행)"
+
+notify_slack SUCCESS "백업 완료 object_key=$OBJECT_KEY size=${DUMP_SIZE}B ${FINAL_DURATION}s${STORAGE_PCT:+ 저장소 총량 ${STORAGE_PCT}%}"
 exit 0
