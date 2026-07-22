@@ -19,7 +19,7 @@
 | **백업 저장소** | OCI Object Storage | Always Free | Prometheus/Loki 백업 tarball (버킷 `qasker-monitoring-backup`) + MySQL L2 덤프 (버킷 `qasker-mysql-backup`) |
 | **배포/오케스트레이션** | Docker | 24.x+ | 컨테이너 런타임 |
 | | Docker Compose | 2.x+ | 다중 서비스 오케스트레이션 |
-| **스케줄러** | 호스트 cron + systemd timer | Ubuntu 기본 | cron: 매일 KST 03:00 백업·04:00 재검증 (TZ=Asia/Seoul) / systemd: MySQL L2 백업 6시간 주기 |
+| **스케줄러** | 호스트 cron + systemd timer | Ubuntu 기본 | cron: 매일 KST 03:00 백업·매월 1일 05:00 아카이브 (CRON_TZ=Asia/Seoul) / systemd: MySQL L2 백업 6시간 주기 |
 | **인프라** | OCI Always Free | — | 3개 ARM 인스턴스 + 관리형 MySQL |
 
 ## 명령어 (Scripts)
@@ -159,7 +159,7 @@ plg-stack/
 │   │   └── lib/
 │   │       └── backup-common.sh ← 공통 함수 라이브러리 (15+ 유틸)
 │   ├── cron/
-│   │   └── q-asker-backup       ← /etc/cron.d/ 배포 참조본 (TZ=Asia/Seoul)
+│   │   └── q-asker-backup       ← /etc/cron.d/ 배포 참조본 (CRON_TZ=Asia/Seoul)
 │   ├── logrotate/
 │   │   └── q-asker-backup       ← /etc/logrotate.d/ 배포 참조본 (weekly × 4)
 │   ├── docs/

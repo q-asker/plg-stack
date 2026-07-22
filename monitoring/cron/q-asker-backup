@@ -10,18 +10,21 @@
 # 로그 확인:
 #   sudo tail -f /var/log/q-asker-backup.log
 #
-# TZ=Asia/Seoul로 KST 03:00 확정 실행 (spec Q4).
-# 컨테이너 timezone(UTC)에 의존하지 않아 배포 환경 이식성이 높다.
+# CRON_TZ=Asia/Seoul로 스케줄 시각을 KST 기준으로 확정 (spec Q4).
+#   ※ TZ= 는 잡의 환경변수일 뿐 스케줄 해석 시각대를 바꾸지 않는다.
+#     스케줄을 KST로 평가하려면 반드시 CRON_TZ 를 써야 한다(Vixie/Ubuntu cron).
+#     시스템 UTC에 의존하지 않아 배포 환경 이식성이 높다.
 
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=Asia/Seoul
 TZ=Asia/Seoul
 
 # ─── 백업: 매일 KST 03:00 (spec Q4) ───
-# 업로드 직후 인라인 무결성 검증 + 저장소 90% 임계 알림을 backup.sh가 함께 수행한다.
+# 업로드 직후 인라인 무결성 검증 + 저장소 80/90% 2단계 임계 알림을 backup.sh가 함께 수행한다.
 0 3 * * * root /home/ubuntu/plg-stack/monitoring/scripts/backup.sh --target=both >> /var/log/q-asker-backup.log 2>&1
 
 # ─── 월간 아카이브(archive-monthly.sh): 매월 1일 KST 05:00 ───
-# 전월 마지막 백업 4개(prom+loki tar.gz + sha256)를 monthly-archive/YYYYMM-<store>.*로
-# 복사한 뒤 즉시 Archive tier로 이관. 옛날 로그 장기 보존용.
+# 전월 마지막 백업 4개(prom+loki tar.gz + sha256)를 READER 다운로드→WRITER 업로드로
+# monthly-archive/YYYYMM-<store>.*에 영구 보존(Standard). 옛날 로그 장기 보존용.
 0 5 1 * * root /home/ubuntu/plg-stack/monitoring/scripts/archive-monthly.sh >> /var/log/q-asker-backup.log 2>&1
