@@ -98,7 +98,7 @@ declare -A STORE_STATUS STORE_SIZE STORE_HASH STORE_DURATION STORE_DOWNTIME
 
 # 저장소 임계 (무료 한도 도달 경고 — 2단계)
 BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-20000000000}"  # 20 GB (OCI 무료 한도, ≈18.6 GiB)
-STORAGE_WARN_RATIO="0.80"   # 조기 경고 (여유 축소 — 리텐션 단축 검토)
+STORAGE_WARN_RATIO="0.80"   # 조기 경고 (여유 축소 — 백업 주기 늘리기 검토)
 STORAGE_CRIT_RATIO="0.90"   # 임박 경고 (즉시 조치)
 STORAGE_TIER_STATE="${BACKUP_TMP_DIR}/storage-alert-tier.state"  # 마지막 알림 단계 (ok|warn|crit)
 STORAGE_USAGE_BYTES=0
@@ -258,7 +258,7 @@ backup_loki() {
 # ═══════════════════════════════════════════════════════════
 # 저장소 임계 확인 (FR-013) — 2단계 경고
 #   80% 조기 경고 → 90% 임박 경고. 단계 상향 시에만 발송(재발송 억제),
-#   회복 시 상태만 갱신. 대응은 개발자가 --retention-days로 판단.
+#   회복 시 상태만 갱신. 대응은 개발자가 백업 주기 늘리기(cron 조정)로 판단.
 # ═══════════════════════════════════════════════════════════
 
 check_storage_threshold() {
@@ -294,10 +294,10 @@ check_storage_threshold() {
             headroom=$(( BACKUP_FREE_LIMIT_BYTES - STORAGE_USAGE_BYTES ))
             if [[ "$cur_tier" == "crit" ]]; then
                 notify_slack ERROR "storage-threshold" \
-                    "🚨 저장소 ${pct}% 임박 (잔여 ${headroom}B). 즉시 조치: 오래된 아카이브 정리 / 리텐션 단축(backup.sh --retention-days=N) / 유료 전환 판단."
+                    "🚨 저장소 ${pct}% 임박 (잔여 ${headroom}B). 즉시 조치: PLG 백업 주기 늘리기(/etc/cron.d/q-asker-backup) / 오래된 아카이브 정리 / 유료 전환 판단."
             else
                 notify_slack WARN "storage-threshold" \
-                    "⚠️ 저장소 ${pct}% 도달 (잔여 ${headroom}B). 여유 축소 — 리텐션 단축 검토(backup.sh --retention-days=N)."
+                    "⚠️ 저장소 ${pct}% 도달 (잔여 ${headroom}B). 백업 주기를 늘려 증가를 늦추세요 — cron 조정: 매일 '0 3 * * *' → 이틀마다 '0 3 */2 * *'."
             fi
             printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
             log INFO "저장소 경고 상향: ${last_tier} → ${cur_tier}"

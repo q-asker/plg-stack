@@ -59,7 +59,7 @@ curl -sf 'http://localhost:9090/api/v1/query?query=time()-q_asker_backup_last_su
 # 저장소 사용률 추이
 curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_storage_usage_ratio' \
   | jq -r '.data.result[0].value[1]'
-# 0.80 미만 권장. 0.80 이상이면 증가 추세 점검 + 필요 시 리텐션 단축(§10.2, --retention-days)
+# 0.80 미만 권장. 0.80 이상이면 증가 추세 점검 + 필요 시 백업 주기 늘리기(§10.2)
 
 # quarantine 누적 확인
 oci --profile BACKUP_MON_READER os object list \
@@ -81,7 +81,7 @@ sudo ./monitoring/scripts/backup.sh [옵션]
 | 옵션 | 설명 |
 |------|------|
 | `--target=prometheus\|loki\|both` | 백업 대상 (기본 `both`) |
-| `--retention-days=N` | 보관일 override(`.env`의 `BACKUP_RETENTION_DAYS`보다 우선). 저장소 압박 시 단축 레버 → §10.2 |
+| `--retention-days=N` | 보관일 override(`.env`의 `BACKUP_RETENTION_DAYS`보다 우선). 일반 도구 — 저장소 압박 대응은 백업 주기 늘리기 권장(§10.2) |
 | `--dry-run` | 업로드·정리·알림 없이 시뮬레이션 |
 | `--debug` | `set -x` 상세 로그 |
 
@@ -647,11 +647,15 @@ oci --profile BACKUP_MON_READER os object list \
 ```
 
 대응 옵션:
-1. **리텐션 단축(개발자 판단 레버)**: 보관일을 줄여 발자국 축소. 다음 실행부터 반영.
+1. **백업 주기 늘리기(개발자 판단 레버)**: PLG 백업 빈도를 낮춰 발자국 증가를 늦춘다.
+   관측 데이터라 RPO 여유가 크다(운영 데이터 MySQL은 6h 유지). `/etc/cron.d/q-asker-backup`에서:
    ```bash
-   sudo ./monitoring/scripts/backup.sh --target=both --retention-days=3
+   # 매일 → 이틀마다 (예)
+   # 0 3 * * *  →  0 3 */2 * *
+   sudo sed -i 's|^0 3 \* \* \* |0 3 */2 * * |' /etc/cron.d/q-asker-backup
+   sudo systemctl restart cron
    ```
-   상시 적용하려면 `monitoring/.env`의 `BACKUP_RETENTION_DAYS`를 낮춘다.
+   되돌릴 땐 다시 `0 3 * * *`로. (보관일 자체를 줄이는 `--retention-days`도 있으나, 복구 깊이가 줄어 비권장)
 2. **정상 성장**: 오래된 월간 아카이브 정리(§8-B.4) 또는 유료 전환 판단 (무료 20GB는 Standard+Archive 합산이라 Archive 전환은 이득 없음)
 3. **retention 미동작**: `/var/log/q-asker-backup.log`에서 retention_cleanup 로그 확인
 4. **quarantine 누적**: §7.7 정기 정리
