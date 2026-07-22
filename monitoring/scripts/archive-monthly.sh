@@ -6,14 +6,16 @@
 # 목적:
 #   Prometheus/Loki의 자체 retention(180일)을 넘는 옛날 로그를 장기 보존.
 #   매월 1일에 전월 마지막 백업 4개(prom+loki tar.gz + sha256)를
-#   monthly-archive/ prefix로 복사한 뒤 즉시 Archive tier로 이관한다.
+#   monthly-archive/ prefix로 복제하여 영구 보존한다.
 #
 # 흐름:
 #   1) 전월의 가장 최신 backup timestamp 조회 (prometheus/, loki/)
-#   2) 4개 객체(prom tar.gz + sha256 + loki tar.gz + sha256) 각각을
-#      monthly-archive/YYYYMM-<store>.<ext>로 os object copy
-#   3) 4개 객체 Archive tier로 update-storage-tier
-#   4) 성공/실패 Slack 알림 + 종료
+#   2) READER로 다운로드 → 해시 검증 → WRITER로 monthly-archive/YYYYMM-<store>.<ext> 업로드
+#      (WRITER는 서버사이드 os object copy 권한이 없어 GET→PUT 2단계로 수행)
+#   3) 성공/실패 Slack 알림 + 종료
+#
+#   ※ Archive tier 이관은 하지 않는다: 무료 티어는 20GB가 Standard+Archive 합산이라
+#     비용 이득이 없고 복원 지연만 커진다. Standard 유지 + lifecycle 제외로 영구 보존한다.
 #
 # 자동 삭제 정책:
 #   - 버킷 lifecycle(delete-after-7d)의 exclusion-patterns에 monthly-archive/* 포함
@@ -33,8 +35,9 @@ MONITORING_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "${SCRIPT_DIR}/lib/backup-common.sh"
 
 load_env "$MONITORING_DIR"
-require_env OCI_BUCKET_NAME OCI_WRITER_PROFILE OCI_READER_PROFILE OCI_NAMESPACE OCI_REGION
-require_cmd oci jq
+require_env OCI_BUCKET_NAME OCI_WRITER_PROFILE OCI_READER_PROFILE
+require_cmd oci jq sha256sum
+ensure_tmp_dir
 
 BUCKET="$OCI_BUCKET_NAME"
 WRITER="$OCI_WRITER_PROFILE"
@@ -64,45 +67,41 @@ archive_store() {
     local src_sha="${store}/${latest_ts}-${store}.sha256"
     local dst_tar="monthly-archive/${YYYY_MM}-${store}.tar.gz"
     local dst_sha="monthly-archive/${YYYY_MM}-${store}.sha256"
+    local tmp_tar="${BACKUP_TMP_DIR}/archive-${YYYY_MM}-${store}.tar.gz"
+    local tmp_sha="${BACKUP_TMP_DIR}/archive-${YYYY_MM}-${store}.sha256"
 
-    # 1) tar.gz 복사
-    log INFO "[${store}] copy: ${src_tar} → ${dst_tar}"
-    if ! _oci_call "$WRITER" os object copy \
-            --bucket-name "$BUCKET" \
-            --source-object-name "$src_tar" \
-            --destination-namespace "$OCI_NAMESPACE" \
-            --destination-region "$OCI_REGION" \
-            --destination-bucket "$BUCKET" \
-            --destination-object-name "$dst_tar" >/dev/null; then
-        log ERROR "[${store}] tar.gz 복사 실패"
+    # 1) READER로 원본 다운로드 (WRITER는 서버사이드 copy 권한 없음 → GET→PUT 2단계)
+    if ! download_object "$READER" "$BUCKET" "$src_tar" "$tmp_tar"; then
+        log ERROR "[${store}] tar.gz 다운로드 실패: ${src_tar}"
+        return 1
+    fi
+    if ! download_object "$READER" "$BUCKET" "$src_sha" "$tmp_sha"; then
+        log ERROR "[${store}] sha256 다운로드 실패: ${src_sha}"
+        rm -f "$tmp_tar"
         return 1
     fi
 
-    # 2) sha256 복사
-    log INFO "[${store}] copy: ${src_sha} → ${dst_sha}"
-    if ! _oci_call "$WRITER" os object copy \
-            --bucket-name "$BUCKET" \
-            --source-object-name "$src_sha" \
-            --destination-namespace "$OCI_NAMESPACE" \
-            --destination-region "$OCI_REGION" \
-            --destination-bucket "$BUCKET" \
-            --destination-object-name "$dst_sha" >/dev/null; then
-        log ERROR "[${store}] sha256 복사 실패"
+    # 2) 무결성 확인 (손상본을 아카이브하지 않도록)
+    if ! verify_local_hash "$tmp_tar" "$tmp_sha"; then
+        log ERROR "[${store}] 원본 무결성 실패 — 아카이브 중단"
+        rm -f "$tmp_tar" "$tmp_sha"
         return 1
     fi
 
-    # 3) Archive tier로 이관 (tar.gz + sha256)
-    for key in "$dst_tar" "$dst_sha"; do
-        log INFO "[${store}] Archive tier 이관: ${key}"
-        if ! _oci_call "$WRITER" os object update-storage-tier \
-                --bucket-name "$BUCKET" \
-                --name "$key" \
-                --storage-tier Archive >/dev/null; then
-            log WARN "[${store}] Archive 이관 실패(무해, 다음 실행에서 재시도): ${key}"
-        fi
-    done
+    # 3) WRITER로 monthly-archive/ 업로드 (Standard 유지, lifecycle 제외로 영구 보존)
+    if ! upload_object "$WRITER" "$BUCKET" "$dst_tar" "$tmp_tar"; then
+        log ERROR "[${store}] tar.gz 업로드 실패: ${dst_tar}"
+        rm -f "$tmp_tar" "$tmp_sha"
+        return 1
+    fi
+    if ! upload_object "$WRITER" "$BUCKET" "$dst_sha" "$tmp_sha"; then
+        log ERROR "[${store}] sha256 업로드 실패: ${dst_sha}"
+        rm -f "$tmp_tar" "$tmp_sha"
+        return 1
+    fi
 
-    log INFO "[${store}] 완료: ${dst_tar}, ${dst_sha}"
+    rm -f "$tmp_tar" "$tmp_sha"
+    log INFO "[${store}] 완료: ${dst_tar}, ${dst_sha} (Standard, lifecycle 제외로 영구 보존)"
     return 0
 }
 

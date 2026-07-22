@@ -103,9 +103,9 @@ run_with_retry() {
     local rc=0
 
     while (( attempt <= max )); do
-        if "$@"; then
-            return 0
-        fi
+        # 주의: `if "$@"; then ...; fi` 다음의 $?는 if문(=0)을 잡아 실패를 은폐한다.
+        # `"$@" && return 0` 형태로 명령의 실제 종료코드를 rc에 담는다.
+        "$@" && return 0
         rc=$?
         if (( attempt < max )); then
             log WARN "명령 실패 (exit=$rc, 시도 $attempt/$max), ${sleep_sec}s 후 재시도: $*"
