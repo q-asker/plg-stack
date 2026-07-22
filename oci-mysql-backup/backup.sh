@@ -41,6 +41,13 @@ set -uo pipefail
 : "${WORK_BASE_DIR:=/tmp}"
 : "${DRY_RUN:=0}"
 
+# 저장소 임계 (2단계 경고). 무료 20GB는 tenancy 전체 Object Storage 합산이라
+# PLG 버킷과 공유한다 → MySQL 몫(기본 2GB)만 이 버킷 사용량으로 감시한다. .env로 조정.
+: "${BACKUP_FREE_LIMIT_BYTES:=2000000000}"   # 2 GB (MySQL 몫)
+: "${STORAGE_TIER_STATE:=/var/lib/oci-mysql-backup/storage-alert-tier.state}"
+STORAGE_WARN_RATIO="0.80"
+STORAGE_CRIT_RATIO="0.90"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # lib source
@@ -67,8 +74,41 @@ sha256() {
   else shasum -a 256 "$@"; fi
 }
 
+# 저장소 사용량 2단계 경고 (PLG backup.sh와 동일 철학).
+# 단계 상향 시에만 발송(재발송 억제), 회복 시 상태만 갱신. 대응은 MySQL 백업 주기 늘리기(systemd timer).
+check_storage_threshold() {
+  local usage ratio pct headroom cur_tier last_tier
+  usage="$(oci --profile "$OCI_PROFILE" os object list --bucket-name "$BUCKET" --all --output json 2>/dev/null \
+           | jq -r '[.data[]?.size // 0] | add // 0')"
+  [[ -z "$usage" || "$usage" == "null" ]] && usage=0
+  ratio="$(awk -v u="$usage" -v l="$BACKUP_FREE_LIMIT_BYTES" 'BEGIN{ if(l>0) printf "%.4f", u/l; else print "0" }')"
+  pct="$(awk -v r="$ratio" 'BEGIN{ printf "%.1f", r*100 }')"
+  headroom=$(( BACKUP_FREE_LIMIT_BYTES - usage ))
+  log "[storage] 사용량 ${usage}/${BACKUP_FREE_LIMIT_BYTES} bytes (ratio=${ratio})"
+
+  cur_tier="$(awk -v r="$ratio" -v w="$STORAGE_WARN_RATIO" -v c="$STORAGE_CRIT_RATIO" \
+              'BEGIN{ if(r>=c) print "crit"; else if(r>=w) print "warn"; else print "ok" }')"
+  last_tier="ok"; [[ -f "$STORAGE_TIER_STATE" ]] && last_tier="$(cat "$STORAGE_TIER_STATE" 2>/dev/null || echo ok)"
+  local -A rank=( [ok]=0 [warn]=1 [crit]=2 )
+  local cr="${rank[$cur_tier]:-0}" lr="${rank[$last_tier]:-0}"
+  mkdir -p "$(dirname "$STORAGE_TIER_STATE")" 2>/dev/null || true
+
+  if (( cr > lr )); then
+    if [[ "$cur_tier" == "crit" ]]; then
+      notify_slack ERROR "🚨 저장소(MySQL 몫) ${pct}% 임박 (잔여 ${headroom}B). 즉시 조치: MySQL 백업 주기 늘리기(systemd oci-mysql-backup.timer) / 유료 전환 판단."
+    else
+      notify_slack WARN "⚠️ 저장소(MySQL 몫) ${pct}% 도달 (잔여 ${headroom}B). 백업 주기를 늘려 증가를 늦추세요 — timer OnCalendar 6h→12h (예: 00,12:00:00)."
+    fi
+    echo "$cur_tier" > "$STORAGE_TIER_STATE"
+    log "[storage] 경고 상향: ${last_tier} → ${cur_tier}"
+  elif (( cr < lr )); then
+    echo "$cur_tier" > "$STORAGE_TIER_STATE"
+    log "[storage] 단계 회복: ${last_tier} → ${cur_tier}"
+  fi
+}
+
 # ─── 사전 검증 ───
-for cmd in flock mysqldump mysql jq oci; do
+for cmd in flock mysqldump mysql jq oci awk; do
   command -v "$cmd" >/dev/null || { log "[ERR] $cmd 미설치"; exit 1; }
 done
 for var in MYSQL_HOST MYSQL_USER MYSQL_PASSWORD MYSQL_DATABASE; do
@@ -187,4 +227,7 @@ FINAL_DURATION=$(($(date +%s) - START_TS))
 metric_record_success "$DUMP_SIZE" "$FINAL_DURATION" "$OBJECT_KEY"
 log "[OK] $OBJECT_KEY uploaded ($DUMP_SIZE bytes, ${FINAL_DURATION}s)"
 notify_slack SUCCESS "백업 완료 object_key=$OBJECT_KEY size=${DUMP_SIZE}B ${FINAL_DURATION}s"
+
+# 저장소 사용량 2단계 경고 (실패해도 백업 자체는 성공이므로 종료코드에 영향 없음)
+check_storage_threshold || log "[storage] 임계 확인 실패 (계속 진행)"
 exit 0
