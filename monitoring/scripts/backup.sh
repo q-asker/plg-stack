@@ -96,8 +96,10 @@ COMPOSE_FILE="${MONITORING_DIR}/docker-compose.yml"
 # 결과 누적 (메트릭 조립용)
 declare -A STORE_STATUS STORE_SIZE STORE_HASH STORE_DURATION STORE_DOWNTIME
 
-# 저장소 임계 (무료 한도 도달 경고 — 2단계)
-BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-20000000000}"  # 20 GB (OCI 무료 한도, ≈18.6 GiB)
+# 저장소 임계 (tenancy 전체 사용량 vs 무료 한도 — 2단계 경고)
+BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-20000000000}"  # 20 GB (OCI 무료 한도, 전 버킷 합산)
+# 총량 조회 전용 프로필: 'read buckets' 권한(버킷 목록+approximateSize). BACKUP_* 스코프로는 불가.
+USAGE_OCI_PROFILE="${USAGE_OCI_PROFILE:-BACKUP_USAGE_READER}"
 STORAGE_WARN_RATIO="0.80"   # 조기 경고 (여유 축소 — 백업 주기 늘리기 검토)
 STORAGE_CRIT_RATIO="0.90"   # 임박 경고 (즉시 조치)
 STORAGE_TIER_STATE="${BACKUP_TMP_DIR}/storage-alert-tier.state"  # 마지막 알림 단계 (ok|warn|crit)
@@ -264,7 +266,7 @@ backup_loki() {
 check_storage_threshold() {
     log INFO "===== 저장소 사용량 확인 ====="
 
-    STORAGE_USAGE_BYTES="$(get_bucket_usage_bytes "$READER" "$BUCKET" || echo 0)"
+    STORAGE_USAGE_BYTES="$(get_total_usage_bytes "$USAGE_OCI_PROFILE" "$BUCKET" || echo 0)"
     [[ -z "$STORAGE_USAGE_BYTES" ]] && STORAGE_USAGE_BYTES=0
 
     STORAGE_USAGE_RATIO="$(awk -v u="$STORAGE_USAGE_BYTES" -v l="$BACKUP_FREE_LIMIT_BYTES" \

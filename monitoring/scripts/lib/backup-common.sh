@@ -424,6 +424,38 @@ get_bucket_usage_bytes() {
         || echo 0
 }
 
+# get_total_usage_bytes <usage_profile> <ref_bucket>
+#   tenancy(compartment) 전체 Object Storage 사용량 합(bytes). 무료 20GB는 전 버킷 합산이라
+#   개별 버킷이 아닌 총량을 감시해야 정확하다.
+#   usage_profile은 'read buckets' 권한 필요(버킷 목록 + approximateSize). BACKUP_* 스코프
+#   프로필로는 불가하므로 compartment 읽기 전용 프로필(BACKUP_USAGE_READER)을 쓴다.
+#   approximateSize는 OCI가 계산한 근사값(실측 대비 ~1% 이내). 조회 실패 시 0 + 비치명.
+get_total_usage_bytes() {
+    local profile="$1" ref_bucket="$2"
+
+    local comp
+    comp="$(_oci_call "$profile" os bucket get --bucket-name "$ref_bucket" --output json 2>/dev/null \
+        | jq -r '.data."compartment-id" // empty')"
+    if [[ -z "$comp" ]]; then
+        log WARN "총량 조회 실패: compartment 확인 불가 (프로필 ${profile}의 'read buckets' 권한 확인)"
+        echo 0
+        return 1
+    fi
+
+    local total
+    total="$(_oci_call "$profile" os bucket list --compartment-id "$comp" --output json 2>/dev/null \
+        | jq -r '.data[]?.name // empty' \
+        | while IFS= read -r name; do
+              [[ -z "$name" ]] && continue
+              _oci_call "$profile" os bucket get --bucket-name "$name" --fields approximateSize \
+                  --output json 2>/dev/null | jq -r '.data."approximate-size" // 0'
+          done \
+        | jq -s 'add // 0')"
+
+    [[ "$total" =~ ^[0-9]+$ ]] || total=0
+    echo "$total"
+}
+
 # ═══════════════════════════════════════════════════════════
 # ⑪ 초기화
 # ═══════════════════════════════════════════════════════════

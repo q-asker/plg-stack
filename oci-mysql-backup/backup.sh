@@ -41,9 +41,11 @@ set -uo pipefail
 : "${WORK_BASE_DIR:=/tmp}"
 : "${DRY_RUN:=0}"
 
-# 저장소 임계 (2단계 경고). 무료 20GB는 tenancy 전체 Object Storage 합산이라
-# PLG 버킷과 공유한다 → MySQL 몫(기본 2GB)만 이 버킷 사용량으로 감시한다. .env로 조정.
-: "${BACKUP_FREE_LIMIT_BYTES:=2000000000}"   # 2 GB (MySQL 몫)
+# 저장소 임계 (2단계 경고). 무료 20GB는 tenancy 전체 Object Storage 합산이라 총량을 감시한다.
+# 총량 조회는 'read buckets' 권한 프로필 필요(BACKUP_USAGE_READER; BACKUP_WRITER 스코프로는 불가).
+# 조회 실패 시 경고만 스킵하고 백업은 정상.
+: "${BACKUP_FREE_LIMIT_BYTES:=20000000000}"   # 20 GB (전 버킷 합산)
+: "${USAGE_OCI_PROFILE:=BACKUP_USAGE_READER}"
 : "${STORAGE_TIER_STATE:=/var/lib/oci-mysql-backup/storage-alert-tier.state}"
 STORAGE_WARN_RATIO="0.80"
 STORAGE_CRIT_RATIO="0.90"
@@ -77,10 +79,23 @@ sha256() {
 # 저장소 사용량 2단계 경고 (PLG backup.sh와 동일 철학).
 # 단계 상향 시에만 발송(재발송 억제), 회복 시 상태만 갱신. 대응은 MySQL 백업 주기 늘리기(systemd timer).
 check_storage_threshold() {
-  local usage ratio pct headroom cur_tier last_tier
-  usage="$(oci --profile "$OCI_PROFILE" os object list --bucket-name "$BUCKET" --all --output json 2>/dev/null \
-           | jq -r '[.data[]?.size // 0] | add // 0')"
-  [[ -z "$usage" || "$usage" == "null" ]] && usage=0
+  local usage ratio pct headroom cur_tier last_tier comp
+  # tenancy 전체 사용량(전 버킷 approximateSize 합) — 무료 20GB는 버킷 합산이므로.
+  comp="$(oci --profile "$USAGE_OCI_PROFILE" os bucket get --bucket-name "$BUCKET" --output json 2>/dev/null \
+          | jq -r '.data."compartment-id" // empty')"
+  if [[ -z "$comp" ]]; then
+    log "[storage] 총량 조회 실패: compartment 확인 불가 (프로필 ${USAGE_OCI_PROFILE}의 read buckets 권한 확인) — 경고 스킵"
+    return 1
+  fi
+  usage="$(oci --profile "$USAGE_OCI_PROFILE" os bucket list --compartment-id "$comp" --output json 2>/dev/null \
+           | jq -r '.data[]?.name // empty' \
+           | while IFS= read -r bkt; do
+               [[ -z "$bkt" ]] && continue
+               oci --profile "$USAGE_OCI_PROFILE" os bucket get --bucket-name "$bkt" --fields approximateSize \
+                 --output json 2>/dev/null | jq -r '.data."approximate-size" // 0'
+             done \
+           | jq -s 'add // 0')"
+  [[ "$usage" =~ ^[0-9]+$ ]] || usage=0
   ratio="$(awk -v u="$usage" -v l="$BACKUP_FREE_LIMIT_BYTES" 'BEGIN{ if(l>0) printf "%.4f", u/l; else print "0" }')"
   pct="$(awk -v r="$ratio" 'BEGIN{ printf "%.1f", r*100 }')"
   headroom=$(( BACKUP_FREE_LIMIT_BYTES - usage ))
@@ -95,9 +110,9 @@ check_storage_threshold() {
 
   if (( cr > lr )); then
     if [[ "$cur_tier" == "crit" ]]; then
-      notify_slack ERROR "🚨 저장소(MySQL 몫) ${pct}% 임박 (잔여 ${headroom}B). 즉시 조치: MySQL 백업 주기 늘리기(systemd oci-mysql-backup.timer) / 유료 전환 판단."
+      notify_slack ERROR "🚨 저장소 총량 ${pct}% 임박 (전 버킷 합산, 잔여 ${headroom}B). 즉시 조치: 백업 주기 늘리기(MySQL=systemd oci-mysql-backup.timer, PLG=cron) / 유료 전환 판단."
     else
-      notify_slack WARN "⚠️ 저장소(MySQL 몫) ${pct}% 도달 (잔여 ${headroom}B). 백업 주기를 늘려 증가를 늦추세요 — timer OnCalendar 6h→12h (예: 00,12:00:00)."
+      notify_slack WARN "⚠️ 저장소 총량 ${pct}% 도달 (전 버킷 합산, 잔여 ${headroom}B). 백업 주기 늘리기 검토 — MySQL timer 6h→12h(예: 00,12:00:00) 또는 PLG cron."
     fi
     echo "$cur_tier" > "$STORAGE_TIER_STATE"
     log "[storage] 경고 상향: ${last_tier} → ${cur_tier}"
