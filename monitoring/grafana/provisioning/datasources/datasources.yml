@@ -55,3 +55,21 @@ datasources:
     version: 1
     # 편집 불가 설정
     editable: false
+
+  # ═══════════════════════════════════════════════════════════
+  # ③ MySQL 데이터소스 (쿼리 튜닝 분석 DB — §②③ trace_snapshot)
+  # ═══════════════════════════════════════════════════════════
+  - name: qasker-mysql-local
+    # 대시보드 §②③ 패널이 참조하는 키 — 변경 금지(기존 수동 등록 uid 승계)
+    uid: bfrwvbnu3162ob
+    type: mysql
+    access: proxy
+    # 분석 대상 x100 컨테이너(local-mysql-x100)를 호스트 포트로 접근.
+    # 127.0.0.1:3309(loopback 바인딩) → 컨테이너에서는 host.docker.internal:3309 로 도달.
+    url: host.docker.internal:3309
+    database: qaskerdb
+    user: root
+    secureJsonData:
+      password: password
+    version: 1
+    editable: false
