@@ -406,8 +406,8 @@ fi
 # ─── 저장소 임계 확인 ───
 check_storage_threshold || log WARN "저장소 임계 확인 실패 (계속 진행)"
 
-# ─── 메트릭 노출 ───
-emit_metrics
+# ─── 메트릭 노출 (관측 부가 단계 — 실패해도 백업·알림은 계속) ───
+emit_metrics || log WARN "메트릭 노출 실패 (계속 진행)"
 
 TOTAL_DURATION=$(( SECONDS - TOTAL_START ))
 log INFO "총 소요: ${TOTAL_DURATION}s, 실패 store: ${failures}"
