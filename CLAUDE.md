@@ -65,6 +65,16 @@ curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_last_success_t
 curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_storage_usage_ratio' | jq
 ```
 
+### 백업 주기 재조정 (저장소 압박 시)
+
+`set-backup-schedule.sh`(레포 루트)가 MySQL(systemd timer)·PLG(cron) 주기를 **라이브로** 바꾼다. git 레포는 건드리지 않고, MySQL은 systemd drop-in override(`*.timer.d/10-schedule.conf`, update.sh 재배포에도 유지), PLG는 `/etc/cron.d/q-asker-backup` in-place 수정으로 반영한다. OCI-3에서 sudo로 실행:
+
+```bash
+sudo ./set-backup-schedule.sh --show                 # 현재 적용값 확인
+sudo ./set-backup-schedule.sh --mysql 12h --plg 2d   # MySQL 12시간·PLG 이틀마다
+```
+`--mysql <N>h`는 24의 약수(2/3/4/6/8/12/24, UTC 00시 기준 균등 배치), `--plg <N>d`는 N일마다 KST 03:00(1=매일). PLG는 이후 cron 참조본을 `/etc/cron.d`로 다시 `cp`하면 되돌아가니 그때 재실행한다.
+
 ## 아키텍처
 
 ### 논리 아키텍처
@@ -190,6 +200,7 @@ plg-stack/
 │       └── oci-mysql-backup.timer    ← 6시간 주기 (UTC 00·06·12·18)
 │
 ├── remote-node.env.example      ← 원격 노드 공통 환경 변수
+├── set-backup-schedule.sh       ← 백업 주기 라이브 재조정 (MySQL timer + PLG cron)
 └── .claude/                     ← Claude Code 설정 디렉토리
     ├── CLAUDE.md
     ├── rules/                   ← 코딩 컨벤션 및 작업 규칙
