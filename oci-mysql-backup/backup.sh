@@ -123,7 +123,7 @@ check_storage_threshold() {
 즉시 조치: 백업 주기 늘리기(MySQL=systemd timer, PLG=cron) / 유료 전환 판단"
   elif [[ "$cur_tier" == "warn" ]]; then
     notify_slack WARN "⚠️ *저장소 총량 ${pct}% 도달* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
-현재 백업 주기 — MySQL 6시간 · PLG 매일 03:00(KST)"
+백업 주기 재조정을 추천합니다 — 현재 MySQL 6시간 · PLG 매일 03:00(KST)"
   fi
   # 상태 파일은 단계 전환(상향/회복) 로깅용으로만 유지 — 발송 판단엔 더는 쓰지 않는다.
   if (( cr != lr )); then

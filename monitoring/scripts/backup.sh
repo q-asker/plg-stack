@@ -302,7 +302,7 @@ check_storage_threshold() {
             else
                 notify_slack WARN "storage-threshold" \
                     "⚠️ *저장소 총량 ${pct}% 도달* (잔여 *${headroom_mb} MB*)
-현재 백업 주기 — MySQL 6시간 · PLG 매일 03:00(KST)"
+백업 주기 재조정을 추천합니다 — 현재 MySQL 6시간 · PLG 매일 03:00(KST)"
             fi
         fi
     fi
