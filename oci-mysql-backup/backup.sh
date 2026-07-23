@@ -98,7 +98,10 @@ check_storage_threshold() {
   [[ "$usage" =~ ^[0-9]+$ ]] || usage=0
   ratio="$(awk -v u="$usage" -v l="$BACKUP_FREE_LIMIT_BYTES" 'BEGIN{ if(l>0) printf "%.4f", u/l; else print "0" }')"
   pct="$(awk -v r="$ratio" 'BEGIN{ printf "%.1f", r*100 }')"
-  STORAGE_PCT="$pct"   # 전역: 성공 메시지에 현재 총량% 표기용
+  STORAGE_PCT="$pct"   # 전역: 경고 메시지용
+  # 전역: 성공 메시지에 "사용 / 한도 GB (%)" 표기용 (GB는 10^9 기준, 한도와 일치)
+  STORAGE_LABEL="$(awk -v u="$usage" -v l="$BACKUP_FREE_LIMIT_BYTES" \
+    'BEGIN{ printf "%.1f / %.0f GB (%.1f%%)", u/1e9, l/1e9, (l>0 ? u/l*100 : 0) }')"
   headroom=$(( BACKUP_FREE_LIMIT_BYTES - usage ))
   log "[storage] 사용량 ${usage}/${BACKUP_FREE_LIMIT_BYTES} bytes (ratio=${ratio})"
 
@@ -247,15 +250,15 @@ FINAL_DURATION=$(($(date +%s) - START_TS))
 metric_record_success "$DUMP_SIZE" "$FINAL_DURATION" "$OBJECT_KEY"
 log "[OK] $OBJECT_KEY uploaded ($DUMP_SIZE bytes, ${FINAL_DURATION}s)"
 
-# 저장소 사용량 2단계 경고 + 현재 총량%(STORAGE_PCT) 산출. 실패해도 백업은 성공이므로 무시.
-STORAGE_PCT=""
+# 저장소 사용량 2단계 경고 + 현재 총량 라벨(STORAGE_LABEL) 산출. 실패해도 백업은 성공이므로 무시.
+STORAGE_PCT=""; STORAGE_LABEL=""
 check_storage_threshold || log "[storage] 임계 확인 실패 (계속 진행)"
 
 SIZE_MB="$(awk -v b="$DUMP_SIZE" 'BEGIN{ printf "%.1f", b/1024/1024 }')"
 SUCCESS_MSG="*백업 완료*
 • 객체 \`${OBJECT_KEY}\`
 • 크기 *${SIZE_MB} MB* · 소요 ${FINAL_DURATION}s"
-[[ -n "$STORAGE_PCT" ]] && SUCCESS_MSG="${SUCCESS_MSG}
-• 저장소 총량 *${STORAGE_PCT}%*"
+[[ -n "$STORAGE_LABEL" ]] && SUCCESS_MSG="${SUCCESS_MSG}
+• 저장소 *${STORAGE_LABEL}*"
 notify_slack SUCCESS "$SUCCESS_MSG"
 exit 0

@@ -417,12 +417,14 @@ if (( failures > 0 )); then
 fi
 
 log INFO "backup.sh 정상 종료"
-# 경고가 아니어도 현재 총량%를 성공 메시지에 항상 표기 (조회 실패=0바이트면 생략)
+# 경고가 아니어도 현재 총량을 성공 메시지에 항상 표기 (조회 실패=0바이트면 생략)
+# "사용 / 한도 GB (%)" 형태 (GB는 10^9 기준, 한도와 일치)
 STORAGE_LINE=""
 if (( ${STORAGE_USAGE_BYTES:-0} > 0 )); then
-    STORAGE_PCT="$(awk -v r="${STORAGE_USAGE_RATIO:-0}" 'BEGIN { printf "%.1f", r*100 }')"
+    STORAGE_LABEL="$(awk -v u="$STORAGE_USAGE_BYTES" -v l="$BACKUP_FREE_LIMIT_BYTES" \
+        'BEGIN { printf "%.1f / %.0f GB (%.1f%%)", u/1e9, l/1e9, (l>0 ? u/l*100 : 0) }')"
     STORAGE_LINE="
-• 저장소 총량 *${STORAGE_PCT}%*"
+• 저장소 *${STORAGE_LABEL}*"
 fi
 notify_slack SUCCESS "backup" "*백업·검증 완료*
 • 대상 *${TARGET}* · 시각 \`${TIMESTAMP}\`
