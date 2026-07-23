@@ -79,6 +79,29 @@ sha256() {
   else shasum -a 256 "$@"; fi
 }
 
+# 현재 백업 주기를 실제 설정에서 읽어 라벨 생성 (하드코딩 방지 — 주기 바꾸면 메시지도 바뀜).
+#   MySQL: systemd timer의 OnCalendar(drop-in override 우선) 시각 개수 → 24/개수 시간
+#   PLG:   /etc/cron.d/q-asker-backup 백업 라인의 일(day-of-month) 필드
+current_schedule_label() {
+  local dropin=/etc/systemd/system/oci-mysql-backup.timer.d/10-schedule.conf
+  local base=/etc/systemd/system/oci-mysql-backup.timer
+  local src="$base"
+  [[ -f "$dropin" ]] && grep -qE '^OnCalendar=.*[0-9]' "$dropin" 2>/dev/null && src="$dropin"
+  local hours mysql_lbl="?"
+  hours="$(grep -oE '[0-9]{2}(,[0-9]{2})*:00:00' "$src" 2>/dev/null | tail -1 | sed 's/:00:00//')"
+  if [[ -n "$hours" ]]; then
+    local cnt; cnt="$(awk -F, '{print NF}' <<<"$hours")"
+    (( cnt > 0 )) && mysql_lbl="$(( 24 / cnt ))시간"
+  fi
+  local dom plg_lbl="?"
+  dom="$(grep -E 'backup\.sh --target=both' /etc/cron.d/q-asker-backup 2>/dev/null | awk '{print $3}' | head -1)"
+  case "$dom" in
+    '*')   plg_lbl="매일 03:00" ;;
+    '*/'*) plg_lbl="${dom#*/}일마다 03:00" ;;
+  esac
+  echo "MySQL ${mysql_lbl} · PLG ${plg_lbl}(KST)"
+}
+
 # 저장소 사용량 2단계 경고 (PLG backup.sh와 동일 철학).
 # warn/crit 단계면 매 실행마다 발송(재발송 억제 안 함). 대응은 MySQL 백업 주기 늘리기(systemd timer).
 check_storage_threshold() {
@@ -123,7 +146,7 @@ check_storage_threshold() {
 즉시 조치: 백업 주기 늘리기(MySQL=systemd timer, PLG=cron) / 유료 전환 판단"
   elif [[ "$cur_tier" == "warn" ]]; then
     notify_slack WARN "⚠️ *저장소 총량 ${pct}% 도달* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
-백업 주기 재조정을 추천합니다 — 현재 MySQL 6시간 · PLG 매일 03:00(KST)"
+백업 주기 재조정을 추천합니다 — 현재 $(current_schedule_label)"
   fi
   # 상태 파일은 단계 전환(상향/회복) 로깅용으로만 유지 — 발송 판단엔 더는 쓰지 않는다.
   if (( cr != lr )); then

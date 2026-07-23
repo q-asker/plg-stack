@@ -257,6 +257,27 @@ backup_loki() {
     return 0
 }
 
+# 현재 백업 주기를 실제 설정에서 읽어 라벨 생성 (하드코딩 방지 — 주기 바꾸면 메시지도 바뀜).
+current_schedule_label() {
+    local dropin=/etc/systemd/system/oci-mysql-backup.timer.d/10-schedule.conf
+    local base=/etc/systemd/system/oci-mysql-backup.timer
+    local src="$base"
+    [[ -f "$dropin" ]] && grep -qE '^OnCalendar=.*[0-9]' "$dropin" 2>/dev/null && src="$dropin"
+    local hours mysql_lbl="?"
+    hours="$(grep -oE '[0-9]{2}(,[0-9]{2})*:00:00' "$src" 2>/dev/null | tail -1 | sed 's/:00:00//')"
+    if [[ -n "$hours" ]]; then
+        local cnt; cnt="$(awk -F, '{print NF}' <<<"$hours")"
+        (( cnt > 0 )) && mysql_lbl="$(( 24 / cnt ))시간"
+    fi
+    local dom plg_lbl="?"
+    dom="$(grep -E 'backup\.sh --target=both' /etc/cron.d/q-asker-backup 2>/dev/null | awk '{print $3}' | head -1)"
+    case "$dom" in
+        '*')   plg_lbl="매일 03:00" ;;
+        '*/'*) plg_lbl="${dom#*/}일마다 03:00" ;;
+    esac
+    echo "MySQL ${mysql_lbl} · PLG ${plg_lbl}(KST)"
+}
+
 # ═══════════════════════════════════════════════════════════
 # 저장소 임계 확인 (FR-013) — 2단계 경고
 #   80% 조기 경고 → 90% 임박 경고. warn/crit 단계면 매 실행마다 발송(재발송 억제 안 함).
@@ -302,7 +323,7 @@ check_storage_threshold() {
             else
                 notify_slack WARN "storage-threshold" \
                     "⚠️ *저장소 총량 ${pct}% 도달* (잔여 *${headroom_mb} MB*)
-백업 주기 재조정을 추천합니다 — 현재 MySQL 6시간 · PLG 매일 03:00(KST)"
+백업 주기 재조정을 추천합니다 — 현재 $(current_schedule_label)"
             fi
         fi
     fi
