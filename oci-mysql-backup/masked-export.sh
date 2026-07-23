@@ -30,7 +30,6 @@ OUT="/tmp/masked-$(date +%Y%m%dT%H%M%SZ).sql.gz"
 
 log()    { echo "[$(date -u +%H:%M:%SZ)] $*"; }
 sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
-mexec()  { docker exec -i "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" 2>/dev/null; }
 mquery() { docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" -N -e "$1" 2>/dev/null; }
 # 성공·실패 무관 종료 시 정리: 임시 디렉터리 + 컨테이너 제거(원본 PII 남은 채 컨테이너 잔존 방지)
 cleanup() { [ -n "${RDIR:-}" ] && rm -rf "$RDIR"; docker rm -f "$CONTAINER" >/dev/null 2>&1 && log "정리: $CONTAINER 제거"; }
@@ -93,7 +92,10 @@ SQL="$(mquery "
     esac
   done)"
 log "[3/4] 마스킹 적용 ($(echo "$SQL" | grep -c UPDATE) UPDATE, salt 고정)"
-printf 'SET foreign_key_checks=0;\n%s\n' "$SQL" | mexec || { log "[ERR] 마스킹 적용 실패"; exit 12; }
+# stderr 를 캡처해 실패 시 실제 MySQL 에러(어느 컬럼/문장인지)를 그대로 출력
+apply_err="$(printf 'SET foreign_key_checks=0;\n%s\n' "$SQL" \
+  | docker exec -i "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" 2>&1 1>/dev/null)" \
+  || { log "[ERR] 마스킹 적용 실패:"; echo "$apply_err" | sed 's/^/    /' >&2; exit 12; }
 
 # ── [4/4] 덤프 + 업로드 ──
 log "[4/4] mysqldump → $OUT (pii_classification 제외)"
