@@ -259,8 +259,8 @@ backup_loki() {
 
 # ═══════════════════════════════════════════════════════════
 # 저장소 임계 확인 (FR-013) — 2단계 경고
-#   80% 조기 경고 → 90% 임박 경고. 단계 상향 시에만 발송(재발송 억제),
-#   회복 시 상태만 갱신. 대응은 개발자가 백업 주기 늘리기(cron 조정)로 판단.
+#   80% 조기 경고 → 90% 임박 경고. warn/crit 단계면 매 실행마다 발송(재발송 억제 안 함).
+#   대응은 개발자가 백업 주기 늘리기(cron 조정)로 판단.
 # ═══════════════════════════════════════════════════════════
 
 check_storage_threshold() {
@@ -286,10 +286,10 @@ check_storage_threshold() {
     local -A rank=( [ok]=0 [warn]=1 [crit]=2 )
     local cur_rank="${rank[$cur_tier]:-0}" last_rank="${rank[$last_tier]:-0}"
 
-    if (( cur_rank > last_rank )); then
-        # 단계 상향(악화) → 경고 발송
+    # 재발송 억제 안 함: warn/crit 단계면 매 실행마다 경고 발송.
+    if [[ "$cur_tier" != "ok" ]]; then
         if (( DRY_RUN )); then
-            log WARN "[DRY-RUN] 저장소 ${cur_tier} 경고 스킵 (상태 미갱신)"
+            log WARN "[DRY-RUN] 저장소 ${cur_tier} 경고 스킵"
         else
             local pct headroom headroom_mb
             pct="$(awk -v r="$STORAGE_USAGE_RATIO" 'BEGIN { printf "%.1f", r*100 }')"
@@ -304,19 +304,12 @@ check_storage_threshold() {
                     "⚠️ *저장소 총량 ${pct}% 도달* (잔여 *${headroom_mb} MB*)
 백업 주기를 늘려 증가를 늦추세요 — cron 조정: 매일 \`0 3 * * *\` → 이틀마다 \`0 3 */2 * *\`"
             fi
-            printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
-            log INFO "저장소 경고 상향: ${last_tier} → ${cur_tier}"
         fi
-    elif (( cur_rank < last_rank )); then
-        # 단계 하향(회복) → 상태만 갱신 (스팸 방지)
-        if (( DRY_RUN )); then
-            log INFO "[DRY-RUN] 저장소 회복 감지 (상태 미갱신)"
-        else
-            printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
-            log INFO "저장소 단계 회복: ${last_tier} → ${cur_tier}"
-        fi
-    else
-        log INFO "저장소 단계 유지: ${cur_tier} (재발송 억제)"
+    fi
+    # 상태 파일은 단계 전환(상향/회복) 로깅용으로만 유지 — 발송 판단엔 더는 쓰지 않는다.
+    if (( ! DRY_RUN )) && (( cur_rank != last_rank )); then
+        printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
+        log INFO "저장소 단계 변화: ${last_tier} → ${cur_tier}"
     fi
 }
 

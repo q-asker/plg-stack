@@ -80,7 +80,7 @@ sha256() {
 }
 
 # 저장소 사용량 2단계 경고 (PLG backup.sh와 동일 철학).
-# 단계 상향 시에만 발송(재발송 억제), 회복 시 상태만 갱신. 대응은 MySQL 백업 주기 늘리기(systemd timer).
+# warn/crit 단계면 매 실행마다 발송(재발송 억제 안 함). 대응은 MySQL 백업 주기 늘리기(systemd timer).
 check_storage_threshold() {
   local usage ratio pct headroom cur_tier last_tier comp
   # tenancy 전체 사용량(전 버킷 approximateSize 합) — 무료 20GB는 버킷 합산이므로.
@@ -117,19 +117,18 @@ check_storage_threshold() {
 
   local headroom_mb
   headroom_mb="$(awk -v b="$headroom" 'BEGIN{ printf "%.0f", b/1024/1024 }')"
-  if (( cr > lr )); then
-    if [[ "$cur_tier" == "crit" ]]; then
-      notify_slack ERROR "🚨 *저장소 총량 ${pct}% 임박* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
+  # 재발송 억제 안 함: warn/crit 단계면 매 실행마다 발송한다.
+  if [[ "$cur_tier" == "crit" ]]; then
+    notify_slack ERROR "🚨 *저장소 총량 ${pct}% 임박* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
 즉시 조치: 백업 주기 늘리기(MySQL=systemd timer, PLG=cron) / 유료 전환 판단"
-    else
-      notify_slack WARN "⚠️ *저장소 총량 ${pct}% 도달* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
+  elif [[ "$cur_tier" == "warn" ]]; then
+    notify_slack WARN "⚠️ *저장소 총량 ${pct}% 도달* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
 백업 주기 늘리기 검토 — MySQL timer 6h→12h(예: 00,12:00:00) 또는 PLG cron"
-    fi
+  fi
+  # 상태 파일은 단계 전환(상향/회복) 로깅용으로만 유지 — 발송 판단엔 더는 쓰지 않는다.
+  if (( cr != lr )); then
     echo "$cur_tier" > "$STORAGE_TIER_STATE"
-    log "[storage] 경고 상향: ${last_tier} → ${cur_tier}"
-  elif (( cr < lr )); then
-    echo "$cur_tier" > "$STORAGE_TIER_STATE"
-    log "[storage] 단계 회복: ${last_tier} → ${cur_tier}"
+    log "[storage] 단계 변화: ${last_tier} → ${cur_tier}"
   fi
 }
 

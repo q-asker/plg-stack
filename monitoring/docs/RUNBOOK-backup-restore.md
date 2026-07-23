@@ -86,7 +86,7 @@ sudo ./monitoring/scripts/backup.sh [옵션]
 | `--debug` | `set -x` 상세 로그 |
 
 - 백업은 업로드 직후 **인라인 무결성 검증**(sha256 재비교)을 수행하고, 실패분은 `quarantine/`로 격리한다.
-- 저장소 사용률 경고는 **80%(⚠️ WARN) · 90%(❌ ERROR) 2단계**로 자동 발송된다(§10.2). 단계 상향 시에만 알리고 회복 시 재무장.
+- 저장소 사용률 경고는 **80%(⚠️ WARN) · 90%(❌ ERROR) 2단계**로 자동 발송된다(§10.2). warn/crit 구간에 있으면 매 백업 실행마다 발송(재발송 억제 안 함).
 
 ---
 
@@ -631,7 +631,7 @@ sudo ./monitoring/scripts/backup.sh --target=both
 ### 10.2 `⚠️/❌ [q-asker-backup] storage-threshold`
 
 **저장소 사용률 2단계 경고** — 80% 도달 시 `⚠️ WARN`(조기), 90% 도달 시 `❌ ERROR`(임박).
-단계가 올라갈 때만 발송되고(재발송 억제), 회복 시 다시 무장된다.
+warn/crit 단계에 머무는 한 백업 실행마다(PLG 매일·MySQL 6시간) 매번 발송된다(재발송 억제 안 함).
 
 ```bash
 # 현재 사용량 확인
