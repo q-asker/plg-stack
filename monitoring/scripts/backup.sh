@@ -291,15 +291,18 @@ check_storage_threshold() {
         if (( DRY_RUN )); then
             log WARN "[DRY-RUN] 저장소 ${cur_tier} 경고 스킵 (상태 미갱신)"
         else
-            local pct headroom
+            local pct headroom headroom_mb
             pct="$(awk -v r="$STORAGE_USAGE_RATIO" 'BEGIN { printf "%.1f", r*100 }')"
             headroom=$(( BACKUP_FREE_LIMIT_BYTES - STORAGE_USAGE_BYTES ))
+            headroom_mb="$(awk -v b="$headroom" 'BEGIN { printf "%.0f", b/1024/1024 }')"
             if [[ "$cur_tier" == "crit" ]]; then
                 notify_slack ERROR "storage-threshold" \
-                    "🚨 저장소 ${pct}% 임박 (잔여 ${headroom}B). 즉시 조치: PLG 백업 주기 늘리기(/etc/cron.d/q-asker-backup) / 오래된 아카이브 정리 / 유료 전환 판단."
+                    "🚨 *저장소 총량 ${pct}% 임박* (잔여 *${headroom_mb} MB*)
+즉시 조치: PLG 백업 주기 늘리기(\`/etc/cron.d/q-asker-backup\`) / 오래된 아카이브 정리 / 유료 전환 판단"
             else
                 notify_slack WARN "storage-threshold" \
-                    "⚠️ 저장소 ${pct}% 도달 (잔여 ${headroom}B). 백업 주기를 늘려 증가를 늦추세요 — cron 조정: 매일 '0 3 * * *' → 이틀마다 '0 3 */2 * *'."
+                    "⚠️ *저장소 총량 ${pct}% 도달* (잔여 *${headroom_mb} MB*)
+백업 주기를 늘려 증가를 늦추세요 — cron 조정: 매일 \`0 3 * * *\` → 이틀마다 \`0 3 */2 * *\`"
             fi
             printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
             log INFO "저장소 경고 상향: ${last_tier} → ${cur_tier}"
@@ -415,10 +418,13 @@ fi
 
 log INFO "backup.sh 정상 종료"
 # 경고가 아니어도 현재 총량%를 성공 메시지에 항상 표기 (조회 실패=0바이트면 생략)
-STORAGE_SUFFIX=""
+STORAGE_LINE=""
 if (( ${STORAGE_USAGE_BYTES:-0} > 0 )); then
     STORAGE_PCT="$(awk -v r="${STORAGE_USAGE_RATIO:-0}" 'BEGIN { printf "%.1f", r*100 }')"
-    STORAGE_SUFFIX=". 저장소 총량 ${STORAGE_PCT}%"
+    STORAGE_LINE="
+• 저장소 총량 *${STORAGE_PCT}%*"
 fi
-notify_slack SUCCESS "backup" "target=${TARGET} 백업·검증 완료. TIMESTAMP=${TIMESTAMP}, 총 ${TOTAL_DURATION}s${STORAGE_SUFFIX}"
+notify_slack SUCCESS "backup" "*백업·검증 완료*
+• 대상 *${TARGET}* · 시각 \`${TIMESTAMP}\`
+• 소요 ${TOTAL_DURATION}s${STORAGE_LINE}"
 exit 0

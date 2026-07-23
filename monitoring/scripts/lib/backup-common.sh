@@ -262,6 +262,7 @@ notify_slack() {
                 color: (if $text | contains("ERROR") then "#e01e5a"
                         elif $text | contains("WARN") then "#ecb22e"
                         else "#2eb67d" end),
+                mrkdwn_in: ["fields"],
                 fields: [
                     {title: "Host",   value: $host, short: true},
                     {title: "Detail", value: $detail, short: false}

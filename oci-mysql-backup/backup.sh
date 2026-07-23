@@ -109,11 +109,15 @@ check_storage_threshold() {
   local cr="${rank[$cur_tier]:-0}" lr="${rank[$last_tier]:-0}"
   mkdir -p "$(dirname "$STORAGE_TIER_STATE")" 2>/dev/null || true
 
+  local headroom_mb
+  headroom_mb="$(awk -v b="$headroom" 'BEGIN{ printf "%.0f", b/1024/1024 }')"
   if (( cr > lr )); then
     if [[ "$cur_tier" == "crit" ]]; then
-      notify_slack ERROR "🚨 저장소 총량 ${pct}% 임박 (전 버킷 합산, 잔여 ${headroom}B). 즉시 조치: 백업 주기 늘리기(MySQL=systemd oci-mysql-backup.timer, PLG=cron) / 유료 전환 판단."
+      notify_slack ERROR "🚨 *저장소 총량 ${pct}% 임박* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
+즉시 조치: 백업 주기 늘리기(MySQL=systemd timer, PLG=cron) / 유료 전환 판단"
     else
-      notify_slack WARN "⚠️ 저장소 총량 ${pct}% 도달 (전 버킷 합산, 잔여 ${headroom}B). 백업 주기 늘리기 검토 — MySQL timer 6h→12h(예: 00,12:00:00) 또는 PLG cron."
+      notify_slack WARN "⚠️ *저장소 총량 ${pct}% 도달* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
+백업 주기 늘리기 검토 — MySQL timer 6h→12h(예: 00,12:00:00) 또는 PLG cron"
     fi
     echo "$cur_tier" > "$STORAGE_TIER_STATE"
     log "[storage] 경고 상향: ${last_tier} → ${cur_tier}"
@@ -247,5 +251,11 @@ log "[OK] $OBJECT_KEY uploaded ($DUMP_SIZE bytes, ${FINAL_DURATION}s)"
 STORAGE_PCT=""
 check_storage_threshold || log "[storage] 임계 확인 실패 (계속 진행)"
 
-notify_slack SUCCESS "백업 완료 object_key=$OBJECT_KEY size=${DUMP_SIZE}B ${FINAL_DURATION}s${STORAGE_PCT:+ 저장소 총량 ${STORAGE_PCT}%}"
+SIZE_MB="$(awk -v b="$DUMP_SIZE" 'BEGIN{ printf "%.1f", b/1024/1024 }')"
+SUCCESS_MSG="*백업 완료*
+• 객체 \`${OBJECT_KEY}\`
+• 크기 *${SIZE_MB} MB* · 소요 ${FINAL_DURATION}s"
+[[ -n "$STORAGE_PCT" ]] && SUCCESS_MSG="${SUCCESS_MSG}
+• 저장소 총량 *${STORAGE_PCT}%*"
+notify_slack SUCCESS "$SUCCESS_MSG"
 exit 0

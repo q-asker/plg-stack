@@ -39,6 +39,7 @@ notify_slack() {
       text: $text,
       attachments: [{
         color: $color,
+        mrkdwn_in: ["fields"],
         fields: [
           {title: "Host",   value: $host,   short: true},
           {title: "Detail", value: $detail, short: false}
