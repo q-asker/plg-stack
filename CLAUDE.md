@@ -112,7 +112,7 @@ curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_storage_usage_
       └────────────────────────────┘
 ```
 
-**MySQL L2 백업 (별도 서브시스템, spec 001-oci-mysql-backup-restore)**: OCI-3에서 systemd timer가 6시간 주기(UTC 00·06·12·18 = KST 09·15·21·03)로 `oci-mysql-backup/backup.sh`를 실행 → HeatWave MySQL을 `mysqldump`(gzip+sha256)하여 별도 버킷 `qasker-mysql-backup`에 PUT한다. PLG 백업(cron)과 독립적으로 동작하며, flock으로 백업/복구/GameDay를 직렬화하고 Prometheus textfile 컬렉터로 결과 메트릭을 노출한다.
+**MySQL L2 백업 (별도 서브시스템, spec 001-oci-mysql-backup-restore)**: OCI-3에서 systemd timer가 6시간 주기(UTC 00·06·12·18 = KST 09·15·21·03)로 `oci-mysql-backup/backup.sh`를 실행 → HeatWave MySQL을 `mysqldump`(gzip+sha256)하여 별도 버킷 `qasker-mysql-backup`에 PUT하고, 업로드 직후 재다운로드로 인라인 무결성 검증까지 통과해야 성공으로 인정한다. PLG 백업(cron)과 독립적으로 동작하며, flock으로 백업/복구/GameDay를 직렬화하고 Prometheus textfile 컬렉터로 결과 메트릭을 노출한다.
 
 ### 디렉토리 구조
 
@@ -172,7 +172,7 @@ plg-stack/
 │           └── prometheus.yml   ← Spring Boot Actuator 스크래핑
 │
 ├── oci-mysql-backup/            ← HeatWave MySQL L2 백업 (systemd, spec 001-oci-mysql-backup-restore)
-│   ├── backup.sh                ← mysqldump → gzip+sha256 → Object Storage PUT (6시간 주기)
+│   ├── backup.sh                ← mysqldump → gzip+sha256 → PUT → 재다운로드 무결성 검증 (6시간 주기)
 │   ├── restore.sh               ← 재해 복구 진입점 (원격 호스트용)
 │   ├── restore-local.sh         ← 로컬 Docker MySQL로 복원 (분석용)
 │   ├── masked-export.sh         ← 민감정보 마스킹 덤프

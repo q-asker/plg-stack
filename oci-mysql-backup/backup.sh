@@ -9,7 +9,8 @@
 #   4. DB 메타데이터(스키마/테이블/row 카운트 + 호스트·dump 도구 버전) JSON
 #   5. metadata에 size·sha·duration·key 머지
 #   6. OCI Object Storage에 3종 PUT (dump, meta, sha)
-#   7. Prometheus textfile 메트릭 갱신
+#   7. 업로드 무결성 검증 (BACKUP_READER로 재다운로드 후 sha256 대조)
+#   8. Prometheus textfile 메트릭 갱신
 #
 # 종료 코드:
 #   0  성공 (또는 락 점유로 skip)
@@ -26,6 +27,7 @@
 #   MYSQL_CNF           --defaults-extra-file 경로 (password CLI 노출 회피)
 #   BUCKET              기본 qasker-mysql-backup
 #   OCI_PROFILE         기본 BACKUP_WRITER
+#   VERIFY_OCI_PROFILE  기본 BACKUP_READER (업로드 후 재다운로드 검증용)
 #   LOCK_FILE           기본 /var/lock/oci-mysql-backup.lock
 #   STATE_FILE          기본 /var/lib/oci-mysql-backup/state.json
 #   METRIC_FILE         기본 /var/lib/node_exporter/textfile_collector/oci_mysql_backup.prom
@@ -37,6 +39,7 @@ set -uo pipefail
 # ─── 환경변수 기본값 ───
 : "${BUCKET:=qasker-mysql-backup}"
 : "${OCI_PROFILE:=BACKUP_WRITER}"
+: "${VERIFY_OCI_PROFILE:=BACKUP_READER}"
 : "${LOCK_FILE:=/var/lock/oci-mysql-backup.lock}"
 : "${WORK_BASE_DIR:=/tmp}"
 : "${DRY_RUN:=0}"
@@ -169,7 +172,7 @@ START_TS=$(date +%s)
 log "[START] object_key=$OBJECT_KEY"
 
 # ─── Step 1: mysqldump → gzip ───
-log "[step 1/5] mysqldump..."
+log "[step 1/6] mysqldump..."
 if [[ -n "${MYSQL_CNF:-}" ]]; then
   if ! mysqldump --defaults-extra-file="$MYSQL_CNF" \
        --single-transaction --routines --triggers --hex-blob \
@@ -193,18 +196,18 @@ else
 fi
 DUMP_SIZE=$(stat -c%s "$DUMP_FILE" 2>/dev/null || stat -f%z "$DUMP_FILE")
 [[ "$DUMP_SIZE" -gt 0 ]] || fail "dump-empty" 2
-log "[step 1/5] dump complete ($DUMP_SIZE bytes)"
+log "[step 1/6] dump complete ($DUMP_SIZE bytes)"
 
 # ─── Step 2: SHA256 ───
-log "[step 2/5] checksum..."
+log "[step 2/6] checksum..."
 if ! sha256 "$DUMP_FILE" | awk '{print $1}' > "$SHA_FILE"; then
   fail "checksum" 3
 fi
 SHA256=$(cat "$SHA_FILE")
-log "[step 2/5] sha256=$SHA256"
+log "[step 2/6] sha256=$SHA256"
 
 # ─── Step 3: 메타데이터 수집 ───
-log "[step 3/5] metadata..."
+log "[step 3/6] metadata..."
 if ! collect_metadata > "$META_FILE"; then
   fail "metadata" 5
 fi
@@ -213,7 +216,7 @@ fi
 if TABLE_COUNTS=$(collect_table_counts 2>/dev/null) && [[ "$TABLE_COUNTS" != "{}" ]]; then
   jq --argjson tc "$TABLE_COUNTS" '. + {table_counts: $tc}' "$META_FILE" > "${META_FILE}.tmp" \
     && mv "${META_FILE}.tmp" "$META_FILE"
-  log "[step 3/5] table_counts merged: $(echo "$TABLE_COUNTS" | jq -c .)"
+  log "[step 3/6] table_counts merged: $(echo "$TABLE_COUNTS" | jq -c .)"
 fi
 
 # ─── Step 4: 메타데이터 머지 (크기·체크섬·소요·키) ───
@@ -221,17 +224,17 @@ DURATION=$(($(date +%s) - START_TS))
 if ! finalize_metadata "$META_FILE" "$DUMP_SIZE" "$SHA256" "$DURATION" "$OBJECT_KEY"; then
   fail "metadata-finalize" 5
 fi
-log "[step 4/5] metadata finalized"
+log "[step 4/6] metadata finalized"
 
 # ─── Step 5: OCI upload (dump, meta, sha) ───
 if [[ "$DRY_RUN" == "1" ]]; then
-  log "[step 5/5] DRY_RUN=1 → upload skip"
+  log "[step 5/6] DRY_RUN=1 → upload skip"
   log "[OK] (dry-run) would upload: $OBJECT_KEY ($DUMP_SIZE bytes, ${DURATION}s)"
   metric_record_success "$DUMP_SIZE" "$DURATION" "$OBJECT_KEY"
   exit 0
 fi
 
-log "[step 5/5] uploading 3 objects to bucket=$BUCKET profile=$OCI_PROFILE..."
+log "[step 5/6] uploading 3 objects to bucket=$BUCKET profile=$OCI_PROFILE..."
 upload() {
   local file="$1" key="$2"
   oci --profile "$OCI_PROFILE" os object put \
@@ -245,6 +248,26 @@ upload "$DUMP_FILE" "$OBJECT_KEY" || { log "[ERR] upload dump: $(cat "$WORK_DIR/
 upload "$META_FILE" "$META_KEY"  || { log "[ERR] upload meta: $(cat "$WORK_DIR/upload.err")"; fail "upload-meta" 4; }
 upload "$SHA_FILE"  "$SHA_KEY"   || { log "[ERR] upload sha: $(cat "$WORK_DIR/upload.err")"; fail "upload-sha" 4; }
 
+# ─── Step 6: 인라인 무결성 검증 (READER로 재다운로드 후 sha256 대조) ───
+# PLG backup.sh verify_object와 동일 철학: put exit 0만으로는 저장 객체가 로컬 sha256과
+# 일치함을 보장하지 못하므로, 재다운로드해 대조해야 "검증 완료"로 인정한다.
+log "[step 6/6] verifying uploaded object (재다운로드 후 sha256 대조)..."
+VERIFY_FILE="$WORK_DIR/verify.sql.gz"
+if ! oci --profile "$VERIFY_OCI_PROFILE" os object get \
+     --bucket-name "$BUCKET" \
+     --name "$OBJECT_KEY" \
+     --file "$VERIFY_FILE" \
+     >/dev/null 2>"$WORK_DIR/verify.err"; then
+  log "[ERR] verify download: $(cat "$WORK_DIR/verify.err")"
+  fail "verify-download" 4
+fi
+VERIFY_SHA=$(sha256 "$VERIFY_FILE" | awk '{print $1}')
+if [[ "$VERIFY_SHA" != "$SHA256" ]]; then
+  log "[ERR] 무결성 불일치: local=$SHA256 remote=$VERIFY_SHA"
+  fail "verify-mismatch" 3
+fi
+log "[step 6/6] 무결성 OK: sha256=$SHA256"
+
 # ─── 성공 메트릭 ───
 FINAL_DURATION=$(($(date +%s) - START_TS))
 metric_record_success "$DUMP_SIZE" "$FINAL_DURATION" "$OBJECT_KEY"
@@ -255,7 +278,7 @@ STORAGE_PCT=""; STORAGE_LABEL=""
 check_storage_threshold || log "[storage] 임계 확인 실패 (계속 진행)"
 
 SIZE_MB="$(awk -v b="$DUMP_SIZE" 'BEGIN{ printf "%.1f", b/1024/1024 }')"
-SUCCESS_MSG="*백업 완료*
+SUCCESS_MSG="*백업·검증 완료*
 • 객체 \`${OBJECT_KEY}\`
 • 크기 *${SIZE_MB} MB* · 소요 ${FINAL_DURATION}s"
 [[ -n "$STORAGE_LABEL" ]] && SUCCESS_MSG="${SUCCESS_MSG}
