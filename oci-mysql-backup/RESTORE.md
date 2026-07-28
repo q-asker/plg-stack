@@ -96,8 +96,29 @@ oci --profile BACKUP_READER os ns get
 ### 4. healthcheck.baseline.yml 배포 확인
 ```bash
 sudo cat /etc/oci-mysql-backup/healthcheck.baseline.yml | jq .schemas.expected
-# → 4 반환하면 OK
+# → 1 반환하면 OK
 ```
+
+## 검증 사다리 — baseline 확인과 `--app-check`
+
+| 수준 | 방법 | 검증 범위 |
+|---|---|---|
+| 기본 | healthcheck.sh (baseline) | 스키마 수 + 대표 테이블 존재·비어있지 않음 (샘플) |
+| `--app-check` | 실제 앱(Spring Boot) 부팅 | **Flyway 마이그레이션 이력 + Hibernate `ddl-auto:validate`(앱이 쓰는 전체 엔티티↔스키마 대조) + actuator health UP** |
+
+`--app-check`는 복원 DB에 소비자(앱)를 직접 붙이는 최종 판정이다 — 검증 기준이 앱 코드와 함께 진화하므로 baseline처럼 낡지 않는다. 앱은 `local,mock` 프로필로 부팅해 외부 호출·실쓰기가 mock 처리되고, 검증 후 앱 컨테이너는 자동 정리된다 (MySQL 격리 컨테이너는 보존).
+
+```bash
+# 요구: 앱 이미지 pull 가능 + Jasypt 복호화 키
+sudo JASYPT_ENCRYPTOR_PASSWORD='<키>' \
+  /opt/oci-mysql-backup/restore.sh --latest --app-check
+
+# 이미지·포트 재정의 (기본 qasker/api:latest, 서버 18080, actuator 19090)
+sudo APP_IMAGE=qasker/api:1.2.3 JASYPT_ENCRYPTOR_PASSWORD='<키>' \
+  /opt/oci-mysql-backup/restore.sh --latest --app-check
+```
+
+앱의 actuator 기본 포트(9090)는 OCI-3 Prometheus와 충돌하므로 검증 중엔 19090으로 재정의된다.
 
 ## 종료 코드
 
@@ -111,6 +132,7 @@ sudo cat /etc/oci-mysql-backup/healthcheck.baseline.yml | jq .schemas.expected
 | 12 | Docker 실패 (pull/run/health) | 무 |
 | 13 | dump 적재 실패 | 무 (격리 컨테이너 안에만) |
 | 14 | healthcheck 스크립트 없음 | 무 |
+| 15 | 앱 부팅 검증 FAIL (`--app-check`) | 무 (앱 컨테이너 보존 — `docker logs`로 원인 분석) |
 
 **어떤 실패든 원본 MySQL 인스턴스는 무영향** (spec Edge Cases 명시).
 

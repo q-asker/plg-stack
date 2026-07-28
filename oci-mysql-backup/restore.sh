@@ -9,7 +9,10 @@
 #   4. dump 적재
 #   5. T7 healthcheck.sh 호출 (baseline 기반 구조 확인)
 #   6. RTO 측정 (헬스체크 PASS 시점, FR-019)
-#   7. 격리 컨테이너 자동 삭제 X (FR-020, 운영자 수동 정리)
+#   7. (--app-check) 실제 앱 부팅 검증 — 복원 DB에 Spring Boot를 붙여
+#      Flyway 이력 검증 + Hibernate ddl-auto:validate(전체 엔티티↔스키마 대조) +
+#      actuator/health UP까지 확인. 소비자 관점의 최종 판정.
+#   8. 격리 컨테이너 자동 삭제 X (FR-020, 운영자 수동 정리)
 #
 # 종료 코드:
 #   0   PASS (헬스체크 통과, RTO 기록)
@@ -20,11 +23,16 @@
 #   12  Docker 컨테이너 생성·pull·healthy 실패
 #   13  dump 적재 실패
 #   14  healthcheck 스크립트 없음
+#   15  앱 부팅 검증 FAIL (--app-check)
 #
 # 사용법:
-#   restore.sh <OBJECT_KEY> [--env docker|schema]
-#   restore.sh --latest [--env docker|schema]
+#   restore.sh <OBJECT_KEY> [--env docker|schema] [--app-check]
+#   restore.sh --latest [--env docker|schema] [--app-check]
 #   restore.sh --list
+#
+# --app-check 요구사항:
+#   APP_IMAGE                   기본 qasker/api:latest (pull 가능해야 함)
+#   JASYPT_ENCRYPTOR_PASSWORD   application-secrets.yml 복호화 키 (env로 전달)
 
 set -uo pipefail
 
@@ -36,6 +44,9 @@ set -uo pipefail
 : "${BASELINE_FILE:=/etc/oci-mysql-backup/healthcheck.baseline.yml}"
 : "${HEALTHCHECK_SCRIPT:=/opt/oci-mysql-backup/healthcheck.sh}"
 : "${DOCKER_IMAGE:=mysql:8.0}"
+: "${APP_IMAGE:=qasker/api:latest}"
+: "${APP_SERVER_PORT:=18080}"    # 앱 서버 포트 (호스트 네트워크 — 8080 등과 충돌 회피)
+: "${APP_MGMT_PORT:=19090}"      # actuator 포트 (앱 기본 9090은 OCI-3 Prometheus와 충돌)
 
 # OCI CLI가 sudo·root 환경에서도 시스템 사용자의 config를 쓰도록 강제
 export OCI_CLI_CONFIG_FILE
@@ -65,22 +76,27 @@ OBJECT_KEY 예:
 옵션:
   --env docker   (기본) Docker mysql 컨테이너에 복구
   --env schema   원본 서버에 격리 스키마로 복구 (spec 대안, 미구현)
+  --app-check    복원 DB에 실제 앱(Spring Boot)을 부팅시켜 최종 검증
+                 (JASYPT_ENCRYPTOR_PASSWORD env 필요)
   --latest       버킷의 가장 최근 백업 자동 선택
   --list         사용 가능한 백업 목록만 표시 후 종료
   -h, --help     사용법 표시
 
 환경변수:
   BUCKET(기본 qasker-mysql-backup), OCI_PROFILE(기본 BACKUP_READER),
-  DOCKER_IMAGE(기본 mysql:8.0), BASELINE_FILE, HEALTHCHECK_SCRIPT
+  DOCKER_IMAGE(기본 mysql:8.0), BASELINE_FILE, HEALTHCHECK_SCRIPT,
+  APP_IMAGE(기본 qasker/api:latest), JASYPT_ENCRYPTOR_PASSWORD(--app-check 시)
 EOF
 }
 
 # ─── 인자 파싱 ───
 OBJECT_KEY=""
 ENV_TYPE="docker"
+APP_CHECK=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env) ENV_TYPE="$2"; shift 2 ;;
+    --app-check) APP_CHECK=1; shift ;;
     --latest) OBJECT_KEY="__LATEST__"; shift ;;
     --list)
       # --all: 페이지네이션으로 최신 목록이 잘리는 것 방지. masked/ 는 DR 대상 아니라 제외.
@@ -271,6 +287,59 @@ fi
 END_TS=$(date +%s)
 RTO=$((END_TS - START_TS))
 
+# ─── (선택) 앱 부팅 검증: 소비자 관점 최종 판정 ───
+# 복원 DB에 실제 앱을 붙여 부팅한다. 부팅 성공 = Flyway 마이그레이션 이력 검증 +
+# Hibernate ddl-auto:validate(앱이 쓰는 전체 엔티티↔스키마 대조) + health UP.
+# baseline 구조 확인(대표 테이블 샘플)보다 검증 범위가 넓고, 앱 코드가 진화하면
+# 검증 기준도 자동으로 따라온다.
+APP_CHECK_RESULT="skip"
+if [[ $APP_CHECK -eq 1 ]]; then
+  [[ -n "${JASYPT_ENCRYPTOR_PASSWORD:-}" ]] \
+    || { log "[ERR] --app-check는 JASYPT_ENCRYPTOR_PASSWORD env 필요"; fail "app-check-env" 1; }
+
+  APP_NAME="qasker-appcheck-${UNIX_TS}"
+  log "[app-check] 앱 부팅 검증 시작: image=$APP_IMAGE port=$APP_SERVER_PORT mgmt=$APP_MGMT_PORT"
+
+  # host 네트워크: 격리 MySQL의 호스트 포트(127.0.0.1:$HOST_PORT)로 바로 접속.
+  # mock 프로필(local,mock): 외부 호출·실쓰기 mock, datasource는 env로 재정의(공식 관행).
+  if ! docker run -d \
+       --name "$APP_NAME" \
+       --network host \
+       -e SPRING_PROFILES_ACTIVE=local,mock \
+       -e SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:${HOST_PORT}/qaskerdb" \
+       -e SPRING_DATASOURCE_USERNAME=root \
+       -e SPRING_DATASOURCE_PASSWORD="$ROOT_PWD" \
+       -e SERVER_PORT="$APP_SERVER_PORT" \
+       -e MANAGEMENT_SERVER_PORT="$APP_MGMT_PORT" \
+       -e JASYPT_ENCRYPTOR_PASSWORD \
+       "$APP_IMAGE" >/dev/null 2>"$WORK_DIR/appcheck.err"; then
+    log "[ERR] 앱 컨테이너 기동 실패: $(cat "$WORK_DIR/appcheck.err")"
+    fail "app-check-run" 15
+  fi
+
+  # health UP 폴링 (Spring Boot 기동 + Flyway/Hibernate 검증 시간 고려, 최대 180s)
+  APP_UP=0
+  for _ in $(seq 1 36); do
+    if ! docker inspect "$APP_NAME" >/dev/null 2>&1; then
+      break   # 부팅 실패로 컨테이너 종료 (Flyway/Hibernate validate 실패 등)
+    fi
+    HEALTH=$(curl -sf --max-time 3 "http://127.0.0.1:${APP_MGMT_PORT}/actuator/health" \
+             | jq -r '.status // empty' 2>/dev/null)
+    [[ "$HEALTH" == "UP" ]] && { APP_UP=1; break; }
+    sleep 5
+  done
+
+  if [[ $APP_UP -ne 1 ]]; then
+    log "[FAIL] 앱 부팅 검증 실패 — 복원 DB로 앱이 기동하지 못함"
+    log "       원인 확인: docker logs $APP_NAME (Flyway/Hibernate validate 로그 확인)"
+    fail "app-check-fail" 15
+  fi
+
+  APP_CHECK_RESULT="PASS"
+  log "[app-check] PASS — Flyway 이력·Hibernate 스키마 검증·health UP"
+  docker rm -f "$APP_NAME" >/dev/null 2>&1 || true
+fi
+
 DUMP_SIZE=$(stat -c%s "$DUMP_FILE" 2>/dev/null || stat -f%z "$DUMP_FILE")
 
 log ""
@@ -282,6 +351,7 @@ log "  dump_size:    ${DUMP_SIZE} bytes"
 log "  load_time:    ${LOAD_DUR}s"
 log "  RTO:          ${RTO}s  (SC-001 target ≤ 900s = 15분)"
 log "  healthcheck:  PASS"
+log "  app-check:    ${APP_CHECK_RESULT}"
 log "  hc_result:    $HC_RESULT_FILE"
 log ""
 log "▶ 격리 컨테이너는 유지됨 (FR-020). 분석 후 수동 정리:"
