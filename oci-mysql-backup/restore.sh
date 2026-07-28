@@ -36,6 +36,18 @@
 
 set -uo pipefail
 
+# systemd EnvironmentFile을 수동 실행에서도 재사용 (KEY=VALUE 단순 형식).
+# 이미 설정된 변수는 덮지 않는다 — 커맨드라인 env가 파일보다 우선.
+ENV_FILE="${ENV_FILE:-/etc/oci-mysql-backup/env}"
+if [[ -f "$ENV_FILE" ]]; then
+  while IFS= read -r _line || [[ -n "$_line" ]]; do
+    [[ "$_line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$_line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
+    _k="${BASH_REMATCH[1]}"; _v="${BASH_REMATCH[2]}"
+    [[ -z "${!_k:-}" ]] && export "$_k=$_v"
+  done < "$ENV_FILE"
+fi
+
 : "${BUCKET:=qasker-mysql-backup}"
 : "${OCI_PROFILE:=BACKUP_READER}"
 : "${OCI_CLI_CONFIG_FILE:=/var/lib/oci-mysql-backup/.oci/config}"
