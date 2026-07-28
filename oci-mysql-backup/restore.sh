@@ -332,13 +332,16 @@ if [[ $APP_CHECK -eq 1 ]]; then
 
   # health UP 폴링 (Spring Boot 기동 + Flyway/Hibernate 검증 시간 고려, 최대 180s)
   APP_UP=0
-  for _ in $(seq 1 36); do
-    if ! docker inspect "$APP_NAME" >/dev/null 2>&1; then
-      break   # 부팅 실패로 컨테이너 종료 (Flyway/Hibernate validate 실패 등)
+  for _i in $(seq 1 36); do
+    APP_STATE=$(docker inspect -f '{{.State.Running}}' "$APP_NAME" 2>/dev/null || echo gone)
+    if [[ "$APP_STATE" != "true" ]]; then
+      log "[app-check] 앱 컨테이너 조기 종료 감지 (state=$APP_STATE) — 부팅 실패"
+      break   # Flyway/Hibernate validate 실패, Jasypt 복호화 실패 등
     fi
     HEALTH=$(curl -sf --max-time 3 "http://127.0.0.1:${APP_MGMT_PORT}/actuator/health" \
              | jq -r '.status // empty' 2>/dev/null)
     [[ "$HEALTH" == "UP" ]] && { APP_UP=1; break; }
+    log "[app-check] 부팅 대기 중... (${_i}/36, health=${HEALTH:-미응답})"
     sleep 5
   done
 
