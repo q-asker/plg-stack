@@ -328,7 +328,10 @@ if [[ $APP_CHECK -eq 1 ]]; then
   # 앱의 OCI SDK 클라이언트 빈은 프로필과 무관하게 부팅 시점에 ~/.oci/config를
   # eager 파싱한다 (GameDay 1회차 실측 — mock은 '호출'을 막지 '빈 생성'을 못 막음).
   # 실 호출은 mock이 차단하므로, 파싱만 통과하는 더미 자격을 만들어 마운트한다.
-  OCI_STUB_DIR="$WORK_DIR/appcheck-oci"
+  # 주의: WORK_DIR(임시)에 두면 스크립트 종료 시 trap이 지워 바인드 마운트가 비어버린다
+  # — 앱이 아직 부팅 중일 수 있으므로 영속 경로에 둔다 (GameDay 1회차 실측).
+  OCI_STUB_DIR="/var/lib/oci-mysql-backup/appcheck-oci"
+  rm -rf "$OCI_STUB_DIR"
   mkdir -p "$OCI_STUB_DIR"
   if ! openssl genrsa -out "$OCI_STUB_DIR/key.pem" 2048 >/dev/null 2>&1; then
     log "[ERR] 더미 키 생성 실패 (openssl 필요)"
@@ -362,6 +365,7 @@ EOF
     log "[ERR] 앱 컨테이너 기동 실패: $(cat "$WORK_DIR/appcheck.err")"
     fail "app-check-run" 15
   fi
+  log "[app-check] 컨테이너 기동됨: $APP_NAME — health 폴링 시작 (최대 180s, Ctrl-C 금지)"
 
   # health UP 폴링 (Spring Boot 기동 + Flyway/Hibernate 검증 시간 고려, 최대 180s)
   APP_UP=0
