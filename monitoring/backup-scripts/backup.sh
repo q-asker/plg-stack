@@ -102,7 +102,6 @@ BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-20000000000}"  # 20 GB (OCI 
 USAGE_OCI_PROFILE="${USAGE_OCI_PROFILE:-BACKUP_USAGE_READER}"
 STORAGE_WARN_RATIO="0.80"   # 조기 경고 (여유 축소 — 백업 주기 늘리기 검토)
 STORAGE_CRIT_RATIO="0.90"   # 임박 경고 (즉시 조치)
-STORAGE_TIER_STATE="${BACKUP_TMP_DIR}/storage-alert-tier.state"  # 마지막 알림 단계 (ok|warn|crit)
 STORAGE_USAGE_BYTES=0
 STORAGE_USAGE_RATIO=0
 
@@ -282,14 +281,8 @@ check_storage_threshold() {
     cur_tier="$(awk -v r="$STORAGE_USAGE_RATIO" -v w="$STORAGE_WARN_RATIO" -v c="$STORAGE_CRIT_RATIO" \
         'BEGIN { if (r >= c) print "crit"; else if (r >= w) print "warn"; else print "ok" }')"
 
-    # 마지막 알림 단계 로드 (기본 ok)
-    local last_tier="ok"
-    [[ -f "$STORAGE_TIER_STATE" ]] && last_tier="$(cat "$STORAGE_TIER_STATE" 2>/dev/null || echo ok)"
-
-    local -A rank=( [ok]=0 [warn]=1 [crit]=2 )
-    local cur_rank="${rank[$cur_tier]:-0}" last_rank="${rank[$last_tier]:-0}"
-
     # 재발송 억제 안 함: warn/crit 단계면 매 실행마다 경고 발송.
+    # 단계 전환 시점 추적은 대시보드 사용률 추이·Slack 타임라인으로 충분해 상태 파일을 두지 않는다.
     if [[ "$cur_tier" != "ok" ]]; then
         if (( DRY_RUN )); then
             log WARN "[DRY-RUN] 저장소 ${cur_tier} 경고 스킵"
@@ -308,11 +301,6 @@ check_storage_threshold() {
 백업 주기 재조정을 추천합니다 — 현재 $(current_schedule_label)"
             fi
         fi
-    fi
-    # 상태 파일은 단계 전환(상향/회복) 로깅용으로만 유지 — 발송 판단엔 더는 쓰지 않는다.
-    if (( ! DRY_RUN )) && (( cur_rank != last_rank )); then
-        printf '%s\n' "$cur_tier" > "$STORAGE_TIER_STATE"
-        log INFO "저장소 단계 변화: ${last_tier} → ${cur_tier}"
     fi
 }
 

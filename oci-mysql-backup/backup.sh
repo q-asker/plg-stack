@@ -45,7 +45,6 @@ set -uo pipefail
 # 조회 실패 시 경고만 스킵하고 백업은 정상.
 : "${BACKUP_FREE_LIMIT_BYTES:=20000000000}"   # 20 GB (전 버킷 합산)
 : "${USAGE_OCI_PROFILE:=BACKUP_USAGE_READER}"
-: "${STORAGE_TIER_STATE:=/var/lib/oci-mysql-backup/storage-alert-tier.state}"
 STORAGE_WARN_RATIO="0.80"
 STORAGE_CRIT_RATIO="0.90"
 
@@ -92,7 +91,7 @@ current_schedule_label() {
 # 저장소 사용량 2단계 경고 (PLG backup.sh와 동일 철학).
 # warn/crit 단계면 매 실행마다 발송(재발송 억제 안 함). 대응은 MySQL 백업 주기 늘리기(systemd timer).
 check_storage_threshold() {
-  local usage ratio pct headroom cur_tier last_tier comp
+  local usage ratio pct headroom cur_tier comp
   # tenancy 전체 사용량(전 버킷 approximateSize 합) — 무료 20GB는 버킷 합산이므로.
   comp="$(oci --profile "$USAGE_OCI_PROFILE" os bucket get --bucket-name "$BUCKET" --output json 2>/dev/null \
           | jq -r '.data."compartment-id" // empty')"
@@ -120,25 +119,17 @@ check_storage_threshold() {
 
   cur_tier="$(awk -v r="$ratio" -v w="$STORAGE_WARN_RATIO" -v c="$STORAGE_CRIT_RATIO" \
               'BEGIN{ if(r>=c) print "crit"; else if(r>=w) print "warn"; else print "ok" }')"
-  last_tier="ok"; [[ -f "$STORAGE_TIER_STATE" ]] && last_tier="$(cat "$STORAGE_TIER_STATE" 2>/dev/null || echo ok)"
-  local -A rank=( [ok]=0 [warn]=1 [crit]=2 )
-  local cr="${rank[$cur_tier]:-0}" lr="${rank[$last_tier]:-0}"
-  mkdir -p "$(dirname "$STORAGE_TIER_STATE")" 2>/dev/null || true
 
   local headroom_mb
   headroom_mb="$(awk -v b="$headroom" 'BEGIN{ printf "%.0f", b/1024/1024 }')"
   # 재발송 억제 안 함: warn/crit 단계면 매 실행마다 발송한다.
+  # 단계 전환 시점 추적은 대시보드 사용률 추이·Slack 타임라인으로 충분해 상태 파일을 두지 않는다.
   if [[ "$cur_tier" == "crit" ]]; then
     notify_slack ERROR "🚨 *저장소 총량 ${pct}% 임박* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
 즉시 조치: 백업 주기 늘리기(MySQL=systemd timer, PLG=cron) / 유료 전환 판단"
   elif [[ "$cur_tier" == "warn" ]]; then
     notify_slack WARN "⚠️ *저장소 총량 ${pct}% 도달* (전 버킷 합산, 잔여 *${headroom_mb} MB*)
 백업 주기 재조정을 추천합니다 — 현재 $(current_schedule_label)"
-  fi
-  # 상태 파일은 단계 전환(상향/회복) 로깅용으로만 유지 — 발송 판단엔 더는 쓰지 않는다.
-  if (( cr != lr )); then
-    echo "$cur_tier" > "$STORAGE_TIER_STATE"
-    log "[storage] 단계 변화: ${last_tier} → ${cur_tier}"
   fi
 }
 
