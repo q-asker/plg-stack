@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================
-# backup-common.sh — Prometheus/Loki 백업·복구·검증 공통 함수 라이브러리
+# backup-common.sh — Prometheus/Loki 백업·복구 공통 함수 라이브러리
 # (plg-stack: specs/001-prometheus-loki-backup-recovery)
 # =============================================================
 # 사용법:
@@ -12,7 +12,7 @@
 # 의존:
 #   - bash 4+
 #   - oci CLI (--profile 기능)
-#   - curl, jq, tar, gzip, sha256sum (coreutils)
+#   - curl, jq, tar, gzip
 #
 # 규칙:
 #   - bash -euo pipefail (호출 스크립트가 설정)
@@ -81,17 +81,7 @@ require_cmd() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ③ 해시 (SHA-256)
-# ═══════════════════════════════════════════════════════════
-
-# hash_file <path> → stdout: 64자 hex
-hash_file() {
-    local file="$1"
-    sha256sum "$file" | awk '{print $1}'
-}
-
-# ═══════════════════════════════════════════════════════════
-# ④ 재시도 유틸
+# ③ 재시도 유틸
 # ═══════════════════════════════════════════════════════════
 
 # run_with_retry <max_attempts> <cmd...>
@@ -119,7 +109,7 @@ run_with_retry() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑤ OCI Object Storage 래퍼
+# ④ OCI Object Storage 래퍼
 # ═══════════════════════════════════════════════════════════
 
 # _oci_call <profile> <cmd...>
@@ -175,17 +165,6 @@ delete_object() {
         --force >/dev/null
 }
 
-# rename_object <profile> <bucket> <src_key> <dst_key>
-# 무결성 검증 실패 시 quarantine/ 이동 등에 사용
-rename_object() {
-    local profile="$1" bucket="$2" src="$3" dst="$4"
-    log INFO "이름 변경: ${bucket}/${src} → ${dst}"
-    _oci_call "$profile" os object rename \
-        --bucket-name "$bucket" \
-        --source-name "$src" \
-        --new-name "$dst" >/dev/null
-}
-
 # list_object_keys <profile> <bucket> <prefix>
 # stdout: 객체 키를 한 줄에 하나씩 (jq로 안전 파싱)
 list_object_keys() {
@@ -200,35 +179,7 @@ list_object_keys() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑥ 인라인 무결성 검증 (FR-009 1단계)
-# ═══════════════════════════════════════════════════════════
-
-# verify_object <profile> <bucket> <key> <expected_hash> <verify_tmp_file>
-#   업로드 직후 즉시 GET → 로컬 해시 재계산 → 비교
-#   일치: 0, 불일치: 1 (호출자가 quarantine 처리)
-verify_object() {
-    local profile="$1" bucket="$2" key="$3" expected="$4" tmp="$5"
-
-    download_object "$profile" "$bucket" "$key" "$tmp"
-
-    local actual
-    actual="$(hash_file "$tmp")"
-
-    if [[ "$actual" == "$expected" ]]; then
-        log INFO "무결성 OK: ${key} (sha256=${actual})"
-        rm -f "$tmp"
-        return 0
-    fi
-
-    log ERROR "무결성 불일치: ${key}"
-    log ERROR "  기대: ${expected}"
-    log ERROR "  실제: ${actual}"
-    rm -f "$tmp"
-    return 1
-}
-
-# ═══════════════════════════════════════════════════════════
-# ⑦ Slack 알림 (SLACK_BACKUP_WEBHOOK_URL 부재 시 로그만 남기고 스킵)
+# ⑤ Slack 알림 (SLACK_BACKUP_WEBHOOK_URL 부재 시 로그만 남기고 스킵)
 # ═══════════════════════════════════════════════════════════
 
 # notify_slack <status> <target> <detail>
@@ -278,7 +229,7 @@ notify_slack() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑧ Prometheus textfile collector 메트릭 노출
+# ⑥ Prometheus textfile collector 메트릭 노출
 # ═══════════════════════════════════════════════════════════
 
 # write_metrics_atomic <metrics_content> [filename]
@@ -304,20 +255,13 @@ write_metrics_atomic() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑨ 보존 정리 (FR-008: 7일 초과 객체 자동 삭제)
+# ⑦ 보존 정리 (FR-008: 7일 초과 객체 자동 삭제)
 # ═══════════════════════════════════════════════════════════
 
 # retention_cleanup <profile> <bucket> <prefix> <days>
 #   객체 키의 <YYYYMMDD>-<HHMM> 접두 날짜 기준으로 <days>일 초과 객체 삭제.
-#   quarantine/ 접두는 대상 제외.
-#   .sha256 metadata도 함께 삭제.
 retention_cleanup() {
     local profile="$1" bucket="$2" prefix="$3" days="$4"
-
-    if [[ "$prefix" == quarantine/* ]]; then
-        log WARN "quarantine/ 접두는 retention 대상 아님. 스킵."
-        return 0
-    fi
 
     local cutoff
     cutoff="$(date -u -d "${days} days ago" +%Y%m%d 2>/dev/null || true)"
@@ -332,7 +276,6 @@ retention_cleanup() {
     local key date_part
     while IFS= read -r key; do
         [[ -z "$key" ]] && continue
-        [[ "$key" == quarantine/* ]] && continue
 
         date_part="$(echo "$key" | grep -oE '[0-9]{8}-[0-9]{4}' | head -1 | cut -d- -f1)"
         if [[ -z "$date_part" ]]; then
@@ -354,25 +297,8 @@ retention_cleanup() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑩ 복원용 유틸 (restore.sh / archive-monthly.sh 공용)
+# ⑧ 복원용 유틸 (restore.sh / archive-monthly.sh 공용)
 # ═══════════════════════════════════════════════════════════
-
-# verify_local_hash <tar_file> <sha_file>
-#   .sha256 파일 형식은 `<hex>  <basename>` (sha256sum 표준).
-#   tar_file의 로컬 재계산 해시와 비교하여 일치 확인.
-verify_local_hash() {
-    local tar_file="$1"
-    local sha_file="$2"
-    local expected actual
-    expected="$(awk '{print $1}' "$sha_file")"
-    actual="$(hash_file "$tar_file")"
-    if [[ "$expected" != "$actual" ]]; then
-        log ERROR "로컬 해시 불일치: 기대=$expected, 실제=$actual"
-        return 1
-    fi
-    log INFO "로컬 해시 일치: $actual"
-    return 0
-}
 
 # health_poll <url> <max_attempts> <sleep_sec>
 #   curl -sf 성공까지 폴링. 매 시도 사이에 sleep_sec 대기.
@@ -458,7 +384,7 @@ get_total_usage_bytes() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# ⑪ 초기화
+# ⑨ 초기화
 # ═══════════════════════════════════════════════════════════
 
 # ensure_tmp_dir

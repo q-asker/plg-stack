@@ -12,13 +12,15 @@
 # 흐름:
 #   1) .env 로드 + 필수 검증
 #   2) --target 별 handler 호출 (독립 시도, 하나 실패해도 다른 것 계속)
-#   3) 인라인 무결성 검증(FR-009 1단계): 업로드 직후 GET + 해시 재비교
-#   4) retention_cleanup (FR-008): 7일 초과 객체 자동 삭제
-#   5) 저장소 사용량 2단계 임계 알림 (80% 조기 / 90% 임박, FR-013)
-#   6) textfile collector 메트릭 갱신 (FR-010, T5에서 활성화됨)
-#   7) 하나라도 실패했으면 Slack ERROR + exit 1
+#   3) retention_cleanup (FR-008): 7일 초과 객체 자동 삭제
+#   4) 저장소 사용량 2단계 임계 알림 (80% 조기 / 90% 임박, FR-013)
+#   5) textfile collector 메트릭 갱신 (FR-010, T5에서 활성화됨)
+#   6) 하나라도 실패했으면 Slack ERROR + exit 1
 #
-# 대응 FR: 001, 002, 003, 004, 007, 008, 009(1단계), 010, 012, 013
+# 무결성 노선: 별도 해시 검증 계층을 두지 않는다 — 전송은 TLS가, 저장은 OCI 서버측
+# 체크섬(11 nines + 자동 복구)이 검증한다. 백업의 온전함은 GameDay 복원 리허설로 증명.
+#
+# 대응 FR: 001, 002, 003, 004, 007, 008, 010, 012, 013
 
 set -euo pipefail
 
@@ -79,10 +81,9 @@ fi
 require_env \
     OCI_BUCKET_NAME \
     OCI_WRITER_PROFILE \
-    OCI_READER_PROFILE \
     BACKUP_RETENTION_DAYS
 
-require_cmd oci curl jq tar gzip sha256sum awk
+require_cmd oci curl jq tar gzip awk
 
 ensure_tmp_dir
 
@@ -90,11 +91,10 @@ ensure_tmp_dir
 TIMESTAMP="$(date -u +%Y%m%d-%H%M)"
 BUCKET="$OCI_BUCKET_NAME"
 WRITER="$OCI_WRITER_PROFILE"
-READER="$OCI_READER_PROFILE"
 COMPOSE_FILE="${MONITORING_DIR}/docker-compose.yml"
 
 # 결과 누적 (메트릭 조립용)
-declare -A STORE_STATUS STORE_SIZE STORE_HASH STORE_DURATION STORE_DOWNTIME
+declare -A STORE_STATUS STORE_SIZE STORE_DURATION STORE_DOWNTIME
 
 # 저장소 임계 (tenancy 전체 사용량 vs 무료 한도 — 2단계 경고)
 BACKUP_FREE_LIMIT_BYTES="${BACKUP_FREE_LIMIT_BYTES:-20000000000}"  # 20 GB (OCI 무료 한도, 전 버킷 합산)
@@ -112,7 +112,7 @@ STORAGE_USAGE_RATIO=0
 
 backup_prometheus() {
     local store="prometheus"
-    local start_ts snap_json snap_id snap_dir tar_file key sha_file expected size
+    local start_ts snap_json snap_id snap_dir tar_file key size
     start_ts=$SECONDS
 
     log INFO "===== Prometheus 백업 시작 (ts=${TIMESTAMP}) ====="
@@ -132,42 +132,26 @@ backup_prometheus() {
     log INFO "tar+gzip: ${tar_file}"
     tar -czf "$tar_file" -C "/mnt/monitoring/prometheus/snapshots" "$snap_id"
 
-    # 3) hash
-    expected="$(hash_file "$tar_file")"
     size="$(stat -c '%s' "$tar_file")"
-    log INFO "sha256=${expected}, size=${size}B"
+    log INFO "size=${size}B"
 
-    # 4) upload (tar.gz + .sha256 metadata)
+    # 3) upload
     key="prometheus/${TIMESTAMP}-prometheus.tar.gz"
-    sha_file="${BACKUP_TMP_DIR}/prometheus-${TIMESTAMP}.sha256"
-    printf '%s  %s\n' "$expected" "$(basename "$key")" > "$sha_file"
 
     if (( DRY_RUN )); then
         log WARN "[DRY-RUN] upload 스킵: ${key}"
     else
         upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"
-        upload_object "$WRITER" "$BUCKET" "prometheus/${TIMESTAMP}-prometheus.sha256" "$sha_file"
-
-        # 5) 인라인 무결성 검증 (READER 프로필로 GET, 권한 분리도 함께 검증)
-        local verify_tmp="${BACKUP_TMP_DIR}/verify-prometheus-${TIMESTAMP}.tar.gz"
-        if ! verify_object "$READER" "$BUCKET" "$key" "$expected" "$verify_tmp"; then
-            log ERROR "Prometheus 무결성 검증 실패 → quarantine 이동"
-            rename_object "$WRITER" "$BUCKET" "$key" "quarantine/${key}"
-            rename_object "$WRITER" "$BUCKET" "prometheus/${TIMESTAMP}-prometheus.sha256" \
-                "quarantine/prometheus/${TIMESTAMP}-prometheus.sha256" || true
-            return 1
-        fi
     fi
 
-    # 6) 로컬 cleanup
+    # 4) 로컬 cleanup
     rm -rf "$snap_dir"
-    rm -f "$tar_file" "$sha_file"
+    rm -f "$tar_file"
     log INFO "로컬 정리 완료"
 
-    # 7) 결과 기록
+    # 5) 결과 기록
     STORE_STATUS[$store]=1
     STORE_SIZE[$store]=$size
-    STORE_HASH[$store]="$expected"
     STORE_DURATION[$store]=$(( SECONDS - start_ts ))
 
     log INFO "===== Prometheus 백업 완료 (${STORE_DURATION[$store]}s) ====="
@@ -180,7 +164,7 @@ backup_prometheus() {
 
 backup_loki() {
     local store="loki"
-    local start_ts stop_ts start_time_ts hardlink_dir tar_file key sha_file expected size downtime
+    local start_ts stop_ts start_time_ts hardlink_dir tar_file key size downtime
     start_ts=$SECONDS
 
     log INFO "===== Loki 백업 시작 (ts=${TIMESTAMP}) ====="
@@ -215,42 +199,26 @@ backup_loki() {
     log INFO "tar+gzip: ${tar_file}"
     tar -czf "$tar_file" -C "$BACKUP_TMP_DIR" "loki-${TIMESTAMP}"
 
-    # 4) hash
-    expected="$(hash_file "$tar_file")"
     size="$(stat -c '%s' "$tar_file")"
-    log INFO "sha256=${expected}, size=${size}B"
+    log INFO "size=${size}B"
 
-    # 5) upload
+    # 4) upload
     key="loki/${TIMESTAMP}-loki.tar.gz"
-    sha_file="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}.sha256"
-    printf '%s  %s\n' "$expected" "$(basename "$key")" > "$sha_file"
 
     if (( DRY_RUN )); then
         log WARN "[DRY-RUN] upload 스킵: ${key}"
     else
         upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"
-        upload_object "$WRITER" "$BUCKET" "loki/${TIMESTAMP}-loki.sha256" "$sha_file"
-
-        # 6) 인라인 무결성 검증
-        local verify_tmp="${BACKUP_TMP_DIR}/verify-loki-${TIMESTAMP}.tar.gz"
-        if ! verify_object "$READER" "$BUCKET" "$key" "$expected" "$verify_tmp"; then
-            log ERROR "Loki 무결성 검증 실패 → quarantine 이동"
-            rename_object "$WRITER" "$BUCKET" "$key" "quarantine/${key}"
-            rename_object "$WRITER" "$BUCKET" "loki/${TIMESTAMP}-loki.sha256" \
-                "quarantine/loki/${TIMESTAMP}-loki.sha256" || true
-            return 1
-        fi
     fi
 
-    # 7) 로컬 cleanup (hardlink dir은 inode 참조라 원본 손상 없음)
+    # 5) 로컬 cleanup (hardlink dir은 inode 참조라 원본 손상 없음)
     rm -rf "$hardlink_dir"
-    rm -f "$tar_file" "$sha_file"
+    rm -f "$tar_file"
     log INFO "로컬 정리 완료"
 
-    # 8) 결과 기록
+    # 6) 결과 기록
     STORE_STATUS[$store]=1
     STORE_SIZE[$store]=$size
-    STORE_HASH[$store]="$expected"
     STORE_DURATION[$store]=$(( SECONDS - start_ts ))
 
     log INFO "===== Loki 백업 완료 (${STORE_DURATION[$store]}s, downtime ${downtime}s) ====="
@@ -394,7 +362,7 @@ if [[ "$TARGET" == "prometheus" || "$TARGET" == "both" ]]; then
         log ERROR "Prometheus 백업 실패"
         STORE_STATUS[prometheus]=0
         failures=$((failures + 1))
-        notify_slack ERROR "prometheus" "백업 또는 검증 실패. TIMESTAMP=${TIMESTAMP}"
+        notify_slack ERROR "prometheus" "백업 실패. TIMESTAMP=${TIMESTAMP}"
     fi
 fi
 
@@ -403,7 +371,7 @@ if [[ "$TARGET" == "loki" || "$TARGET" == "both" ]]; then
         log ERROR "Loki 백업 실패"
         STORE_STATUS[loki]=0
         failures=$((failures + 1))
-        notify_slack ERROR "loki" "백업 또는 검증 실패. TIMESTAMP=${TIMESTAMP}"
+        notify_slack ERROR "loki" "백업 실패. TIMESTAMP=${TIMESTAMP}"
     fi
 fi
 
@@ -440,7 +408,7 @@ if (( ${STORAGE_USAGE_BYTES:-0} > 0 )); then
     STORAGE_LINE="
 • 저장소 *${STORAGE_LABEL}*"
 fi
-notify_slack SUCCESS "backup" "*백업·검증 완료*
+notify_slack SUCCESS "backup" "*백업 완료*
 • 대상 *${TARGET}* · 시각 \`${TIMESTAMP}\`
 • 소요 ${TOTAL_DURATION}s${STORAGE_LINE}"
 exit 0

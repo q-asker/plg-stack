@@ -5,7 +5,7 @@
 # 메타데이터 필드:
 #   schemas, tables, approx_row_count,
 #   source_id (DB host), source_host (적재 호스트), dump_tool_version,
-#   created_at, size_bytes, sha256, duration_seconds, object_key
+#   created_at, size_bytes, duration_seconds, object_key
 #
 # 사용 환경변수:
 #   MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT,
@@ -85,17 +85,16 @@ collect_table_counts() {
   echo "$json_body"
 }
 
-# 적재 후 확정 정보 머지: 크기·체크섬·소요시간·객체 키
-# $1=meta_file_path  $2=size_bytes  $3=sha256  $4=duration_seconds  $5=object_key
+# 적재 후 확정 정보 머지: 크기·소요시간·객체 키
+# $1=meta_file_path  $2=size_bytes  $3=duration_seconds  $4=object_key
 finalize_metadata() {
-  local meta_file="$1" size="$2" sha="$3" dur="$4" key="$5"
+  local meta_file="$1" size="$2" dur="$3" key="$4"
   local tmp="${meta_file}.tmp.$$"
   jq \
     --argjson size "$size" \
-    --arg sha "$sha" \
     --argjson dur "$dur" \
     --arg key "$key" \
-    '. + {size_bytes: $size, sha256: $sha, duration_seconds: $dur, object_key: $key}' \
+    '. + {size_bytes: $size, duration_seconds: $dur, object_key: $key}' \
     "$meta_file" > "$tmp"
   mv "$tmp" "$meta_file"
 }

@@ -4,9 +4,9 @@
 # ============================================================
 # 무옵션 고정 파이프라인:
 #   [1/4] 새 MySQL 컨테이너 생성(기존 있으면 제거 후 재생성)
-#   [2/4] 버킷의 최신 원본 DR(sql.gz, masked/ 제외) 다운로드·sha256 검증·적재
+#   [2/4] 버킷의 최신 원본 DR(sql.gz, masked/ 제외) 다운로드·적재
 #   [3/4] pii_classification 기준 마스킹(HASH/FAKE/REDACT, SAFE 원본 유지, 미분류=REDACT)
-#   [4/4] 마스킹 덤프 → OCI 버킷 masked/ prefix 업로드(+ .sha256)
+#   [4/4] 마스킹 덤프 → OCI 버킷 masked/ prefix 업로드
 #   종료 시(성공·실패 무관) 컨테이너 docker rm -f 로 정리 → 원본 PII 남은 컨테이너 잔존 방지
 # ⚠️ 원본(비마스킹) PII 를 로컬에 내려받으므로 원본 접근 허용 구역(트러스트 존)에서만 실행.
 # 설정은 아래 상수로만 바꾼다(CLI 옵션 없음).
@@ -29,7 +29,6 @@ WORK_DIR="/tmp"
 OUT="/tmp/masked-$(date +%Y%m%dT%H%M%SZ).sql.gz"
 
 log()    { echo "[$(date -u +%H:%M:%SZ)] $*"; }
-sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 mquery() { docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" -N -e "$1" 2>/dev/null; }
 # 성공·실패 무관 종료 시 정리: 임시 디렉터리 + 컨테이너 제거(원본 PII 남은 채 컨테이너 잔존 방지)
 cleanup() { [ -n "${RDIR:-}" ] && rm -rf "$RDIR"; docker rm -f "$CONTAINER" >/dev/null 2>&1 && log "정리: $CONTAINER 제거"; }
@@ -58,13 +57,9 @@ DR_KEY="$(oci --profile "$DR_PROFILE" os object list -bn "$BUCKET" --all \
 [ -n "$DR_KEY" ] && [ "$DR_KEY" != "null" ] || { log "[ERR] DR 백업 없음"; exit 12; }
 log "[2/4] 선택: $DR_KEY"
 RDIR="$(mktemp -d "$WORK_DIR/masked-export-dr.XXXXXX")"
-DR_DUMP="$RDIR/dr.sql.gz"; DR_SHA="$RDIR/dr.sha256"
+DR_DUMP="$RDIR/dr.sql.gz"
 oci --profile "$DR_PROFILE" os object get -bn "$BUCKET" --name "$DR_KEY" --file "$DR_DUMP" >/dev/null 2>&1 \
   || { log "[ERR] DR 다운로드 실패"; exit 12; }
-if oci --profile "$DR_PROFILE" os object get -bn "$BUCKET" --name "${DR_KEY%.sql.gz}.sha256" --file "$DR_SHA" >/dev/null 2>&1; then
-  [ "$(awk '{print $1}' "$DR_SHA")" = "$(sha256 "$DR_DUMP" | awk '{print $1}')" ] || { log "[ERR] sha256 불일치"; exit 12; }
-  log "[2/4] sha256 OK"
-fi
 docker exec "$CONTAINER" mysql -uroot -p"$ROOT_PWD" \
   -e "CREATE DATABASE IF NOT EXISTS \`$DB\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null
 gzip -dc "$DR_DUMP" | docker exec -i "$CONTAINER" mysql -uroot -p"$ROOT_PWD" "$DB" 2>/dev/null \
@@ -104,10 +99,7 @@ docker exec "$CONTAINER" mysqldump -uroot -p"$ROOT_PWD" --single-transaction --n
   || { log "[ERR] 덤프 실패"; exit 12; }
 NOW_UTC="$(date -u +%Y%m%dT%H%M%SZ)"; DATE_PREFIX="$(date -u +%Y/%m/%d)"
 OBJECT_KEY="${MASKED_PREFIX%/}/${DATE_PREFIX}/qasker-masked-${NOW_UTC}.sql.gz"
-SHA_FILE="${OUT%.sql.gz}.sha256"; sha256 "$OUT" | awk '{print $1}' > "$SHA_FILE"
 log "[4/4] 업로드 → $BUCKET/$OBJECT_KEY (profile=$OCI_PROFILE)"
 oci --profile "$OCI_PROFILE" os object put -bn "$BUCKET" --name "$OBJECT_KEY" --file "$OUT" --force >/dev/null 2>&1 \
   || { log "[ERR] 덤프 업로드 실패"; exit 12; }
-oci --profile "$OCI_PROFILE" os object put -bn "$BUCKET" --name "${OBJECT_KEY%.sql.gz}.sha256" --file "$SHA_FILE" --force >/dev/null 2>&1 \
-  || { log "[ERR] sha256 업로드 실패"; exit 12; }
-log "✅ 완료: $OBJECT_KEY (+ .sha256)"
+log "✅ 완료: $OBJECT_KEY"

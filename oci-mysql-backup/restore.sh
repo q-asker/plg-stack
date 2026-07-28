@@ -4,18 +4,16 @@
 # ============================================================
 # 동작 (spec FR-007 단일 명령):
 #   1. flock으로 백업/복구/GameDay 직렬화
-#   2. BACKUP_READER로 3종 객체 다운로드 (.sql.gz, .meta.json, .sha256)
-#   3. sha256 검증 (실패 시 격리 환경 진입 전 중단)
-#   4. Docker mysql 컨테이너 생성 (시각 기반 유니크 이름, FR-020)
-#   5. dump 적재
-#   6. T7 healthcheck.sh 호출
-#   7. RTO 측정 (헬스체크 PASS 시점, FR-019)
-#   8. 격리 컨테이너 자동 삭제 X (FR-020, 운영자 수동 정리)
+#   2. BACKUP_READER로 2종 객체 다운로드 (.sql.gz, .meta.json)
+#   3. Docker mysql 컨테이너 생성 (시각 기반 유니크 이름, FR-020)
+#   4. dump 적재
+#   5. T7 healthcheck.sh 호출
+#   6. RTO 측정 (헬스체크 PASS 시점, FR-019)
+#   7. 격리 컨테이너 자동 삭제 X (FR-020, 운영자 수동 정리)
 #
 # 종료 코드:
 #   0   PASS (헬스체크 통과, RTO 기록)
 #   1   사용법·환경변수 오류
-#   3   sha256 불일치 (운영 무영향)
 #   4   OCI 다운로드 실패
 #   6   백업 객체 없음 (--latest 조회 실패)
 #   10  헬스체크 FAIL
@@ -52,13 +50,6 @@ fail() {
   local stage="$1" code="$2"
   log "[FAIL] stage=$stage exit=$code"
   exit "$code"
-}
-
-# sha256sum(GNU/coreutils) 또는 shasum -a 256(macOS/BSD) 이식성 래퍼.
-# 둘 다 "<hash>  <path>" 형식으로 출력하므로 downstream awk '{print $1}' 호환.
-sha256() {
-  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"
-  else shasum -a 256 "$@"; fi
 }
 
 usage() {
@@ -137,13 +128,11 @@ fi
 
 # ─── 파생 키 계산 ───
 META_KEY="${OBJECT_KEY%.sql.gz}.meta.json"
-SHA_KEY="${OBJECT_KEY%.sql.gz}.sha256"
 
 # ─── 작업 디렉터리 ───
 WORK_DIR=$(mktemp -d "$WORK_BASE_DIR/oci-mysql-restore.XXXXXX")
 DUMP_FILE="$WORK_DIR/dump.sql.gz"
 META_FILE="$WORK_DIR/meta.json"
-SHA_FILE="$WORK_DIR/dump.sha256"
 
 # trap: 실패해도 컨테이너는 유지(FR-020), 임시 디렉터리만 정리
 cleanup_temp() { rm -rf "$WORK_DIR"; }
@@ -162,8 +151,8 @@ ROOT_PWD="password"
 
 log "[START] object_key=$OBJECT_KEY container=$CONTAINER_NAME"
 
-# ─── Step 1: 다운로드 (3종) ───
-log "[step 1/5] downloading dump + meta + sha256..."
+# ─── Step 1: 다운로드 (2종) ───
+log "[step 1/4] downloading dump + meta..."
 download() {
   local key="$1" file="$2"
   oci --profile "$OCI_PROFILE" os object get \
@@ -172,27 +161,12 @@ download() {
     --file "$file" \
     >/dev/null 2>"$WORK_DIR/download.err"
 }
-download "$SHA_KEY" "$SHA_FILE" || { log "[ERR] $(cat "$WORK_DIR/download.err")"; fail "download-sha" 4; }
 download "$META_KEY" "$META_FILE" || { log "[ERR] $(cat "$WORK_DIR/download.err")"; fail "download-meta" 4; }
 download "$OBJECT_KEY" "$DUMP_FILE" || { log "[ERR] $(cat "$WORK_DIR/download.err")"; fail "download-dump" 4; }
-log "[step 1/5] downloaded"
+log "[step 1/4] downloaded"
 
-# ─── Step 2: sha256 검증 (운영 무영향 검증) ───
-log "[step 2/5] verifying sha256..."
-EXPECTED_SHA=$(cat "$SHA_FILE")
-ACTUAL_SHA=$(sha256 "$DUMP_FILE" | awk '{print $1}')
-
-if [[ "$EXPECTED_SHA" != "$ACTUAL_SHA" ]]; then
-  log "[FAIL] checksum mismatch"
-  log "       expected=$EXPECTED_SHA"
-  log "       actual  =$ACTUAL_SHA"
-  log "       (운영 인스턴스는 어떤 변경도 적용되지 않음)"
-  fail "sha-mismatch" 3
-fi
-log "[step 2/5] sha256 OK"
-
-# ─── Step 3: Docker 격리 컨테이너 생성 ───
-log "[step 3/5] starting isolated container ($DOCKER_IMAGE)..."
+# ─── Step 2: Docker 격리 컨테이너 생성 ───
+log "[step 2/4] starting isolated container ($DOCKER_IMAGE)..."
 
 # 이미지 없으면 pull (RTO에서 pull 시간은 START_TS 보정하여 제외)
 if ! docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
@@ -223,7 +197,7 @@ if ! docker run -d \
 fi
 
 # healthy 대기 (최대 90초)
-log "[step 3/5] container=$CONTAINER_NAME, waiting for healthy..."
+log "[step 2/4] container=$CONTAINER_NAME, waiting for healthy..."
 STATUS="unknown"
 for _ in $(seq 1 30); do
   STATUS=$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "unknown")
@@ -239,20 +213,20 @@ fi
 
 # 호스트 포트 조회
 HOST_PORT=$(docker port "$CONTAINER_NAME" 3306 | awk -F: '{print $NF}' | head -1)
-log "[step 3/5] container healthy, host_port=$HOST_PORT"
+log "[step 2/4] container healthy, host_port=$HOST_PORT"
 
 # 호스트에서 TCP 접속 준비 대기 (mysqld가 소켓은 열었지만 TCP는 조금 늦음)
-log "[step 3/5] waiting for TCP port readiness..."
+log "[step 2/4] waiting for TCP port readiness..."
 for _ in $(seq 1 30); do
   if MYSQL_PWD="$ROOT_PWD" mysqladmin -h 127.0.0.1 -P "$HOST_PORT" --protocol=tcp -uroot ping --silent 2>/dev/null; then
-    log "[step 3/5] TCP ready"
+    log "[step 2/4] TCP ready"
     break
   fi
   sleep 1
 done
 
-# ─── Step 4: dump 적재 ───
-log "[step 4/5] loading dump.sql.gz..."
+# ─── Step 3: dump 적재 ───
+log "[step 3/4] loading dump.sql.gz..."
 LOAD_START=$(date +%s)
 if ! gzip -dc "$DUMP_FILE" | MYSQL_PWD="$ROOT_PWD" mysql \
      -h 127.0.0.1 -P "$HOST_PORT" --protocol=tcp -uroot qaskerdb 2>"$WORK_DIR/load.err"; then
@@ -262,10 +236,10 @@ if ! gzip -dc "$DUMP_FILE" | MYSQL_PWD="$ROOT_PWD" mysql \
   fail "dump-load" 13
 fi
 LOAD_DUR=$(($(date +%s) - LOAD_START))
-log "[step 4/5] dump loaded (${LOAD_DUR}s)"
+log "[step 3/4] dump loaded (${LOAD_DUR}s)"
 
-# ─── Step 5: 헬스체크 (T7) ───
-log "[step 5/5] running healthcheck (T7)..."
+# ─── Step 4: 헬스체크 (T7) ───
+log "[step 4/4] running healthcheck (T7)..."
 if [[ ! -x "$HEALTHCHECK_SCRIPT" ]]; then
   fail "healthcheck-not-found" 14
 fi

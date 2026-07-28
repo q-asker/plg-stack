@@ -46,7 +46,7 @@ curl http://monitoring:3000/api/health    # Grafana
 
 ### 백업·복구 (spec 001-prometheus-loki-backup-recovery)
 
-두 스크립트 공통 인자 규약: `--target=prometheus|loki|both`(백업/복구). 백업 시 업로드 직후 인라인 무결성 검증과 저장소 90% 임계 알림을 backup.sh가 함께 수행한다.
+두 스크립트 공통 인자 규약: `--target=prometheus|loki|both`(백업/복구). 백업 시 저장소 80/90% 임계 알림을 backup.sh가 함께 수행한다. 별도 해시 검증 계층은 두지 않는다 — 전송은 TLS, 저장은 OCI 서버측 체크섬이 검증하고, 백업의 온전함은 GameDay 복원 리허설로 증명한다.
 자세한 배경 · 흐름도는 [monitoring/docs/프로메테우스로키백업복구설명.md](monitoring/docs/프로메테우스로키백업복구설명.md), 운영 절차는 [monitoring/docs/RUNBOOK-backup-restore.md](monitoring/docs/RUNBOOK-backup-restore.md) 참고.
 
 ```bash
@@ -110,8 +110,8 @@ sudo ./set-backup-schedule.sh --mysql 12h --plg 2d   # MySQL 12시간·PLG 이�
       │ backup.sh 메트릭          │
       └──────────┬─────────────────┘
                  │ 매일 KST 03:00 backup.sh
-                 │ (인라인 검증 + 90% 임계 알림 포함)
-                 │ (tar+gzip+sha256, OCI CLI)
+                 │ (80/90% 임계 알림 포함)
+                 │ (tar+gzip, OCI CLI)
                  ▼
       ┌────────────────────────────┐
       │ OCI Object Storage         │
@@ -122,7 +122,7 @@ sudo ./set-backup-schedule.sh --mysql 12h --plg 2d   # MySQL 12시간·PLG 이�
       └────────────────────────────┘
 ```
 
-**MySQL L2 백업 (별도 서브시스템, spec 001-oci-mysql-backup-restore)**: OCI-3에서 systemd timer가 6시간 주기(UTC 00·06·12·18 = KST 09·15·21·03)로 `oci-mysql-backup/backup.sh`를 실행 → HeatWave MySQL을 `mysqldump`(gzip+sha256)하여 별도 버킷 `qasker-mysql-backup`에 PUT하고, 업로드 직후 재다운로드로 인라인 무결성 검증까지 통과해야 성공으로 인정한다. PLG 백업(cron)과 독립적으로 동작하며, flock으로 백업/복구/GameDay를 직렬화하고 Prometheus textfile 컬렉터로 결과 메트릭을 노출한다.
+**MySQL L2 백업 (별도 서브시스템, spec 001-oci-mysql-backup-restore)**: OCI-3에서 systemd timer가 6시간 주기(UTC 00·06·12·18 = KST 09·15·21·03)로 `oci-mysql-backup/backup.sh`를 실행 → HeatWave MySQL을 `mysqldump`(gzip)하여 별도 버킷 `qasker-mysql-backup`에 PUT한다. PLG 백업(cron)과 독립적으로 동작하며, flock으로 백업/복구/GameDay를 직렬화하고 Prometheus textfile 컬렉터로 결과 메트릭을 노출한다.
 
 ### 디렉토리 구조
 
@@ -182,7 +182,7 @@ plg-stack/
 │           └── prometheus.yml   ← Spring Boot Actuator 스크래핑
 │
 ├── oci-mysql-backup/            ← HeatWave MySQL L2 백업 (systemd, spec 001-oci-mysql-backup-restore)
-│   ├── backup.sh                ← mysqldump → gzip+sha256 → PUT → 재다운로드 무결성 검증 (6시간 주기)
+│   ├── backup.sh                ← mysqldump → gzip → PUT (6시간 주기)
 │   ├── restore.sh               ← 재해 복구 진입점 (원격 호스트용)
 │   ├── restore-local.sh         ← 로컬 Docker MySQL로 복원 (분석용)
 │   ├── masked-export.sh         ← 민감정보 마스킹 덤프
@@ -325,7 +325,6 @@ sudo ./oci-mysql-backup/update.sh
 # 백업 파이프라인
 ✓ 어제 백업 성공: curl -sf 'http://localhost:9090/api/v1/query?query=time()-q_asker_backup_last_success_timestamp' | jq -r '.data.result[]|.value[1]'
 ✓ 저장소 사용률: curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_storage_usage_ratio' | jq
-✓ Quarantine 부재(인라인 검증 실패분): oci --profile BACKUP_MON_READER os object list -bn qasker-monitoring-backup --prefix quarantine/ --all | jq '.data|length'
 
 # 스크립트 정합성 (호스트)
 ✓ cron 등록: cat /etc/cron.d/q-asker-backup

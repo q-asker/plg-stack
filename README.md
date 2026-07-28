@@ -42,7 +42,7 @@ docker compose up -d
 
 ### 백업·복구 (spec 001-prometheus-loki-backup-recovery)
 
-Prometheus/Loki 데이터를 매일 KST 03:00 OCI Object Storage에 자동 백업. 업로드 직후 인라인 무결성 검증과 저장소 90% 임계 알림을 함께 수행.
+Prometheus/Loki 데이터를 매일 KST 03:00 OCI Object Storage에 자동 백업. 저장소 80/90% 임계 알림을 함께 수행하고, 백업의 온전함은 GameDay 복원 리허설로 증명한다.
 
 - **배경 지식·흐름도**: [monitoring/docs/프로메테우스로키백업복구설명.md](monitoring/docs/프로메테우스로키백업복구설명.md)
 - **운영 RUNBOOK (평시·장애·복원·GameDay)**: [monitoring/docs/RUNBOOK-backup-restore.md](monitoring/docs/RUNBOOK-backup-restore.md)

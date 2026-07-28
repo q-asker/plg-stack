@@ -105,7 +105,6 @@ sudo cat /etc/oci-mysql-backup/healthcheck.baseline.yml | jq .schemas.expected
 |---|---|---|
 | 0 | PASS + RTO 기록 | 무 |
 | 1 | 사용법·환경변수 오류 | 무 |
-| 3 | sha256 불일치 | **무** (격리 진입 전 중단) |
 | 4 | OCI 다운로드 실패 | 무 |
 | 6 | 백업 객체 없음 (`--latest` 조회 실패) | 무 |
 | 10 | 헬스체크 FAIL | 무 (격리 컨테이너 안에만) |
@@ -152,14 +151,13 @@ docker ps -aq --filter "name=mysql-restore-" | xargs docker rm -f
 
 **주의**: 다음 GameDay 훈련 시작 전에 이전 컨테이너를 정리해야 리소스 낭비 없음. spec FR-020에 따라 자동 삭제는 하지 않는다.
 
-## 실행 흐름 (내부 5단계)
+## 실행 흐름 (내부 4단계)
 
 ```
-[1/5] downloading dump + meta + sha256   (BACKUP_READER)
-[2/5] verifying sha256                    (불일치 시 exit 3)
-[3/5] starting isolated container         (Docker health 대기 90s)
-[4/5] loading dump.sql.gz                 (zcat | docker exec mysql)
-[5/5] running healthcheck (T7)            (환경변수로 격리 접속 정보 주입)
+[1/4] downloading dump + meta             (BACKUP_READER)
+[2/4] starting isolated container         (Docker health 대기 90s)
+[3/4] loading dump.sql.gz                 (zcat | docker exec mysql)
+[4/4] running healthcheck (T7)            (환경변수로 격리 접속 정보 주입)
     ↓
 ═══════════════ 복구 완료 ═══════════════
   RTO: <초>  (SC-001 target ≤ 900s)
@@ -169,16 +167,14 @@ docker ps -aq --filter "name=mysql-restore-" | xargs docker rm -f
 
 ```
 [2026-07-01T14:30:12Z] [START] object_key=2026/07/01/qasker-mysql-20260701T134701Z.sql.gz container=mysql-restore-20260701T134701Z-1782913812
-[2026-07-01T14:30:12Z] [step 1/5] downloading dump + meta + sha256...
-[2026-07-01T14:30:17Z] [step 1/5] downloaded
-[2026-07-01T14:30:17Z] [step 2/5] verifying sha256...
-[2026-07-01T14:30:17Z] [step 2/5] sha256 OK
-[2026-07-01T14:30:17Z] [step 3/5] starting isolated container (mysql:8.0)...
-[2026-07-01T14:30:17Z] [step 3/5] container=mysql-restore-..., waiting for healthy...
-[2026-07-01T14:30:45Z] [step 3/5] container healthy, host_port=32789
-[2026-07-01T14:30:45Z] [step 4/5] loading dump.sql.gz...
-[2026-07-01T14:31:00Z] [step 4/5] dump loaded (15s)
-[2026-07-01T14:31:00Z] [step 5/5] running healthcheck (T7)...
+[2026-07-01T14:30:12Z] [step 1/4] downloading dump + meta...
+[2026-07-01T14:30:17Z] [step 1/4] downloaded
+[2026-07-01T14:30:17Z] [step 2/4] starting isolated container (mysql:8.0)...
+[2026-07-01T14:30:17Z] [step 2/4] container=mysql-restore-..., waiting for healthy...
+[2026-07-01T14:30:45Z] [step 2/4] container healthy, host_port=32789
+[2026-07-01T14:30:45Z] [step 3/4] loading dump.sql.gz...
+[2026-07-01T14:31:00Z] [step 3/4] dump loaded (15s)
+[2026-07-01T14:31:00Z] [step 4/4] running healthcheck (T7)...
 ──── healthcheck 결과 ────
 {
   "status": "PASS",
@@ -226,11 +222,6 @@ mysql -h 127.0.0.1 -P $HOST_PORT -uroot qaskerdb -e 'SELECT COUNT(*) FROM user;'
 **Tip**: restore.sh 로그·헬스체크 JSON을 GameDay 기록에 첨부 시 함께 남길 것.
 
 ## 트러블슈팅
-
-### exit 3 (sha256 불일치)
-- **원인**: 다운로드 중 데이터 변조·저장소 손상
-- **조치**: 다른 백업 객체(더 이전 시각)로 재시도. 반복되면 버킷 무결성 조사 필요.
-- **운영 영향**: 없음 (격리 진입 전)
 
 ### exit 12 (컨테이너 unhealthy)
 - **원인**: Docker 이미지 손상, 리소스 부족, 포트 충돌
@@ -375,7 +366,7 @@ DROP DATABASE IF EXISTS qaskerdb;
 CREATE DATABASE qaskerdb;
 ```
 
-#### Step 2 · mon 서버에서 dump 다운로드 · 검증
+#### Step 2 · mon 서버에서 dump 다운로드
 
 ```bash
 sshmon
@@ -384,25 +375,14 @@ sshmon
 BACKUP=$(sudo /opt/oci-mysql-backup/restore.sh --list | grep sql.gz | tail -1)
 echo "선택된 백업: $BACKUP"
 
-# 3종 다운로드
+# 2종 다운로드
 oci --profile BACKUP_READER os object get \
   -bn qasker-mysql-backup --name "$BACKUP" \
   --file /tmp/prod-restore.sql.gz
 
 oci --profile BACKUP_READER os object get \
-  -bn qasker-mysql-backup --name "${BACKUP%.sql.gz}.sha256" \
-  --file /tmp/prod-restore.sha256
-
-oci --profile BACKUP_READER os object get \
   -bn qasker-mysql-backup --name "${BACKUP%.sql.gz}.meta.json" \
   --file /tmp/prod-restore-meta.json
-
-# sha256 검증 (필수)
-ACTUAL=$(sha256sum /tmp/prod-restore.sql.gz | awk '{print $1}')
-EXPECTED=$(cat /tmp/prod-restore.sha256)
-[[ "$ACTUAL" == "$EXPECTED" ]] \
-  && echo "✅ SHA OK" \
-  || { echo "❌ SHA MISMATCH — 다른 백업으로 재시도"; exit 1; }
 ```
 
 **주의**: `backup_readonly` 사용자는 write 권한 없음. 아래 로드 명령은 **admin 계정 필요**.

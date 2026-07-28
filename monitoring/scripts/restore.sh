@@ -11,18 +11,17 @@
 #   --snapshot  복원할 시점 (예: 20260701-1447). OCI 객체 목록에서 확인 가능.
 #
 # 선택 인자:
-#   --dry-run   다운로드 + 무결성 검증만 수행. 실제 stop/rename/extract는 스킵.
+#   --dry-run   다운로드만 수행. 실제 stop/rename/extract는 스킵.
 #
 # 흐름 (스토어별):
-#   1. OCI에서 tar.gz + .sha256 다운로드
-#   2. 로컬 해시 재계산 → 무결성 확인
-#   3. docker compose stop <svc>
-#   4. /mnt/monitoring/<store> → .bak.<unix_ts> rename  (롤백 안전망)
-#   5. tar -xzf --strip-components=1 → /mnt/monitoring/<store>
-#   6. chown -R <UID>:<UID>  (Prom 65534, Loki 10001)
-#   7. docker compose start <svc>
-#   8. 헬스 폴링 30회 × 10초 (Prom: /-/ready, Loki: /ready)
-#   9. 성공: .bak.<ts> 보존 (자동 삭제 절대 X — 운영자 수동 정리)
+#   1. OCI에서 tar.gz 다운로드
+#   2. docker compose stop <svc>
+#   3. /mnt/monitoring/<store> → .bak.<unix_ts> rename  (롤백 안전망)
+#   4. tar -xzf --strip-components=1 → /mnt/monitoring/<store>
+#   5. chown -R <UID>:<UID>  (Prom 65534, Loki 10001)
+#   6. docker compose start <svc>
+#   7. 헬스 폴링 30회 × 10초 (Prom: /-/ready, Loki: /ready)
+#   8. 성공: .bak.<ts> 보존 (자동 삭제 절대 X — 운영자 수동 정리)
 #      실패: 자동 롤백 (새 dir 삭제 → .bak.<ts> mv back → start)
 #
 # 대응 FR: 006, 011, 014
@@ -78,7 +77,7 @@ esac
 # ─── 환경 로드 ───
 load_env "$MONITORING_DIR"
 require_env OCI_BUCKET_NAME OCI_WRITER_PROFILE OCI_READER_PROFILE
-require_cmd oci curl jq tar sha256sum chown
+require_cmd oci curl jq tar chown
 
 ensure_tmp_dir
 
@@ -122,37 +121,23 @@ restore_store() {
     log INFO "===== ${store} 복원 시작 (snapshot=${SNAPSHOT}) ====="
 
     local tar_key="${store}/${SNAPSHOT}-${store}.tar.gz"
-    local sha_key="${store}/${SNAPSHOT}-${store}.sha256"
     local tar_file="${BACKUP_TMP_DIR}/restore-${store}-${SNAPSHOT}.tar.gz"
-    local sha_file="${BACKUP_TMP_DIR}/restore-${store}-${SNAPSHOT}.sha256"
 
     # 1. 다운로드
     if ! download_object "$READER" "$BUCKET" "$tar_key" "$tar_file"; then
         log ERROR "[${store}] tar.gz 다운로드 실패: ${tar_key}"
         return 1
     fi
-    if ! download_object "$READER" "$BUCKET" "$sha_key" "$sha_file"; then
-        log ERROR "[${store}] sha256 다운로드 실패: ${sha_key}"
-        rm -f "$tar_file"
-        return 1
-    fi
-
-    # 2. 로컬 무결성 검증
-    if ! verify_local_hash "$tar_file" "$sha_file"; then
-        log ERROR "[${store}] 무결성 검증 실패 → 복원 중단 (원본 무영향)"
-        rm -f "$tar_file" "$sha_file"
-        return 1
-    fi
 
     if (( DRY_RUN )); then
         log WARN "[${store}][DRY-RUN] stop/rename/extract/start 스킵. 원본 유지."
-        rm -f "$tar_file" "$sha_file"
+        rm -f "$tar_file"
         STORE_STATUS[$store]=1
         STORE_DURATION[$store]=$(( SECONDS - start_ts ))
         return 0
     fi
 
-    # 3. 정지 + rename (rollback 안전망)
+    # 2. 정지 + rename (rollback 안전망)
     local data_dir="/mnt/monitoring/${store}"
     local bak_ts
     bak_ts="$(date +%s)"
@@ -165,29 +150,29 @@ restore_store() {
     if ! mv "$data_dir" "$bak_dir"; then
         log ERROR "[${store}] rename 실패 → 컨테이너 재기동만 시도"
         docker compose -f "$COMPOSE_FILE" start "$store" >/dev/null || true
-        rm -f "$tar_file" "$sha_file"
+        rm -f "$tar_file"
         return 1
     fi
 
-    # 4. extract
+    # 3. extract
     mkdir -p "$data_dir"
     if ! tar -xzf "$tar_file" -C "$data_dir" --strip-components=1; then
         log ERROR "[${store}] tar 압축 해제 실패 → 롤백"
         _rollback "$store" "$data_dir" "$bak_dir"
-        rm -f "$tar_file" "$sha_file"
+        rm -f "$tar_file"
         return 1
     fi
 
-    # 5. 권한 복원
+    # 4. 권한 복원
     log INFO "[${store}] chown ${uid}:${uid}"
     if ! chown -R "${uid}:${uid}" "$data_dir"; then
         log ERROR "[${store}] chown 실패 → 롤백"
         _rollback "$store" "$data_dir" "$bak_dir"
-        rm -f "$tar_file" "$sha_file"
+        rm -f "$tar_file"
         return 1
     fi
 
-    # 6. 재기동 + 헬스 폴링
+    # 5. 재기동 + 헬스 폴링
     log INFO "[${store}] docker compose start"
     docker compose -f "$COMPOSE_FILE" start "$store" >/dev/null
 
@@ -196,12 +181,12 @@ restore_store() {
         log ERROR "[${store}] 헬스 미도달 → 롤백"
         docker compose -f "$COMPOSE_FILE" stop "$store" >/dev/null || true
         _rollback "$store" "$data_dir" "$bak_dir"
-        rm -f "$tar_file" "$sha_file"
+        rm -f "$tar_file"
         return 1
     fi
 
-    # 7. 성공: 임시 파일 정리, .bak 보존 (자동 삭제 절대 X)
-    rm -f "$tar_file" "$sha_file"
+    # 6. 성공: 임시 파일 정리, .bak 보존 (자동 삭제 절대 X)
+    rm -f "$tar_file"
     STORE_STATUS[$store]=1
     STORE_DURATION[$store]=$(( SECONDS - start_ts ))
     STORE_BAK_DIR[$store]="$bak_dir"
