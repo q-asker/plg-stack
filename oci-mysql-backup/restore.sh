@@ -325,11 +325,32 @@ if [[ $APP_CHECK -eq 1 ]]; then
   APP_NAME="qasker-appcheck-${UNIX_TS}"
   log "[app-check] 앱 부팅 검증 시작: image=$APP_IMAGE port=$APP_SERVER_PORT mgmt=$APP_MGMT_PORT"
 
+  # 앱의 OCI SDK 클라이언트 빈은 프로필과 무관하게 부팅 시점에 ~/.oci/config를
+  # eager 파싱한다 (GameDay 1회차 실측 — mock은 '호출'을 막지 '빈 생성'을 못 막음).
+  # 실 호출은 mock이 차단하므로, 파싱만 통과하는 더미 자격을 만들어 마운트한다.
+  OCI_STUB_DIR="$WORK_DIR/appcheck-oci"
+  mkdir -p "$OCI_STUB_DIR"
+  if ! openssl genrsa -out "$OCI_STUB_DIR/key.pem" 2048 >/dev/null 2>&1; then
+    log "[ERR] 더미 키 생성 실패 (openssl 필요)"
+    fail "app-check-stub" 15
+  fi
+  cat > "$OCI_STUB_DIR/config" <<'EOF'
+[DEFAULT]
+user=ocid1.user.oc1..aaaaaaaaappcheckdummy
+fingerprint=00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff
+tenancy=ocid1.tenancy.oc1..aaaaaaaaappcheckdummy
+region=ap-chuncheon-1
+key_file=/home/appuser/.oci/key.pem
+EOF
+  chmod 755 "$OCI_STUB_DIR"
+  chmod 644 "$OCI_STUB_DIR/config" "$OCI_STUB_DIR/key.pem"
+
   # host 네트워크: 격리 MySQL의 호스트 포트(127.0.0.1:$HOST_PORT)로 바로 접속.
   # mock 프로필(local,mock): 외부 호출·실쓰기 mock, datasource는 env로 재정의(공식 관행).
   if ! docker run -d \
        --name "$APP_NAME" \
        --network host \
+       -v "$OCI_STUB_DIR":/home/appuser/.oci:ro \
        -e SPRING_PROFILES_ACTIVE=local,mock \
        -e SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:${HOST_PORT}/qaskerdb" \
        -e SPRING_DATASOURCE_USERNAME=root \
