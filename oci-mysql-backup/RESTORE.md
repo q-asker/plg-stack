@@ -162,16 +162,14 @@ mysql-restore-<백업시각>-<유닉스타임스탬프>
 docker ps -a --filter "name=mysql-restore-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
 
-### 훈련 완료 후 수동 정리
-```bash
-# 특정 컨테이너
-docker rm -f mysql-restore-20260701T134701Z-1782913900
+### 정리 정책
 
-# 모든 restore 컨테이너 (신중히)
-docker ps -aq --filter "name=mysql-restore-" | xargs docker rm -f
-```
-
-**주의**: 다음 GameDay 훈련 시작 전에 이전 컨테이너를 정리해야 리소스 낭비 없음. spec FR-020에 따라 자동 삭제는 하지 않는다.
+- **리허설 직후엔 보존** (FR-020) — 분석 창. `docker logs`·직접 접속으로 조사 가능.
+- **다음 리허설 시작 시 자동 정리** — restore.sh가 시작 시점에 이전 `mysql-restore-*`·`qasker-appcheck-*` 컨테이너를 스스로 제거한다 (격리 MySQL의 호스트 포트 55000 고정 → 잔여 컨테이너가 있으면 충돌하므로). 수동 정리는 필요 없다.
+- 리허설 없이 즉시 리소스를 회수하고 싶을 때만 수동:
+  ```bash
+  docker ps -aq --filter "name=mysql-restore-" | xargs -r docker rm -f
+  ```
 
 ## 실행 흐름 (내부 4단계)
 

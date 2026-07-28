@@ -141,6 +141,18 @@ if ! flock -n 200; then
   exit 0
 fi
 
+# ─── 이전 리허설 잔여 컨테이너 자동 정리 ───
+# FR-020의 "보존"은 다음 리허설 시작 전까지의 분석 창을 의미한다. 격리 MySQL이
+# 호스트 포트 55000 고정이라 이전 컨테이너가 남아 있으면 포트 충돌로 실패하므로,
+# 새 리허설 시작 시점에 이전 것들을 정리한다 (flock으로 동시 실행 없음이 보장됨).
+PREV_CONTAINERS=$(docker ps -aq \
+  --filter "name=mysql-restore-" \
+  --filter "name=qasker-appcheck-" 2>/dev/null)
+if [[ -n "$PREV_CONTAINERS" ]]; then
+  log "[INFO] 이전 리허설 컨테이너 정리: $(echo "$PREV_CONTAINERS" | wc -l | tr -d ' ')개"
+  echo "$PREV_CONTAINERS" | xargs docker rm -f >/dev/null 2>&1 || true
+fi
+
 # ─── --latest 해석 ───
 if [[ "$OBJECT_KEY" == "__LATEST__" ]]; then
   log "[INFO] --latest: 가장 최근 sql.gz 조회..."
