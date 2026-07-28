@@ -25,7 +25,7 @@ SYSTEMD_DIR="/etc/systemd/system"
 
 # deploy.sh와 동일한 배포 파일 목록 (실행 755 / lib 644)
 BIN_FILES=(backup.sh restore.sh healthcheck.sh)
-LIB_FILES=(lib/metrics.sh lib/metadata.sh lib/notify.sh)
+LIB_FILES=(lib/metrics.sh lib/notify.sh)
 UNIT_FILES=(oci-mysql-backup.service oci-mysql-backup.timer)
 
 [[ $EUID -eq 0 ]] || { echo "❌ sudo로 실행하세요"; exit 1; }

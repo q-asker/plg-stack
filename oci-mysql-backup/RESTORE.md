@@ -154,7 +154,7 @@ docker ps -aq --filter "name=mysql-restore-" | xargs docker rm -f
 ## 실행 흐름 (내부 4단계)
 
 ```
-[1/4] downloading dump + meta             (BACKUP_READER)
+[1/4] downloading dump                    (BACKUP_READER)
 [2/4] starting isolated container         (Docker health 대기 90s)
 [3/4] loading dump.sql.gz                 (zcat | docker exec mysql)
 [4/4] running healthcheck (T7)            (환경변수로 격리 접속 정보 주입)
@@ -167,7 +167,7 @@ docker ps -aq --filter "name=mysql-restore-" | xargs docker rm -f
 
 ```
 [2026-07-01T14:30:12Z] [START] object_key=2026/07/01/qasker-mysql-20260701T134701Z.sql.gz container=mysql-restore-20260701T134701Z-1782913812
-[2026-07-01T14:30:12Z] [step 1/4] downloading dump + meta...
+[2026-07-01T14:30:12Z] [step 1/4] downloading dump...
 [2026-07-01T14:30:17Z] [step 1/4] downloaded
 [2026-07-01T14:30:17Z] [step 2/4] starting isolated container (mysql:8.0)...
 [2026-07-01T14:30:17Z] [step 2/4] container=mysql-restore-..., waiting for healthy...
@@ -179,11 +179,10 @@ docker ps -aq --filter "name=mysql-restore-" | xargs docker rm -f
 {
   "status": "PASS",
   "checks": [
-    {"check": "schemas", "expected": 4, "actual": 4, "tolerance": 0, "status": "PASS"},
-    {"check": "tables", "expected": 21, "actual": 21, "tolerance": 2, "status": "PASS"},
-    {"check": "user", "expected": 1000, "actual": 1000, "tolerance": 100, "status": "PASS"},
-    {"check": "problem_set", "expected": 4500, "actual": 4500, "tolerance": 500, "status": "PASS"},
-    {"check": "quiz_history", "expected": 5000, "actual": 5000, "tolerance": 5000, "status": "PASS"}
+    {"check": "schemas", "expected": 1, "actual": 1, "tolerance": 0, "status": "PASS"},
+    {"check": "user", "actual": 1523, "status": "PASS"},
+    {"check": "problem_set", "actual": 8210, "status": "PASS"},
+    {"check": "quiz_history", "actual": 45102, "status": "PASS"}
   ]
 }
 ──────────────────────
@@ -375,14 +374,10 @@ sshmon
 BACKUP=$(sudo /opt/oci-mysql-backup/restore.sh --list | grep sql.gz | tail -1)
 echo "선택된 백업: $BACKUP"
 
-# 2종 다운로드
+# dump 다운로드
 oci --profile BACKUP_READER os object get \
   -bn qasker-mysql-backup --name "$BACKUP" \
   --file /tmp/prod-restore.sql.gz
-
-oci --profile BACKUP_READER os object get \
-  -bn qasker-mysql-backup --name "${BACKUP%.sql.gz}.meta.json" \
-  --file /tmp/prod-restore-meta.json
 ```
 
 **주의**: `backup_readonly` 사용자는 write 권한 없음. 아래 로드 명령은 **admin 계정 필요**.
@@ -404,7 +399,6 @@ MYSQL_PWD="$ADMIN_PWD" zcat /tmp/prod-restore.sql.gz | \
 
 ```bash
 BASELINE_FILE=/etc/oci-mysql-backup/healthcheck.baseline.yml \
-META_FILE=/tmp/prod-restore-meta.json \
 RESTORED_HOST="$NEW_ENDPOINT" \
 RESTORED_PORT=3306 \
 RESTORED_USER=admin \

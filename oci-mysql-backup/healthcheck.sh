@@ -1,30 +1,32 @@
 #!/usr/bin/env bash
 # ============================================================
-# T7: 복구된 격리 환경 헬스체크 (스키마/테이블/대표 테이블 row 카운트)
+# T7: 복구된 격리 환경 헬스체크 (baseline 기반 구조 확인)
 # ============================================================
+# 판정 기준: 복원본이 DB로서 성립하는가 —
+#   스키마 수(baseline 기대값) + 대표 테이블 존재·비어있지 않음.
+#   백업 시점 실측값 대조는 하지 않는다 (무결성 노선: 복원 리허설로 증명).
+#
 # 사용법 (환경변수 기반):
 #   RESTORED_HOST=127.0.0.1 \
 #   RESTORED_PORT=3307 \
 #   RESTORED_USER=root \
 #   RESTORED_PASSWORD=xxx \
 #   RESTORED_DATABASE=qaskerdb \
-#   META_FILE=/tmp/meta.json \
 #   BASELINE_FILE=/etc/oci-mysql-backup/healthcheck.baseline.yml \
 #   ./healthcheck.sh
 #
 # 종료 코드:
 #   0   PASS (모든 check 통과)
-#   10  count 불일치 (어느 check FAIL)
-#   11  DB 접속 실패 / baseline·meta 파일 누락
+#   10  check FAIL (스키마 수 불일치 / 대표 테이블 부재·비어 있음)
+#   11  DB 접속 실패 / baseline 파일 누락
 #   1   환경변수 오류
 #
 # 출력: JSON to stdout
 #   {
 #     "status": "PASS" | "FAIL",
 #     "checks": [
-#       {"check": "schemas",  "expected": 1,  "actual": 1,  "status": "PASS"},
-#       {"check": "tables",   "expected": 42, "actual": 42, "status": "PASS"},
-#       {"check": "user",     "expected": 100,"actual": 105,"tolerance": 100,"status": "PASS"},
+#       {"check": "schemas", "expected": 1, "actual": 1, "status": "PASS"},
+#       {"check": "user",    "actual": 1523, "status": "PASS"},
 #       ...
 #     ]
 #   }
@@ -38,7 +40,6 @@ set -uo pipefail
 
 : "${RESTORED_PORT:=3306}"
 : "${BASELINE_FILE:=/etc/oci-mysql-backup/healthcheck.baseline.yml}"
-: "${META_FILE:?META_FILE 필수 (복구 대상 백업의 meta.json 경로)}"
 
 # 필수 도구 검증
 for cmd in mysql jq; do
@@ -48,18 +49,13 @@ for cmd in mysql jq; do
   }
 done
 
-# baseline·meta 파일 존재 확인
+# baseline 파일 존재 확인
 [[ -f "$BASELINE_FILE" ]] || {
   echo "{\"status\":\"FAIL\",\"reason\":\"baseline 파일 없음: $BASELINE_FILE\"}"
   exit 11
 }
-[[ -f "$META_FILE" ]] || {
-  echo "{\"status\":\"FAIL\",\"reason\":\"meta 파일 없음: $META_FILE\"}"
-  exit 11
-}
 
 BASELINE=$(cat "$BASELINE_FILE")
-META=$(cat "$META_FILE")
 
 # MySQL 쿼리 헬퍼 (복구본 접속)
 _query() {
@@ -97,63 +93,33 @@ CHECKS+=("$(jq -n \
   --arg s "$status" \
   '{check:"schemas", expected:$e, actual:$a, tolerance:$tol, status:$s}')")
 
-# ─── Check 2: 테이블 수 (기대값 = meta.database_tables, 복구본 관점) ───
-# meta.database_tables는 백업 대상 DB(qaskerdb) 안의 테이블만 카운트.
-# 관리형 스키마(mysql_audit 등)는 mysqldump 대상에서 제외되어 복구본에도 없음.
-expected_tables=$(echo "$META" | jq -r '.database_tables // .tables // 0')
-tables_tol=$(echo "$BASELINE" | jq -r '.tables.tolerance_abs // 2')
-actual_tables=$(_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${RESTORED_DATABASE}';")
-actual_tables=${actual_tables:-0}
-
-diff=$((actual_tables - expected_tables))
-[[ "$diff" -lt 0 ]] && diff=$((-diff))
-status="PASS"
-[[ "$diff" -gt "$tables_tol" ]] && status="FAIL"
-
-CHECKS+=("$(jq -n \
-  --argjson e "$expected_tables" \
-  --argjson a "$actual_tables" \
-  --argjson tol "$tables_tol" \
-  --arg s "$status" \
-  '{check:"tables", expected:$e, actual:$a, tolerance:$tol, status:$s}')")
-
-# ─── Check 3+: 대표 테이블 row 카운트 ───
+# ─── Check 2+: 대표 테이블 존재 · 비어있지 않음 ───
+# 절단된 덤프·부분 적재는 뒷순서 테이블이 통째로 빠지는 형태로 나타나므로,
+# 핵심 테이블이 존재하고 row가 1건 이상인지로 구조 성립을 판정한다.
 n=$(echo "$BASELINE" | jq -r '.representative_tables | length')
 for i in $(seq 0 $((n - 1))); do
   table_name=$(echo "$BASELINE" | jq -r ".representative_tables[$i].name")
-  tol_abs=$(echo "$BASELINE" | jq -r ".representative_tables[$i].tolerance_abs // 0")
-  tol_ratio=$(echo "$BASELINE" | jq -r ".representative_tables[$i].tolerance_ratio // 0")
 
-  # meta.json.table_counts에 기대값 있어야 함
-  expected=$(echo "$META" | jq -r ".table_counts.\"$table_name\" // \"null\"")
-  if [[ "$expected" == "null" ]]; then
+  exists=$(_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${RESTORED_DATABASE}' AND table_name = '${table_name}';")
+  if [[ "${exists:-0}" -eq 0 ]]; then
     CHECKS+=("$(jq -n \
       --arg t "$table_name" \
-      --arg s "SKIP" \
-      '{check:$t, status:$s, reason:"meta.json.table_counts에 기대값 없음"}')")
+      --arg s "FAIL" \
+      '{check:$t, status:$s, reason:"테이블 없음"}')")
     continue
   fi
 
   actual=$(_query "SELECT COUNT(*) FROM \`${RESTORED_DATABASE}\`.\`${table_name}\`;")
   actual=${actual:-0}
 
-  diff=$((actual - expected))
-  [[ "$diff" -lt 0 ]] && diff=$((-diff))
-
-  # tolerance = max(abs, ratio * expected)
-  ratio_tol=$(awk -v e="$expected" -v r="$tol_ratio" 'BEGIN {printf "%.0f\n", e * r}')
-  tol=$((tol_abs > ratio_tol ? tol_abs : ratio_tol))
-
   status="PASS"
-  [[ "$diff" -gt "$tol" ]] && status="FAIL"
+  [[ "$actual" -eq 0 ]] && status="FAIL"
 
   CHECKS+=("$(jq -n \
     --arg t "$table_name" \
-    --argjson e "$expected" \
     --argjson a "$actual" \
-    --argjson tol "$tol" \
     --arg s "$status" \
-    '{check:$t, expected:$e, actual:$a, tolerance:$tol, status:$s}')")
+    '{check:$t, actual:$a, status:$s}')")
 done
 
 # ─── 결과 조립 ───

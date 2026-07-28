@@ -4,10 +4,10 @@
 # ============================================================
 # 동작 (spec FR-007 단일 명령):
 #   1. flock으로 백업/복구/GameDay 직렬화
-#   2. BACKUP_READER로 2종 객체 다운로드 (.sql.gz, .meta.json)
+#   2. BACKUP_READER로 .sql.gz 다운로드
 #   3. Docker mysql 컨테이너 생성 (시각 기반 유니크 이름, FR-020)
 #   4. dump 적재
-#   5. T7 healthcheck.sh 호출
+#   5. T7 healthcheck.sh 호출 (baseline 기반 구조 확인)
 #   6. RTO 측정 (헬스체크 PASS 시점, FR-019)
 #   7. 격리 컨테이너 자동 삭제 X (FR-020, 운영자 수동 정리)
 #
@@ -126,13 +126,9 @@ if [[ "$OBJECT_KEY" == "__LATEST__" ]]; then
   log "[INFO] 선택: $OBJECT_KEY"
 fi
 
-# ─── 파생 키 계산 ───
-META_KEY="${OBJECT_KEY%.sql.gz}.meta.json"
-
 # ─── 작업 디렉터리 ───
 WORK_DIR=$(mktemp -d "$WORK_BASE_DIR/oci-mysql-restore.XXXXXX")
 DUMP_FILE="$WORK_DIR/dump.sql.gz"
-META_FILE="$WORK_DIR/meta.json"
 
 # trap: 실패해도 컨테이너는 유지(FR-020), 임시 디렉터리만 정리
 cleanup_temp() { rm -rf "$WORK_DIR"; }
@@ -151,8 +147,8 @@ ROOT_PWD="password"
 
 log "[START] object_key=$OBJECT_KEY container=$CONTAINER_NAME"
 
-# ─── Step 1: 다운로드 (2종) ───
-log "[step 1/4] downloading dump + meta..."
+# ─── Step 1: 다운로드 ───
+log "[step 1/4] downloading dump..."
 download() {
   local key="$1" file="$2"
   oci --profile "$OCI_PROFILE" os object get \
@@ -161,7 +157,6 @@ download() {
     --file "$file" \
     >/dev/null 2>"$WORK_DIR/download.err"
 }
-download "$META_KEY" "$META_FILE" || { log "[ERR] $(cat "$WORK_DIR/download.err")"; fail "download-meta" 4; }
 download "$OBJECT_KEY" "$DUMP_FILE" || { log "[ERR] $(cat "$WORK_DIR/download.err")"; fail "download-dump" 4; }
 log "[step 1/4] downloaded"
 
@@ -250,7 +245,6 @@ HC_OUTPUT=$(RESTORED_HOST=127.0.0.1 \
   RESTORED_USER=root \
   RESTORED_PASSWORD="$ROOT_PWD" \
   RESTORED_DATABASE=qaskerdb \
-  META_FILE="$META_FILE" \
   BASELINE_FILE="$BASELINE_FILE" \
   "$HEALTHCHECK_SCRIPT" 2>&1)
 HC_EXIT=$?

@@ -5,19 +5,17 @@
 # 동작:
 #   1. flock으로 백업/복구/GameDay 직렬화 (락 점유 시 즉시 종료 + skip +1)
 #   2. mysqldump --single-transaction --routines --triggers | gzip
-#   3. DB 메타데이터(스키마/테이블/row 카운트 + 호스트·dump 도구 버전) JSON
-#   4. metadata에 size·duration·key 머지
-#   5. OCI Object Storage에 2종 PUT (dump, meta)
-#   6. Prometheus textfile 메트릭 갱신
+#   3. OCI Object Storage에 PUT (dump)
+#   4. Prometheus textfile 메트릭 갱신
 #
-# 무결성 노선: 별도 해시 검증 계층을 두지 않는다 — 전송은 TLS가, 저장은 OCI 서버측
-# 체크섬(11 nines + 자동 복구)이 검증한다. 백업의 온전함은 복구 리허설로 증명.
+# 무결성 노선: 별도 해시·메타데이터 검증 계층을 두지 않는다 — 전송은 TLS가, 저장은
+# OCI 서버측 체크섬(11 nines + 자동 복구)이 검증한다. 백업의 온전함은 복구 리허설로
+# 증명하며, 복원본 판정은 healthcheck.sh의 baseline 기반 구조 확인이 담당.
 #
 # 종료 코드:
 #   0  성공 (또는 락 점유로 skip)
 #   2  dump 실패
 #   4  upload 실패
-#   5  메타데이터 수집 실패
 #   1  사용법/환경변수 오류
 #
 # 환경변수 (필수):
@@ -56,8 +54,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # lib source
 # shellcheck source=lib/metrics.sh
 source "$SCRIPT_DIR/lib/metrics.sh"
-# shellcheck source=lib/metadata.sh
-source "$SCRIPT_DIR/lib/metadata.sh"
 # shellcheck source=lib/notify.sh
 source "$SCRIPT_DIR/lib/notify.sh"
 
@@ -174,16 +170,14 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 NOW_UTC=$(date -u +%Y%m%dT%H%M%SZ)
 DATE_PREFIX=$(date -u +%Y/%m/%d)
 OBJECT_KEY="${DATE_PREFIX}/qasker-mysql-${NOW_UTC}.sql.gz"
-META_KEY="${OBJECT_KEY%.sql.gz}.meta.json"
 
 DUMP_FILE="$WORK_DIR/dump.sql.gz"
-META_FILE="$WORK_DIR/meta.json"
 
 START_TS=$(date +%s)
 log "[START] object_key=$OBJECT_KEY"
 
 # ─── Step 1: mysqldump → gzip ───
-log "[step 1/4] mysqldump..."
+log "[step 1/2] mysqldump..."
 if [[ -n "${MYSQL_CNF:-}" ]]; then
   if ! mysqldump --defaults-extra-file="$MYSQL_CNF" \
        --single-transaction --routines --triggers --hex-blob \
@@ -207,37 +201,18 @@ else
 fi
 DUMP_SIZE=$(stat -c%s "$DUMP_FILE" 2>/dev/null || stat -f%z "$DUMP_FILE")
 [[ "$DUMP_SIZE" -gt 0 ]] || fail "dump-empty" 2
-log "[step 1/4] dump complete ($DUMP_SIZE bytes)"
+log "[step 1/2] dump complete ($DUMP_SIZE bytes)"
 
-# ─── Step 2: 메타데이터 수집 ───
-log "[step 2/4] metadata..."
-if ! collect_metadata > "$META_FILE"; then
-  fail "metadata" 5
-fi
-
-# 대표 테이블 정확 COUNT(*) 병합 (baseline 있을 때만, T7 헬스체크 기대값)
-if TABLE_COUNTS=$(collect_table_counts 2>/dev/null) && [[ "$TABLE_COUNTS" != "{}" ]]; then
-  jq --argjson tc "$TABLE_COUNTS" '. + {table_counts: $tc}' "$META_FILE" > "${META_FILE}.tmp" \
-    && mv "${META_FILE}.tmp" "$META_FILE"
-  log "[step 2/4] table_counts merged: $(echo "$TABLE_COUNTS" | jq -c .)"
-fi
-
-# ─── Step 3: 메타데이터 머지 (크기·소요·키) ───
+# ─── Step 2: OCI upload (dump) ───
 DURATION=$(($(date +%s) - START_TS))
-if ! finalize_metadata "$META_FILE" "$DUMP_SIZE" "$DURATION" "$OBJECT_KEY"; then
-  fail "metadata-finalize" 5
-fi
-log "[step 3/4] metadata finalized"
-
-# ─── Step 4: OCI upload (dump, meta) ───
 if [[ "$DRY_RUN" == "1" ]]; then
-  log "[step 4/4] DRY_RUN=1 → upload skip"
+  log "[step 2/2] DRY_RUN=1 → upload skip"
   log "[OK] (dry-run) would upload: $OBJECT_KEY ($DUMP_SIZE bytes, ${DURATION}s)"
   metric_record_success "$DUMP_SIZE" "$DURATION" "$OBJECT_KEY"
   exit 0
 fi
 
-log "[step 4/4] uploading 2 objects to bucket=$BUCKET profile=$OCI_PROFILE..."
+log "[step 2/2] uploading to bucket=$BUCKET profile=$OCI_PROFILE..."
 upload() {
   local file="$1" key="$2"
   oci --profile "$OCI_PROFILE" os object put \
@@ -248,7 +223,6 @@ upload() {
     >/dev/null 2>"$WORK_DIR/upload.err"
 }
 upload "$DUMP_FILE" "$OBJECT_KEY" || { log "[ERR] upload dump: $(cat "$WORK_DIR/upload.err")"; fail "upload-dump" 4; }
-upload "$META_FILE" "$META_KEY"  || { log "[ERR] upload meta: $(cat "$WORK_DIR/upload.err")"; fail "upload-meta" 4; }
 
 # ─── 성공 메트릭 ───
 FINAL_DURATION=$(($(date +%s) - START_TS))
