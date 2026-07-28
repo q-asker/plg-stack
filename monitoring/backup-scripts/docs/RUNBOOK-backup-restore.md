@@ -27,7 +27,7 @@
 
 ### 1.1 Grafana 대시보드
 
-접속: <https://mon.q-asker.com>
+접속: <https://mon.q-asker.com> → **모니터링 서버 / Q-Asker PLG 백업 (Prometheus·Loki)**
 
 핵심 확인 패널:
 - **q_asker_backup_last_success_timestamp{store}** — 마지막 백업 성공 이후 경과 시간
