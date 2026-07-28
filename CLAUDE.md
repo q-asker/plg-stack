@@ -47,7 +47,7 @@ curl http://monitoring:3000/api/health    # Grafana
 ### 백업·복구 (spec 001-prometheus-loki-backup-recovery)
 
 두 스크립트 공통 인자 규약: `--target=prometheus|loki|both`(백업/복구). 백업 시 저장소 80/90% 임계 알림을 backup.sh가 함께 수행한다. 별도 해시 검증 계층은 두지 않는다 — 전송은 TLS, 저장은 OCI 서버측 체크섬이 검증하고, 백업의 온전함은 GameDay 복원 리허설로 증명한다.
-자세한 배경 · 흐름도는 [monitoring/docs/프로메테우스로키백업복구설명.md](monitoring/docs/프로메테우스로키백업복구설명.md), 운영 절차는 [monitoring/docs/RUNBOOK-backup-restore.md](monitoring/docs/RUNBOOK-backup-restore.md) 참고.
+자세한 배경 · 흐름도는 [monitoring/backup-scripts/docs/프로메테우스로키백업복구설명.md](monitoring/backup-scripts/docs/프로메테우스로키백업복구설명.md), 운영 절차는 [monitoring/backup-scripts/docs/RUNBOOK-backup-restore.md](monitoring/backup-scripts/docs/RUNBOOK-backup-restore.md) 참고.
 
 ```bash
 # 수동 백업 (호스트 cron이 매일 KST 03:00 자동 실행)
@@ -173,12 +173,14 @@ plg-stack/
 │   │   │   └── backup-common.sh ← 공통 함수 라이브러리
 │   │   ├── cron/
 │   │   │   └── q-asker-backup   ← /etc/cron.d/ 배포 참조본 (CRON_TZ=Asia/Seoul)
-│   │   └── logrotate/
-│   │       └── q-asker-backup   ← /etc/logrotate.d/ 배포 참조본 (weekly × 4)
-│   ├── docs/
+│   │   ├── logrotate/
+│   │   │   └── q-asker-backup   ← /etc/logrotate.d/ 배포 참조본 (weekly × 4)
+│   │   └── docs/
+│   │       ├── 프로메테우스로키백업복구설명.md ← 배경 지식 + 흐름도 (진실의 원천)
+│   │       └── RUNBOOK-backup-restore.md      ← 평시·장애·복원·GameDay 절차
+│   ├── docs/                    ← 백업 외 운영·설계 문서
 │   │   ├── grafana-gemini-dashboard-spec.md
-│   │   ├── 프로메테우스로키백업복구설명.md ← 배경 지식 + 흐름도 (진실의 원천)
-│   │   └── RUNBOOK-backup-restore.md      ← 평시·장애·복원·GameDay 절차
+│   │   └── upgrade-2026-07-monitoring-stack.md
 │   └── local/                   ← 로컬 테스트용 모니터링 스택
 │       ├── docker-compose.yml   ← Prometheus + Grafana (로컬)
 │       └── prometheus/

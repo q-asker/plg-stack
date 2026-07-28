@@ -44,8 +44,8 @@ docker compose up -d
 
 Prometheus/Loki 데이터를 매일 KST 03:00 OCI Object Storage에 자동 백업. 저장소 80/90% 임계 알림을 함께 수행하고, 백업의 온전함은 GameDay 복원 리허설로 증명한다.
 
-- **배경 지식·흐름도**: [monitoring/docs/프로메테우스로키백업복구설명.md](monitoring/docs/프로메테우스로키백업복구설명.md)
-- **운영 RUNBOOK (평시·장애·복원·GameDay)**: [monitoring/docs/RUNBOOK-backup-restore.md](monitoring/docs/RUNBOOK-backup-restore.md)
+- **배경 지식·흐름도**: [monitoring/backup-scripts/docs/프로메테우스로키백업복구설명.md](monitoring/backup-scripts/docs/프로메테우스로키백업복구설명.md)
+- **운영 RUNBOOK (평시·장애·복원·GameDay)**: [monitoring/backup-scripts/docs/RUNBOOK-backup-restore.md](monitoring/backup-scripts/docs/RUNBOOK-backup-restore.md)
 - **스크립트**: `monitoring/backup-scripts/{backup,restore}.sh` (자세한 사용법은 CLAUDE.md 명령어 섹션)
 
 수동 실행 예시:
@@ -117,10 +117,9 @@ plg-stack/
 │   │   ├── restore.sh
 │   │   ├── lib/backup-common.sh
 │   │   ├── cron/           # /etc/cron.d/ 배포 참조본
-│   │   └── logrotate/      # /etc/logrotate.d/ 배포 참조본
-│   ├── docs/               # 운영·설계 문서
-│   │   ├── 프로메테우스로키백업복구설명.md
-│   │   └── RUNBOOK-backup-restore.md
+│   │   ├── logrotate/      # /etc/logrotate.d/ 배포 참조본
+│   │   └── docs/           # 백업 배경지식·RUNBOOK
+│   ├── docs/               # 백업 외 운영·설계 문서
 │   └── local/              # 로컬 개발용 스택
 ├── springboot/             # OCI-2 Spring Boot + Alloy
 └── remote-node.env.example # 원격 노드 공통 환경 변수 템플릿

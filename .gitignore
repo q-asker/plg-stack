@@ -44,5 +44,6 @@ shrimp-rules.md
 shrimp_data
 docs
 !monitoring/docs/
+!monitoring/backup-scripts/docs/
 .specify
 /specs
