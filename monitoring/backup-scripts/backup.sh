@@ -128,9 +128,15 @@ backup_prometheus() {
     log INFO "snapshot 생성: ${snap_dir}"
 
     # 2) tar+gzip
+    # 주의: 핸들러가 `if ! backup_prometheus` 문맥에서 불려 set -e가 꺼지므로,
+    # 실패를 조용히 지나치지 않도록 단계마다 명시적으로 return 1 한다.
     tar_file="${BACKUP_TMP_DIR}/prometheus-${TIMESTAMP}.tar.gz"
     log INFO "tar+gzip: ${tar_file}"
-    tar -czf "$tar_file" -C "/mnt/monitoring/prometheus/snapshots" "$snap_id"
+    if ! tar -czf "$tar_file" -C "/mnt/monitoring/prometheus/snapshots" "$snap_id"; then
+        log ERROR "Prometheus tar 생성 실패"
+        rm -rf "$snap_dir"; rm -f "$tar_file"
+        return 1
+    fi
 
     size="$(stat -c '%s' "$tar_file")"
     log INFO "size=${size}B"
@@ -140,8 +146,10 @@ backup_prometheus() {
 
     if (( DRY_RUN )); then
         log WARN "[DRY-RUN] upload 스킵: ${key}"
-    else
-        upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"
+    elif ! upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"; then
+        log ERROR "Prometheus 업로드 실패: ${key}"
+        rm -rf "$snap_dir"; rm -f "$tar_file"
+        return 1
     fi
 
     # 4) 로컬 cleanup
@@ -194,10 +202,14 @@ backup_loki() {
         # 정지 시간이 길어도 백업 자체는 완료했으니 계속 진행
     fi
 
-    # 3) tar+gzip
+    # 3) tar+gzip (실패 시 명시적 return 1 — if ! 문맥에서 set -e가 꺼지므로)
     tar_file="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}.tar.gz"
     log INFO "tar+gzip: ${tar_file}"
-    tar -czf "$tar_file" -C "$BACKUP_TMP_DIR" "loki-${TIMESTAMP}"
+    if ! tar -czf "$tar_file" -C "$BACKUP_TMP_DIR" "loki-${TIMESTAMP}"; then
+        log ERROR "Loki tar 생성 실패"
+        rm -rf "$hardlink_dir"; rm -f "$tar_file"
+        return 1
+    fi
 
     size="$(stat -c '%s' "$tar_file")"
     log INFO "size=${size}B"
@@ -207,8 +219,10 @@ backup_loki() {
 
     if (( DRY_RUN )); then
         log WARN "[DRY-RUN] upload 스킵: ${key}"
-    else
-        upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"
+    elif ! upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"; then
+        log ERROR "Loki 업로드 실패: ${key}"
+        rm -rf "$hardlink_dir"; rm -f "$tar_file"
+        return 1
     fi
 
     # 5) 로컬 cleanup (hardlink dir은 inode 참조라 원본 손상 없음)
