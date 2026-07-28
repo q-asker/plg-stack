@@ -352,8 +352,11 @@ if [[ $APP_CHECK -eq 1 ]]; then
       log "[app-check] 앱 컨테이너 조기 종료 감지 (state=$APP_STATE) — 부팅 실패"
       break   # Flyway/Hibernate validate 실패, Jasypt 복호화 실패 등
     fi
+    # 주의: 헬스체크 블록의 set +e/-e 쌍(위쪽) 이후로는 errexit가 켜져 있다.
+    # 부팅 중엔 curl이 연결 거부(exit 7)로 실패하는 게 정상이므로 || true로 보호
+    # — 없으면 set -e가 첫 폴링에서 스크립트를 무음 종료시킨다 (GameDay 1회차 실측).
     HEALTH=$(curl -sf --max-time 3 "http://127.0.0.1:${APP_MGMT_PORT}/actuator/health" \
-             | jq -r '.status // empty' 2>/dev/null)
+             | jq -r '.status // empty' 2>/dev/null || true)
     [[ "$HEALTH" == "UP" ]] && { APP_UP=1; break; }
     log "[app-check] 부팅 대기 중... (${_i}/36, health=${HEALTH:-미응답})"
     sleep 5
