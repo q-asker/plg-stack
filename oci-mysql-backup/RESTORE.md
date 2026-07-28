@@ -489,3 +489,36 @@ RESTORED_DATABASE=qaskerdb \
 | 컨테이너 정리 | `docker rm -f <컨테이너명>` |
 | 헬스체크 재실행 | (직접 healthcheck.sh 환경변수 주입) |
 | 이미지 사전 캐시 | `sudo docker pull mysql:8.0` |
+
+---
+
+## GameDay Log (부록)
+
+### 2026-Q3 1회차 — 복원 리허설 + 앱 부팅 검증 (2026-07-29 KST)
+
+**환경**: OCI-3 운영 인스턴스 · `restore.sh --latest --app-check` (첫 실전)
+**대상 백업**: `2026/07/28/qasker-mysql-20260728T120044Z.sql.gz` (42.9 MB)
+
+| 지표 | 결과 | 판정 |
+|---|---|---|
+| RTO | **43초** (다운로드 2s + MySQL 기동 18s + 적재 23s) | SC-001 ≤ 900s — ✅ 21× 여유 |
+| healthcheck (baseline) | 스키마 1 · user 167 · problem_set 4,653 · quiz_history 1,883 | ✅ PASS |
+| app-check | `qasker/api:latest` local,mock — Flyway 18건 검증 · Hibernate 전체 엔티티 대조 · health UP (부팅 ~40s) | ✅ PASS |
+
+**리허설이 발견·수정시킨 결함 (7건)** — 전부 재해 시 복구를 막았을 것들:
+
+| # | 결함 | 수정 |
+|---|---|---|
+| 1 | restore.sh의 env 파일 전체 로드가 backup 전용 `OCI_PROFILE=BACKUP_WRITER`를 주입 → READER 기본값이 밀려 다운로드가 BucketNotFound(404) | env 로드를 app-check 키 화이트리스트로 제한 |
+| 2 | 레지스트리 로그인이 사용자별(`~/.docker`)이라 sudo(root) 실행에서 비공개 이미지 pull 거부 | `sudo docker login` 1회 |
+| 3 | 기존 헬스체크 블록의 `set +e/-e` 쌍이 이후 구간을 errexit로 전환 → 부팅 중 curl 연결 거부가 폴링을 무음 즉사 | `\|\| true` 보호 + 진행 로그·조기 종료 감지 |
+| 4 | (우회 시도) 더미 자격을 임시 디렉토리에 두어 EXIT trap과 바인드 마운트가 경합 | api 근본 수정으로 우회 자체를 제거 |
+| 5 | api: mock 프로필이 OCI 클라이언트 빈 생성을 못 막아 `~/.oci` 없는 환경에서 부팅 실패 | `@Profile("!… & !mock")` + MockOciClientConfig 적용 (api #415) |
+| 6 | api: Gemini 클라이언트가 Vertex 모드로 Google ADC 요구 — 개발기의 gcloud 자격증명이 가려온 구멍 | mock에 test용 더미 apiKey 클라이언트 적용 (api fix/gemini-mock-profile) |
+| 7 | (부수) OpenAPI 문서 액션이 JDK 21로 Java 25 jar 직접 실행 → UnsupportedClassVersionError | setup-java 25로 정합 |
+
+**교훈**: "백업은 복원해 본 만큼만 존재한다" — mock 프로필의 '외부 의존 없이 부팅 가능' 계약은
+이 리허설로 처음 완전해졌고(빈 생성 vs 호출의 구분), 검증 기준을 앱 부팅에 두자 인프라·앱·CI
+세 층의 결함이 한 번의 리허설에서 연쇄적으로 드러났다.
+
+**다음 회차**: 2026-Q4 (분기 1회). `--app-check` 포함을 표준으로 한다.
