@@ -4,8 +4,8 @@
 # (plg-stack: specs/001-prometheus-loki-backup-recovery)
 # =============================================================
 # 실행 방법 (OCI-3에서):
-#   sudo bash monitoring/scripts/gameday.sh
-#   sudo bash monitoring/scripts/gameday.sh 20260901-0300   # 다른 SNAPSHOT
+#   sudo bash monitoring/backup-scripts/gameday.sh
+#   sudo bash monitoring/backup-scripts/gameday.sh 20260901-0300   # 다른 SNAPSHOT
 #
 # 실행 중 SLACK_BACKUP_WEBHOOK_URL을 임시 무력화하고 완료 후 원복한다.
 #
@@ -24,7 +24,7 @@ set -uo pipefail
 
 SNAPSHOT="${1:-20260703-0205}"
 MONITORING_DIR="/home/ubuntu/plg-stack/monitoring"
-RESTORE_SH="$MONITORING_DIR/scripts/restore.sh"
+RESTORE_SH="$MONITORING_DIR/backup-scripts/restore.sh"
 ENV_FILE="$MONITORING_DIR/.env"
 
 STAMP=$(date +%Y%m%d-%H%M%S)

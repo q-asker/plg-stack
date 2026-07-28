@@ -51,14 +51,14 @@ curl http://monitoring:3000/api/health    # Grafana
 
 ```bash
 # 수동 백업 (호스트 cron이 매일 KST 03:00 자동 실행)
-sudo ./monitoring/scripts/backup.sh --target=both
-sudo ./monitoring/scripts/backup.sh --target=prometheus --dry-run
-sudo ./monitoring/scripts/backup.sh --target=both --retention-days=3   # 저장소 압박 시 보관일 단축(판단 레버)
+sudo ./monitoring/backup-scripts/backup.sh --target=both
+sudo ./monitoring/backup-scripts/backup.sh --target=prometheus --dry-run
+sudo ./monitoring/backup-scripts/backup.sh --target=both --retention-days=3   # 저장소 압박 시 보관일 단축(판단 레버)
 
 # 복원 (사용자 개입 필요, --snapshot 필수)
-sudo ./monitoring/scripts/restore.sh --target=prometheus              # 사용 가능 목록 조회 후 exit 2
-sudo ./monitoring/scripts/restore.sh --target=loki --snapshot=YYYYMMDD-HHMM
-sudo ./monitoring/scripts/restore.sh --target=both --snapshot=YYYYMMDD-HHMM
+sudo ./monitoring/backup-scripts/restore.sh --target=prometheus              # 사용 가능 목록 조회 후 exit 2
+sudo ./monitoring/backup-scripts/restore.sh --target=loki --snapshot=YYYYMMDD-HHMM
+sudo ./monitoring/backup-scripts/restore.sh --target=both --snapshot=YYYYMMDD-HHMM
 
 # 백업 상태 관측
 curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_last_success_timestamp' | jq
@@ -163,15 +163,18 @@ plg-stack/
 │   │       └── alerting/
 │   ├── alloy/
 │   │   └── config.alloy         ← MySQL exporter + textfile collector 설정
-│   ├── scripts/                 ← 백업·복구·검증 스크립트 (spec 001)
+│   ├── backup-scripts/          ← 백업·복구 관련 일체 (spec 001)
 │   │   ├── backup.sh            ← 매일 KST 03:00 자동 백업 진입점
 │   │   ├── restore.sh           ← 재해 복구 진입점 (부분 복원 지원)
-│   │   └── lib/
-│   │       └── backup-common.sh ← 공통 함수 라이브러리 (15+ 유틸)
-│   ├── cron/
-│   │   └── q-asker-backup       ← /etc/cron.d/ 배포 참조본 (CRON_TZ=Asia/Seoul)
-│   ├── logrotate/
-│   │   └── q-asker-backup       ← /etc/logrotate.d/ 배포 참조본 (weekly × 4)
+│   │   ├── archive-monthly.sh   ← 매월 1일 KST 05:00 월간 아카이브
+│   │   ├── restore-local.sh     ← 로컬 Docker Prometheus 복원 (분석용)
+│   │   ├── gameday.sh           ← 분기 GameDay 복구 리허설
+│   │   ├── lib/
+│   │   │   └── backup-common.sh ← 공통 함수 라이브러리
+│   │   ├── cron/
+│   │   │   └── q-asker-backup   ← /etc/cron.d/ 배포 참조본 (CRON_TZ=Asia/Seoul)
+│   │   └── logrotate/
+│   │       └── q-asker-backup   ← /etc/logrotate.d/ 배포 참조본 (weekly × 4)
 │   ├── docs/
 │   │   ├── grafana-gemini-dashboard-spec.md
 │   │   ├── 프로메테우스로키백업복구설명.md ← 배경 지식 + 흐름도 (진실의 원천)
@@ -296,7 +299,7 @@ BACKUP_FREE_LIMIT_BYTES=20000000000            # 20 GB(≈18.6 GiB, OCI 무료 �
 
 | 서브시스템 | 실행 경로 | 코드 반영 방법 |
 |-----------|----------|----------------|
-| **PLG 백업** (`monitoring/scripts/*.sh`) | cron이 `~/plg-stack/...`를 **직접 실행** | 호스트 `git pull`만 하면 즉시 반영 |
+| **PLG 백업** (`monitoring/backup-scripts/*.sh`) | cron이 `~/plg-stack/...`를 **직접 실행** | 호스트 `git pull`만 하면 즉시 반영 |
 | **MySQL 백업** (`oci-mysql-backup/*.sh`) | systemd가 **`/opt/oci-mysql-backup/` 사본** 실행 | `git pull` 후 **`/opt`로 재배치 필요** |
 
 MySQL 백업은 `git pull`만으론 안 되고 배포 사본을 갱신해야 한다 — `update.sh`가 자동 처리

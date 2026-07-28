@@ -68,7 +68,7 @@ sudo ls -la /mnt/monitoring/ | grep -E "\.bak\." | wc -l
 ### 1.4 백업 스크립트 옵션 (빠른 참조)
 
 ```bash
-sudo ./monitoring/scripts/backup.sh [옵션]
+sudo ./monitoring/backup-scripts/backup.sh [옵션]
 ```
 
 | 옵션 | 설명 |
@@ -103,7 +103,7 @@ sudo ./monitoring/scripts/backup.sh [옵션]
    │  └─ 손실 스토어에 따라 §3 or §4 (단독 복원)
    │
    └─ 정기 GameDay 리허설
-      └─ §11 GameDay 체크리스트
+      └─ §10 GameDay 체크리스트
 ```
 
 ---
@@ -121,7 +121,7 @@ docker compose -f monitoring/docker-compose.yml ps prometheus
 docker logs prometheus 2>&1 | tail -20
 
 # 사용 가능한 백업 시점 조회 (--snapshot 미지정으로 목록만 확인)
-sudo ./monitoring/scripts/restore.sh --target=prometheus
+sudo ./monitoring/backup-scripts/restore.sh --target=prometheus
 # → 목록 출력 후 exit 2
 ```
 
@@ -131,7 +131,7 @@ sudo ./monitoring/scripts/restore.sh --target=prometheus
 # 시점 결정 (예: 20260701-1447)
 SNAPSHOT=20260701-1447
 
-sudo ./monitoring/scripts/restore.sh \
+sudo ./monitoring/backup-scripts/restore.sh \
   --target=prometheus \
   --snapshot=${SNAPSHOT} 2>&1 | tee /tmp/restore-prom-$(date +%Y%m%d-%H%M).log
 ```
@@ -151,7 +151,7 @@ curl -sf 'http://localhost:9090/api/v1/query?query=up' \
 
 # .bak.<unix_ts> 원본 보존 확인 (자동 삭제 X)
 sudo ls -la /mnt/monitoring/ | grep prometheus.bak.
-# → prometheus.bak.1783005679 같은 디렉토리 존재. §8 정리 참고.
+# → prometheus.bak.1783005679 같은 디렉토리 존재. §7 정리 참고.
 ```
 
 ### 3.4 실패 시 자동 롤백 (수동 개입 불필요)
@@ -191,7 +191,7 @@ cd ~/plg-stack
 
 docker compose -f monitoring/docker-compose.yml ps loki
 
-sudo ./monitoring/scripts/restore.sh --target=loki
+sudo ./monitoring/backup-scripts/restore.sh --target=loki
 # 사용 가능 timestamp 목록 확인
 ```
 
@@ -200,7 +200,7 @@ sudo ./monitoring/scripts/restore.sh --target=loki
 ```bash
 SNAPSHOT=20260701-1447
 
-sudo ./monitoring/scripts/restore.sh \
+sudo ./monitoring/backup-scripts/restore.sh \
   --target=loki \
   --snapshot=${SNAPSHOT} 2>&1 | tee /tmp/restore-loki-$(date +%Y%m%d-%H%M).log
 ```
@@ -231,7 +231,7 @@ sudo ls -la /mnt/monitoring/ | grep loki.bak.
 ```bash
 SNAPSHOT=20260703-0300
 
-sudo ./monitoring/scripts/restore.sh \
+sudo ./monitoring/backup-scripts/restore.sh \
   --target=both \
   --snapshot=${SNAPSHOT} 2>&1 | tee /tmp/restore-both-$(date +%Y%m%d-%H%M).log
 ```
@@ -365,7 +365,7 @@ Prometheus/Loki 자체가 180일 retention이라 그보다 오래된 데이터�
 
 ### 7-B.1 자동 실행
 
-- 스크립트: `monitoring/scripts/archive-monthly.sh`
+- 스크립트: `monitoring/backup-scripts/archive-monthly.sh`
 - cron: 매월 1일 KST 05:00 (`/etc/cron.d/q-asker-backup`)
 - 동작: 전월 마지막 백업 2개(prom+loki tar.gz)를 READER 다운로드 → WRITER로 `monthly-archive/YYYYMM-<store>.tar.gz` 업로드 (Standard 유지, lifecycle 제외로 영구 보존)
 
@@ -471,7 +471,7 @@ sudo tail -100 /var/log/q-asker-backup.log
 
 수동 재실행:
 ```bash
-sudo ./monitoring/scripts/backup.sh --target=both
+sudo ./monitoring/backup-scripts/backup.sh --target=both
 ```
 
 ### 9.2 `⚠️/❌ [q-asker-backup] storage-threshold`
@@ -542,12 +542,12 @@ oci --profile BACKUP_MON_READER os object list \
   ```
 - [ ] 사용 가능 snapshot 확인
   ```bash
-  sudo ./monitoring/scripts/restore.sh --target=both
+  sudo ./monitoring/backup-scripts/restore.sh --target=both
   ```
 - [ ] **회차 1** Prometheus 단독 복원 시각 측정
   ```bash
   START=$(date +%s)
-  sudo ./monitoring/scripts/restore.sh --target=prometheus --snapshot=<선택>
+  sudo ./monitoring/backup-scripts/restore.sh --target=prometheus --snapshot=<선택>
   END=$(date +%s)
   echo "회차 1 Prom RTO: $((END - START))s"
   ```
@@ -600,7 +600,7 @@ oci --profile BACKUP_MON_READER os object list \
 **환경**: OCI-3 운영 인스턴스 (`q-asker-monitoring-20260306`)
 **소스**: git commit `b894b8e`
 **SNAPSHOT**: `20260703-0205`
-**실행 스크립트**: `monitoring/scripts/gameday.sh` (Q1=a 반복 스냅샷, Q2=a Slack 무력화, Q3=a 즉시 반복, Q4=a Prom 3회 후 Loki 1회)
+**실행 스크립트**: `monitoring/backup-scripts/gameday.sh` (Q1=a 반복 스냅샷, Q2=a Slack 무력화, Q3=a 즉시 반복, Q4=a Prom 3회 후 Loki 1회)
 **시간대**: KST 00:59:20 ~ 01:08:09 (심야, 트래픽 최저)
 
 **Prometheus 3회 실측**

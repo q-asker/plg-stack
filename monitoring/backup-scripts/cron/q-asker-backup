@@ -3,7 +3,7 @@
 # (plg-stack: specs/001-prometheus-loki-backup-recovery)
 # =============================================================
 # 배포 방법 (OCI-3 호스트에서):
-#   sudo cp monitoring/cron/q-asker-backup /etc/cron.d/q-asker-backup
+#   sudo cp monitoring/backup-scripts/cron/q-asker-backup /etc/cron.d/q-asker-backup
 #   sudo chown root:root /etc/cron.d/q-asker-backup
 #   sudo chmod 644     /etc/cron.d/q-asker-backup
 #
@@ -21,10 +21,10 @@ CRON_TZ=Asia/Seoul
 TZ=Asia/Seoul
 
 # ─── 백업: 매일 KST 03:00 (spec Q4) ───
-# 업로드 직후 인라인 무결성 검증 + 저장소 80/90% 2단계 임계 알림을 backup.sh가 함께 수행한다.
-0 3 * * * root /home/ubuntu/plg-stack/monitoring/scripts/backup.sh --target=both >> /var/log/q-asker-backup.log 2>&1
+# 저장소 80/90% 2단계 임계 알림을 backup.sh가 함께 수행한다.
+0 3 * * * root /home/ubuntu/plg-stack/monitoring/backup-scripts/backup.sh --target=both >> /var/log/q-asker-backup.log 2>&1
 
 # ─── 월간 아카이브(archive-monthly.sh): 매월 1일 KST 05:00 ───
-# 전월 마지막 백업 4개(prom+loki tar.gz + sha256)를 READER 다운로드→WRITER 업로드로
-# monthly-archive/YYYYMM-<store>.*에 영구 보존(Standard). 옛날 로그 장기 보존용.
-0 5 1 * * root /home/ubuntu/plg-stack/monitoring/scripts/archive-monthly.sh >> /var/log/q-asker-backup.log 2>&1
+# 전월 마지막 백업 2개(prom+loki tar.gz)를 READER 다운로드→WRITER 업로드로
+# monthly-archive/YYYYMM-<store>.tar.gz에 영구 보존(Standard). 옛날 로그 장기 보존용.
+0 5 1 * * root /home/ubuntu/plg-stack/monitoring/backup-scripts/archive-monthly.sh >> /var/log/q-asker-backup.log 2>&1

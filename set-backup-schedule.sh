@@ -8,7 +8,7 @@
 #            (/etc/systemd/system/oci-mysql-backup.timer.d/10-schedule.conf)
 #            → update.sh 재배포는 본체 unit만 교체하므로 drop-in은 유지된다.
 #   - PLG:   /etc/cron.d/q-asker-backup 백업 라인의 스케줄 필드 in-place 교체.
-#            ※ 나중에 `cp monitoring/cron/q-asker-backup /etc/cron.d/...`를 다시
+#            ※ 나중에 `cp monitoring/backup-scripts/cron/q-asker-backup /etc/cron.d/...`를 다시
 #              돌리면 되돌아간다(그때 이 스크립트를 재실행하면 됨).
 #
 # 사용법:
