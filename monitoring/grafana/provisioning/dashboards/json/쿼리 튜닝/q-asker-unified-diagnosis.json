@@ -524,7 +524,7 @@
         }
       ],
       "pluginVersion": "13.1.0",
-      "description": "컬럼 설명 — uri: 엔드포인트 · repo: SQL 접근 테이블의 레포지토리 · sql_stripped: 실행된 실제 SQL(주석 제거 150자) · ms: 문장 실행시간 · examined: 문장 스캔행수 · no_index: 인덱스 미사용(1=풀스캔,0=인덱스). 각 uri 대표요청의 문장을 실행순으로."
+      "description": "컬럼 설명 — uri: 엔드포인트 · repo: SQL 접근 테이블의 레포지토리 · sql_stripped: 실행된 실제 SQL(주석 제거 150자) · ms: 문장 실행시간 · examined: 문장 스캔행수 · mem_bytes: 이 문장의 peak 메모리(MAX_TOTAL_MEMORY, bytes) · no_index: 인덱스 미사용(1=풀스캔,0=인덱스). 각 uri 대표요청의 문장을 실행순으로."
     },
     {
       "collapsed": false,
@@ -820,6 +820,187 @@
       ],
       "pluginVersion": "13.1.0",
       "description": "mysql.slow_log 원문. run-level 이 부하 전 slow_query_log=ON(0.1s)+truncate 하므로 이번 실행의 느린 쿼리만. digest·trace_snapshot 과 달리 '실제 임계값(>0.1s) 초과 실행'을 원문으로 본다."
+    },
+    {
+      "id": 906,
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 90
+      },
+      "title": "부록 — 계측 커버리지 (레포지토리 · 메서드 · 엔드포인트 수)",
+      "panels": []
+    },
+    {
+      "id": 907,
+      "type": "stat",
+      "title": "레포지토리 수",
+      "description": "spring_data_repository_invocations_seconds 에 계측된 서로 다른 repository 라벨 수(스케일 스윕 x1/x10/x100 기준).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "wideLayout": true,
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "count(count by(repository)(last_over_time(spring_data_repository_invocations_seconds_count{seed=~\"x1|x10|x100\"}[30d])))",
+          "instant": true,
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 908,
+      "type": "stat",
+      "title": "메서드 수",
+      "description": "계측된 서로 다른 repository·method 조합 수(레포당 여러 쿼리 메서드).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "wideLayout": true,
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "count(count by(repository,method)(last_over_time(spring_data_repository_invocations_seconds_count{seed=~\"x1|x10|x100\"}[30d])))",
+          "instant": true,
+          "refId": "A",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 909,
+      "type": "stat",
+      "title": "엔드포인트 수",
+      "description": "trace_snapshot 에 귀속된 서로 다른 정규화 uri(경로변수 {}치환) 수 = 하네스가 태운 엔드포인트 수(x100 기준).",
+      "datasource": {
+        "type": "mysql",
+        "uid": "bfrwvbnu3162ob"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "wideLayout": true,
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "bfrwvbnu3162ob"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT REGEXP_REPLACE(uri, '[{][^}]+[}]', '{}')) AS endpoints FROM trace_snapshot",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",
@@ -889,11 +1070,11 @@
     "to": "now"
   },
   "timepicker": {
-    "hidden": true
+    "hidden": false
   },
   "timezone": "browser",
   "title": "[쿼리튜닝] 통합 진단 — 스케일 + traceId",
   "uid": "q-asker-unified-diagnosis",
-  "version": 1,
+  "version": 5,
   "weekStart": ""
 }

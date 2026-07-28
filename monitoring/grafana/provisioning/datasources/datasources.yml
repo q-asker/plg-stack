@@ -73,3 +73,17 @@ datasources:
       password: password
     version: 1
     editable: false
+
+  # ═══════════════════════════════════════════════════════════
+  # ④ MySQL (x100 분석 DB) — 인핸스먼트 대시보드의 DB 사실 조회용
+  #    (v1_question_json 평균 크기 등. 컨테이너는 local_local-monitoring 네트워크)
+  # ═══════════════════════════════════════════════════════════
+  - name: MySQL-x100
+    uid: qasker-mysql-x100
+    type: mysql
+    access: proxy
+    url: local-mysql-x100:3306
+    database: qaskerdb
+    user: root
+    secureJsonData:
+      password: password

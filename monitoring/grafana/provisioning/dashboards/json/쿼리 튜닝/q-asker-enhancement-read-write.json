@@ -8,70 +8,10 @@
           "uid": "-- Grafana --"
         },
         "enable": true,
-        "hide": false,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "before/after 구간 마킹",
-        "target": {
-          "limit": 100,
-          "matchAny": true,
-          "tags": [
-            "quiz-read-opt"
-          ],
-          "type": "tags"
-        },
-        "type": "tags"
-      },
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "type": "dashboard"
-      },
-      {
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": false,
-        "iconColor": "green",
-        "name": "before",
-        "target": {
-          "type": "tags",
-          "matchAny": false,
-          "tags": [
-            "before",
-            "quiz-write-opt"
-          ],
-          "limit": 100
-        },
-        "type": "tags"
-      },
-      {
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": false,
-        "iconColor": "orange",
-        "name": "after",
-        "target": {
-          "type": "tags",
-          "matchAny": false,
-          "tags": [
-            "after",
-            "quiz-write-opt"
-          ],
-          "limit": 100
-        },
-        "type": "tags"
       }
     ]
   },
@@ -82,921 +22,321 @@
   "links": [],
   "panels": [
     {
-      "collapsed": false,
+      "id": 35,
+      "type": "timeseries",
+      "title": "요청 유입 타임라인 — 초당 요청 수 (런이 언제 돌았는지 확인·줌용)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "gridPos": {
-        "h": 1,
+        "x": 0,
+        "y": 0,
         "w": 24,
-        "x": 0,
-        "y": 13
+        "h": 6
       },
-      "id": 1,
-      "panels": [],
-      "title": "핵심 증명 — DB 전송량 & 응답시간",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "MySQL이 클라이언트로 보낸 바이트/초. enhancement 적용 후 풀이 조회에서 explanation_content(lazy)가 SELECT에서 빠져 이 값이 감소한다(SC-001, 목표 60%↑ 절감). ⚠️ MySQL을 스크레이프하는 Prometheus(프로덕션 Alloy 또는 로컬 mysqld-exporter)가 필요. 로컬 순수 실험 시 quickstart §4의 SHOW GLOBAL STATUS 'Bytes_sent' 델타로 대체.",
+      "targets": [
+        {
+          "expr": "sum(rate(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "off",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "sum(rate(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__rate_interval]))",
+          "refId": "B",
+          "legendFormat": "on",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "lineWidth": 1,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none"
+            },
+            "spanNulls": false,
+            "pointSize": 4
+          },
           "color": {
             "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "Bps"
+          }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
-      },
-      "id": 2,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "desc"
+          "sort": "none"
         }
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "rate(mysql_global_status_bytes_sent[$__rate_interval])",
-          "legendFormat": "bytes_sent/s",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "DB→WAS 전송량 (rate) ★핵심",
-      "type": "timeseries"
+      "description": "explanation-review 요청의 유입 시각을 초당 요청 수로 표시. off/on 런이 각각 언덕으로 보인다 — 아래 pooled 패널들을 읽기 전에 범위 안에 어떤 런들이 있는지 확인하고, 드래그 줌으로 원하는 런들만 범위에 남기는 용도. 해상도는 스크레이프 간격(5s) 단위라 개별 요청이 아니라 유입 강도의 흐름이다."
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "uri별 p95 지연. enhancement가 풀이 조회(/problem-set/{id})의 로드를 줄여도 p95가 악화되지 않아야 한다(SC-006).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket{application=\"$application\", instance=\"$instance\", uri=~\"/problem-set/{id}|/explanation/{id}|/history\"}[$__rate_interval])))",
-          "legendFormat": "{{uri}} p95",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "풀이/해설/채점 응답시간 p95 (경로별)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "템플릿 변수 $uri로 선택한 경로의 분위수. before/after 구간을 나란히 비교.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"$application\", instance=\"$instance\", uri=\"$uri\"}[$__rate_interval])))",
-          "legendFormat": "p50",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"$application\", instance=\"$instance\", uri=\"$uri\"}[$__rate_interval])))",
-          "legendFormat": "p95",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"$application\", instance=\"$instance\", uri=\"$uri\"}[$__rate_interval])))",
-          "legendFormat": "p99",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "선택 경로 응답시간 p50/p95/p99 ($uri)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 29
-      },
-      "id": 5,
-      "panels": [],
-      "title": "자원 — 메모리 / CPU / GC",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "heap used vs committed. lazy로 큰 TEXT를 안 읽으면 조회당 힙 할당이 줄어 사용량·GC 압박이 완화된다.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 30
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(jvm_memory_used_bytes{application=\"$application\", instance=\"$instance\", area=\"heap\"})",
-          "legendFormat": "heap used",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "sum(jvm_memory_committed_bytes{application=\"$application\", instance=\"$instance\", area=\"heap\"})",
-          "legendFormat": "heap committed",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "JVM Heap 사용량",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "process_cpu_usage (0~1). 쓰기 경로에서 dirty tracking이 스냅샷 비교를 없애 CPU를 낮춘다(research D7 부하 B).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 30
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "rate(process_cpu_time_ns_total[$__rate_interval])/1e9",
-          "legendFormat": "cpu (cores)",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "프로세스 CPU (코어, counter rate) ★정밀",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "young GC 빈도(pause count/s)와 할당률(bytes/s). enhancement 적용 시 조회당 할당 감소 → GC 빈도 감소가 기대된다.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 30
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "rate(jvm_gc_pause_seconds_count{application=\"$application\", instance=\"$instance\"}[$__rate_interval])",
-          "legendFormat": "GC pause/s",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "rate(jvm_gc_memory_allocated_bytes_total{application=\"$application\", instance=\"$instance\"}[$__rate_interval])",
-          "legendFormat": "할당 bytes/s",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "GC 빈도 & 힙 할당률",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 38
-      },
-      "id": 9,
-      "panels": [],
-      "title": "커넥션 & 쿼리",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "active/idle/pending/max. 조회가 가벼워지면 커넥션 점유 시간이 줄어 pending이 완화된다.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 39
-      },
-      "id": 10,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "hikaricp_connections_active{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "active",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "hikaricp_connections_idle{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "idle",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "hikaricp_connections_pending{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "pending",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "hikaricp_connections_max{application=\"$application\", instance=\"$instance\"}",
-          "legendFormat": "max",
-          "range": true,
-          "refId": "D"
-        }
-      ],
-      "title": "HikariCP 커넥션 풀",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "questions/s. Hibernate statistics 미노출이라 MySQL global status로 대체. 해설 화면 N+1이 있으면 문항 수에 비례해 증가 → Q7 프로젝션 적용 후 세트당 1쿼리로 억제. ⚠️ MySQL 스크레이프 필요.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 39
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "rate(mysql_global_status_questions[$__rate_interval])",
-          "legendFormat": "questions/s",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "MySQL 쿼리 처리량 (N+1 감시)",
-      "type": "timeseries"
-    },
-    {
-      "id": 12,
+      "id": 25,
       "type": "row",
-      "title": "▶ 어노테이션 구간 집계 (before vs after, @modifier)",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
       "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 13,
-      "type": "stat",
-      "title": "DB→WAS 전송량/s ★",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+      "panels": [],
+      "title": "▶ 범위 합산 — 범위 내 모든 런의 최종 누적값 합 ÷ 총 요청 수 (run 라벨 기반, 외삽 없음·정확)",
       "gridPos": {
-        "h": 6,
-        "w": 8,
         "x": 0,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "decimals": 2,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "refId": "before",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "before",
-          "expr": "avg_over_time(rate(mysql_global_status_bytes_sent[1m])[${win}:5s] @ ${before_end})"
-        },
-        {
-          "refId": "after",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "after",
-          "expr": "avg_over_time(rate(mysql_global_status_bytes_sent[1m])[${win}:5s] @ ${after_end})"
-        }
-      ]
+        "y": 6,
+        "w": 24,
+        "h": 1
+      }
     },
     {
-      "id": 14,
+      "id": 26,
       "type": "stat",
-      "title": "앱 CPU-time (s) ★정밀",
+      "title": "범위 평균 요청당 지연(ms) - APP",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "decimals": 2,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "refId": "before",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "before",
-          "expr": "increase(process_cpu_time_ns_total[${win}] @ ${before_end})/1e9"
-        },
-        {
-          "refId": "after",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "after",
-          "expr": "increase(process_cpu_time_ns_total[${win}] @ ${after_end})/1e9"
-        }
-      ]
-    },
-    {
-      "id": 15,
-      "type": "stat",
-      "title": "DB CPU-time (s) ★정밀",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "decimals": 2,
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "refId": "before",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "before",
-          "expr": "increase(container_cpu_usage_seconds_total{name=\"q-asker-db\",cpu=\"total\"}[${win}] @ ${before_end})"
-        },
-        {
-          "refId": "after",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "after",
-          "expr": "increase(container_cpu_usage_seconds_total{name=\"q-asker-db\",cpu=\"total\"}[${win}] @ ${after_end})"
-        }
-      ]
-    },
-    {
-      "id": 16,
-      "type": "stat",
-      "title": "앱 힙 max",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
         "x": 0,
-        "y": 7
+        "y": 7,
+        "w": 12,
+        "h": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "decbytes",
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "1000 * sum(last_over_time(http_server_requests_seconds_sum{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])) / sum(last_over_time(http_server_requests_seconds_count{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "off",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "1000 * sum(last_over_time(http_server_requests_seconds_sum{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])) / sum(last_over_time(http_server_requests_seconds_count{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "on",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "범위 내 모든 런의 최종 누적값을 합산해 총 요청 수로 나눈 요청당 값(pooled) — run 태그로 런마다 별도 시리즈라 last_over_time 합산은 외삽 없이 정확하다. 런을 여러 쌍 담을수록 런 간 노이즈가 평균화된다. 주의: 파라미터가 다른 런이 범위에 섞이면 평균이 오염되므로 타임라인에서 확인 후 범위를 좁힐 것. run 태그 도입 이전 런들은 최신 런만 반영됨."
+    },
+    {
+      "id": 27,
+      "type": "stat",
+      "title": "범위 평균 요청당 CPU(ms) — APP 요청 스레드, MySQL 제외",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "1000 * sum(last_over_time(request_thread_cpu_seconds_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])) / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "off",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "1000 * sum(last_over_time(request_thread_cpu_seconds_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])) / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "on",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "범위 내 모든 런의 최종 누적값을 합산해 총 요청 수로 나눈 요청당 값(pooled) — run 태그로 런마다 별도 시리즈라 last_over_time 합산은 외삽 없이 정확하다. 런을 여러 쌍 담을수록 런 간 노이즈가 평균화된다. 주의: 파라미터가 다른 런이 범위에 섞이면 평균이 오염되므로 타임라인에서 확인 후 범위를 좁힐 것. run 태그 도입 이전 런들은 최신 런만 반영됨."
+    },
+    {
+      "id": 28,
+      "type": "stat",
+      "title": "범위 평균 요청당 힙 할당량(MB) — APP",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(last_over_time(request_thread_allocated_bytes_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])) / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])) / 1048576",
+          "refId": "A",
+          "legendFormat": "off",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "sum(last_over_time(request_thread_allocated_bytes_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])) / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])) / 1048576",
+          "refId": "B",
+          "legendFormat": "on",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "범위 내 모든 런의 최종 누적값을 합산해 총 요청 수로 나눈 요청당 값(pooled) — run 태그로 런마다 별도 시리즈라 last_over_time 합산은 외삽 없이 정확하다. 런을 여러 쌍 담을수록 런 간 노이즈가 평균화된다. 주의: 파라미터가 다른 런이 범위에 섞이면 평균이 오염되므로 타임라인에서 확인 후 범위를 좁힐 것. run 태그 도입 이전 런들은 최신 런만 반영됨."
+    },
+    {
+      "id": 29,
+      "type": "stat",
+      "title": "범위 총 요청 수 — 모든 런 합산 (정확)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
           "decimals": 0,
           "color": {
             "mode": "thresholds"
@@ -1029,44 +369,60 @@
       },
       "targets": [
         {
-          "refId": "before",
+          "expr": "sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "off",
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
           "instant": true,
-          "legendFormat": "before",
-          "expr": "max_over_time(sum(jvm_memory_used_bytes{area=\"heap\"})[${win}:5s] @ ${before_end})"
+          "range": false
         },
         {
-          "refId": "after",
+          "expr": "sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "on",
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
           "instant": true,
-          "legendFormat": "after",
-          "expr": "max_over_time(sum(jvm_memory_used_bytes{area=\"heap\"})[${win}:5s] @ ${after_end})"
+          "range": false
         }
-      ]
+      ],
+      "description": "범위 내 모든 런의 최종 누적 요청 수 합 — 런마다 고유 run 태그가 붙어 별도 시리즈가 되므로, 시리즈별 마지막 원값을 합산(last_over_time)해 외삽 없이 정확하다. 기대값 = 런 수 × 100 (5쌍이면 정확히 500). 주의: run 태그 도입(2026-07-26) 이전 런들은 같은 시리즈를 공유해 최신 런만 잡힌다. 역할: off/on 작업량 동일성(공정성) 확인."
     },
     {
-      "id": 17,
+      "id": 42,
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "title": "▶ MySQL 서버 측 — 요청당 자원 소비 (바이트는 시간대로 잘라 집계, 시간·행수는 요청 한 건당 평균)",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 43,
       "type": "stat",
-      "title": "InnoDB data_read/s",
+      "title": "범위 평균 요청당 DB 송신 바이트(MB) — MySQL → 앱",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 7
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps",
+          "unit": "decmbytes",
           "decimals": 2,
           "color": {
             "mode": "thresholds"
@@ -1099,249 +455,1300 @@
       },
       "targets": [
         {
-          "refId": "before",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "before",
-          "expr": "avg_over_time(rate(mysql_global_status_innodb_data_read[1m])[${win}:5s] @ ${before_end})"
-        },
-        {
-          "refId": "after",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "instant": true,
-          "legendFormat": "after",
-          "expr": "avg_over_time(rate(mysql_global_status_innodb_data_read[1m])[${win}:5s] @ ${after_end})"
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "collapsed": false,
-      "title": "▼ 쓰기 축 (write scenario) — before/after",
-      "gridPos": {
-        "x": 0,
-        "y": 47,
-        "w": 24,
-        "h": 1
-      },
-      "id": 18,
-      "panels": []
-    },
-    {
-      "type": "text",
-      "id": 19,
-      "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 48
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "### 쓰기 축(dirty tracking) before/after\n부하당 핵심 수치(**appCPU/write, dbCPU/write, rowsUpd/write, dataWritten/write, write p95**)는 아래 초록(before)·주황(after) 어노테이션 **구간 텍스트**에 실려 있다. 아래 패널은 부하 구간 동안의 앱 JVM CPU·힙·GC를 시간축으로 보여준다. 측정: `measure-write.sh before` → 인핸스먼트 끈 빌드로 교체 → `measure-write.sh after`."
-      }
-    },
-    {
-      "type": "timeseries",
-      "id": 20,
-      "title": "[쓰기] 앱 process CPU usage",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 52
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      },
-      "targets": [
-        {
+          "expr": "0.00000095367431640625 * sum(sum_over_time((rate(mysql_global_status_bytes_sent{instance=\"x100\"}[10s]) and on() (sum(rate(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[10s])) > 0))[$__range:2s])) * 2 / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range]))",
           "refId": "A",
+          "legendFormat": "off",
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "PBFA97CFB590B2093"
           },
-          "expr": "process_cpu_usage",
-          "legendFormat": "process"
+          "instant": true,
+          "range": false
         },
         {
+          "expr": "0.00000095367431640625 * sum(sum_over_time((rate(mysql_global_status_bytes_sent{instance=\"x100\"}[10s]) and on() (sum(rate(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[10s])) > 0))[$__range:2s])) * 2 / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range]))",
           "refId": "B",
+          "legendFormat": "on",
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "PBFA97CFB590B2093"
           },
-          "expr": "system_cpu_usage",
-          "legendFormat": "system"
+          "instant": true,
+          "range": false
         }
-      ]
+      ],
+      "description": "MySQL이 앱으로 내보낸 바이트 ÷ 요청 수 — 인핸스먼트 효과의 서버 측 물증(지연 4컬럼이 SELECT에서 빠진 만큼 감소). 집계 방식: MySQL 지표에는 mode 라벨이 없으므로, 그 모드의 요청이 실제로 흐르던 시각의 표본만 골라 합산한 뒤 그 모드의 총 요청 수로 나눈다(런이 돌던 시간대로 잘라 집계). 앱 지표(위 섹션)와 달리 런 경계에서 ±수 % 번짐이 있을 수 있다. 주의: exporter는 x100 DB 전체를 보므로 다른 작업 트래픽이 섞일 수 있다."
     },
     {
-      "type": "timeseries",
-      "id": 21,
-      "title": "[쓰기] JVM heap used",
+      "id": 46,
+      "type": "stat",
+      "title": "범위 평균 요청당 DB 수신 바이트(KB) — 앱 → MySQL (대조군)",
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 12,
-        "y": 52
+        "y": 22,
+        "w": 12,
+        "h": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10
+          "unit": "deckbytes",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
       },
       "targets": [
         {
+          "expr": "0.0009765625 * sum(sum_over_time((rate(mysql_global_status_bytes_received{instance=\"x100\"}[10s]) and on() (sum(rate(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[10s])) > 0))[$__range:2s])) * 2 / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range]))",
           "refId": "A",
+          "legendFormat": "off",
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
-          "legendFormat": "heap used"
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "0.0009765625 * sum(sum_over_time((rate(mysql_global_status_bytes_received{instance=\"x100\"}[10s]) and on() (sum(rate(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[10s])) > 0))[$__range:2s])) * 2 / sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range]))",
+          "refId": "B",
+          "legendFormat": "on",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "instant": true,
+          "range": false
         }
-      ]
+      ],
+      "description": "앱이 MySQL로 보낸 바이트(요청 SQL·커밋) ÷ 요청 수 — 공정성 대조군. 인핸스먼트는 보내는 쪽을 바꾸지 않으므로 off/on이 비슷해야 정상이다(크게 다르면 워크로드가 달라진 것). 집계 방식: MySQL 지표에는 mode 라벨이 없으므로, 그 모드의 요청이 실제로 흐르던 시각의 표본만 골라 합산한 뒤 그 모드의 총 요청 수로 나눈다(런이 돌던 시간대로 잘라 집계). 앱 지표(위 섹션)와 달리 런 경계에서 ±수 % 번짐이 있을 수 있다. 주의: exporter는 x100 DB 전체를 보므로 다른 작업 트래픽이 섞일 수 있다."
     },
     {
-      "type": "timeseries",
-      "id": 22,
-      "title": "[쓰기] JVM GC pause (rate)",
+      "id": 49,
+      "type": "stat",
+      "title": "범위 평균 요청당 DB 실행시간(ms) — 요청 한 건당 쿼리 수행시간 평균",
+      "description": "MySQL이 이 요청의 쿼리를 실행하는 데 쓴 시간의 합 ÷ 요청 수. run.sh가 매 런 끝에 performance_schema 링버퍼를 굳혀 넣은 enh_snapshot을 직접 집계한다. SQL 주석에 심어둔 mode·reqId가 그대로 컬럼이라 시각으로 갈라낼 필요가 없다 — WHERE mode로 정확히 갈리므로 런 경계 번짐이 없다. 대상은 explanation-review 요청이 발행한 쿼리만(배경 쿼리·exporter 조회 제외). 대시보드 시간 범위가 ts에 그대로 적용되며, 범위 안 모든 런이 합산된다. 산식은 앱 섹션과 같은 pooled 평균(합 ÷ 요청 수)이다.",
       "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 60
+        "y": 27,
+        "w": 12,
+        "h": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
       },
       "targets": [
         {
           "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(SUM(CASE WHEN mode='off' THEN ms END) / COUNT(DISTINCT CASE WHEN mode='off' THEN reqId END), 3) AS `off`,\n  ROUND(SUM(CASE WHEN mode='on' THEN ms END) / COUNT(DISTINCT CASE WHEN mode='on' THEN reqId END), 3) AS `on`\nFROM enh_snapshot WHERE $__timeFilter(ts)",
           "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "rate(jvm_gc_pause_seconds_sum[1m])",
-          "legendFormat": "{{action}} {{cause}}"
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          }
         }
       ]
     },
     {
-      "type": "timeseries",
-      "id": 23,
-      "title": "[쓰기] DB 커넥션 풀 (HikariCP active)",
+      "id": 50,
+      "type": "stat",
+      "title": "범위 평균 요청당 DB 서버 CPU(ms) — 요청 한 건당 쿼리 CPU 시간 평균",
+      "description": "위 실행시간 중 실제로 CPU를 쓴 몫. 실행시간에 근접하면 I/O 대기가 아니라 CPU 바운드라는 뜻이다. performance_schema의 events_statements_cpu 소비자가 켜져 있어야 채워진다(run.sh STEP 1이 켠다). run.sh가 매 런 끝에 performance_schema 링버퍼를 굳혀 넣은 enh_snapshot을 직접 집계한다. SQL 주석에 심어둔 mode·reqId가 그대로 컬럼이라 시각으로 갈라낼 필요가 없다 — WHERE mode로 정확히 갈리므로 런 경계 번짐이 없다. 대상은 explanation-review 요청이 발행한 쿼리만(배경 쿼리·exporter 조회 제외). 대시보드 시간 범위가 ts에 그대로 적용되며, 범위 안 모든 런이 합산된다. 산식은 앱 섹션과 같은 pooled 평균(합 ÷ 요청 수)이다.",
       "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 12,
-        "y": 60
+        "y": 27,
+        "w": 12,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(SUM(CASE WHEN mode='off' THEN cpu_ms END) / COUNT(DISTINCT CASE WHEN mode='off' THEN reqId END), 3) AS `off`,\n  ROUND(SUM(CASE WHEN mode='on' THEN cpu_ms END) / COUNT(DISTINCT CASE WHEN mode='on' THEN reqId END), 3) AS `on`\nFROM enh_snapshot WHERE $__timeFilter(ts)",
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          }
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "type": "stat",
+      "title": "요청당 SQL 쿼리 수 (대조군)",
+      "description": "요청 하나가 발행한 SQL 쿼리 수 — off/on이 같아야 정상이다(같은 일을 했다는 증거). 배치 조회 1회 + 형식 미달 마킹 UPDATE로 구성되며, 마킹은 첫 요청에서만 실제로 일어나 평균이 1에 가깝게 내려간다. run.sh가 매 런 끝에 performance_schema 링버퍼를 굳혀 넣은 enh_snapshot을 직접 집계한다. SQL 주석에 심어둔 mode·reqId가 그대로 컬럼이라 시각으로 갈라낼 필요가 없다 — WHERE mode로 정확히 갈리므로 런 경계 번짐이 없다. 대상은 explanation-review 요청이 발행한 쿼리만(배경 쿼리·exporter 조회 제외). 대시보드 시간 범위가 ts에 그대로 적용되며, 범위 안 모든 런이 합산된다. 산식은 앱 섹션과 같은 pooled 평균(합 ÷ 요청 수)이다.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 6,
+        "h": 4
       },
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
       },
       "targets": [
         {
           "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(COUNT(CASE WHEN mode='off' THEN 1 END) / COUNT(DISTINCT CASE WHEN mode='off' THEN reqId END), 2) AS `off`,\n  ROUND(COUNT(CASE WHEN mode='on' THEN 1 END) / COUNT(DISTINCT CASE WHEN mode='on' THEN reqId END), 2) AS `on`\nFROM enh_snapshot WHERE $__timeFilter(ts)",
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          }
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "type": "stat",
+      "title": "요청당 반환행 (대조군)",
+      "description": "요청 하나가 DB에서 받아온 행 수 — 기대값은 SEED_SETS×PER_SET(기본 50×20=1000)이다. 이 값이 기대와 맞는 것이 집계 대상이 옳다는 자기검증이고, off/on이 같아야 비교가 공정하다. run.sh가 매 런 끝에 performance_schema 링버퍼를 굳혀 넣은 enh_snapshot을 직접 집계한다. SQL 주석에 심어둔 mode·reqId가 그대로 컬럼이라 시각으로 갈라낼 필요가 없다 — WHERE mode로 정확히 갈리므로 런 경계 번짐이 없다. 대상은 explanation-review 요청이 발행한 쿼리만(배경 쿼리·exporter 조회 제외). 대시보드 시간 범위가 ts에 그대로 적용되며, 범위 안 모든 런이 합산된다. 산식은 앱 섹션과 같은 pooled 평균(합 ÷ 요청 수)이다.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 18,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(SUM(CASE WHEN mode='off' THEN sent END) / COUNT(DISTINCT CASE WHEN mode='off' THEN reqId END), 0) AS `off`,\n  ROUND(SUM(CASE WHEN mode='on' THEN sent END) / COUNT(DISTINCT CASE WHEN mode='on' THEN reqId END), 0) AS `on`\nFROM enh_snapshot WHERE $__timeFilter(ts)",
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          }
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "type": "stat",
+      "title": "요청당 스캔행 (대조군)",
+      "description": "MySQL이 훑은 행 수 — 반환행에 근접하면 인덱스를 제대로 탄 것이다. off/on이 같은데 위 실행시간·서버 CPU가 갈린다면, 서버 비용이 행 수가 아니라 실어 나른 바이트에 비례한다는 증거가 된다(EXPLAIN으로는 보이지 않는 축). run.sh가 매 런 끝에 performance_schema 링버퍼를 굳혀 넣은 enh_snapshot을 직접 집계한다. SQL 주석에 심어둔 mode·reqId가 그대로 컬럼이라 시각으로 갈라낼 필요가 없다 — WHERE mode로 정확히 갈리므로 런 경계 번짐이 없다. 대상은 explanation-review 요청이 발행한 쿼리만(배경 쿼리·exporter 조회 제외). 대시보드 시간 범위가 ts에 그대로 적용되며, 범위 안 모든 런이 합산된다. 산식은 앱 섹션과 같은 pooled 평균(합 ÷ 요청 수)이다.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(SUM(CASE WHEN mode='off' THEN examined END) / COUNT(DISTINCT CASE WHEN mode='off' THEN reqId END), 0) AS `off`,\n  ROUND(SUM(CASE WHEN mode='on' THEN examined END) / COUNT(DISTINCT CASE WHEN mode='on' THEN reqId END), 0) AS `on`\nFROM enh_snapshot WHERE $__timeFilter(ts)",
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          }
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "type": "stat",
+      "title": "범위 집계 요청 수 — enh_snapshot 기준",
+      "description": "링버퍼에서 건져 올린 서로 다른 reqId 수. 앱 섹션의 요청 수(=PAIRS×ROUNDS)와 같아야 정상이며, 작으면 그만큼 링버퍼(10,000행)에서 밀려난 것이고 크면 범위에 다른 런이 섞인 것이다. run.sh가 매 런 끝에 performance_schema 링버퍼를 굳혀 넣은 enh_snapshot을 직접 집계한다. SQL 주석에 심어둔 mode·reqId가 그대로 컬럼이라 시각으로 갈라낼 필요가 없다 — WHERE mode로 정확히 갈리므로 런 경계 번짐이 없다. 대상은 explanation-review 요청이 발행한 쿼리만(배경 쿼리·exporter 조회 제외). 대시보드 시간 범위가 ts에 그대로 적용되며, 범위 안 모든 런이 합산된다. 산식은 앱 섹션과 같은 pooled 평균(합 ÷ 요청 수)이다.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 18,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(COUNT(DISTINCT CASE WHEN mode='off' THEN reqId END), 0) AS `off`,\n  ROUND(COUNT(DISTINCT CASE WHEN mode='on' THEN reqId END), 0) AS `on`\nFROM enh_snapshot WHERE $__timeFilter(ts)",
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          }
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "title": "▶ JFR 메서드 계측(JEP 520) — 순수 CPU 5종 + 혼합 창, 범위 합산·요청당 (정확)",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 31,
+      "type": "table",
+      "title": "더티체킹 — 순수 CPU 4종 (범위 평균, 요청당)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (method) (last_over_time(jfr_method_invocations{mode=\"off\",method=~\"DefaultFlushEntityEventListener.performDirtyCheck|DefaultFlushEntityEventListener.getDirtyPropertiesFromSelfDirtinessTracker|AbstractEntityPersister.resolveDirtyAttributeIndexes|InlineDirtyCheckerEqualsHelper.areEquals\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])))",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "hikaricp_connections_active",
-          "legendFormat": "active"
+            "uid": "PBFA97CFB590B2093"
+          }
         },
         {
+          "expr": "sum by (method) (last_over_time(jfr_method_invocations{mode=\"on\",method=~\"DefaultFlushEntityEventListener.performDirtyCheck|DefaultFlushEntityEventListener.getDirtyPropertiesFromSelfDirtinessTracker|AbstractEntityPersister.resolveDirtyAttributeIndexes|InlineDirtyCheckerEqualsHelper.areEquals\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])))",
           "refId": "B",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "1000 * sum by (method) (last_over_time(jfr_method_time_total_seconds{mode=\"off\",method=~\"DefaultFlushEntityEventListener.performDirtyCheck|DefaultFlushEntityEventListener.getDirtyPropertiesFromSelfDirtinessTracker|AbstractEntityPersister.resolveDirtyAttributeIndexes|InlineDirtyCheckerEqualsHelper.areEquals\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])))",
+          "refId": "C",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "1000 * sum by (method) (last_over_time(jfr_method_time_total_seconds{mode=\"on\",method=~\"DefaultFlushEntityEventListener.performDirtyCheck|DefaultFlushEntityEventListener.getDirtyPropertiesFromSelfDirtinessTracker|AbstractEntityPersister.resolveDirtyAttributeIndexes|InlineDirtyCheckerEqualsHelper.areEquals\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])))",
+          "refId": "D",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "method",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true
+            },
+            "renameByName": {
+              "method": "메서드",
+              "Value #A": "off 호출/요청",
+              "Value #B": "on 호출/요청",
+              "Value #C": "off ms/요청",
+              "Value #D": "on ms/요청"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "off 호출/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
           },
-          "expr": "hikaricp_connections_pending",
-          "legendFormat": "pending"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on 호출/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "off ms/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on ms/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "countRows": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "off 호출/요청",
+            "on 호출/요청",
+            "off ms/요청",
+            "on ms/요청"
+          ]
+        }
+      },
+      "description": "범위 내 모든 런의 최종 누적값 합 ÷ 총 요청 수 = 요청당 값 (run 라벨 기반, 외삽 없음) — 범위 평균 행과 동일 의미론. 스냅샷 비교(performDirtyCheck, OFF 경로 — ON에서 0이어야 정상=폴백 소멸), 장부 읽기(getDirtyProperties~Tracker), 필드명→인덱스 변환(resolveDirtyAttributeIndexes), setter 시점 비교(areEquals, ON 전용 — OFF 열 빈칸 정상). 기대: off 스냅샷 비교=행수(1000)/요청, on=0. 합계 행 = 더티체킹 방식별 요청당 총비용. 주의: 파라미터 다른 런이 범위에 섞이면 오염 — 비교 대상 런들로 범위를 좁힐 것."
+    },
+    {
+      "id": 34,
+      "type": "table",
+      "title": "읽기 — 순수 CPU 조립 창 readRow (범위 평균, 요청당)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "sum by (method) (last_over_time(jfr_method_invocations{mode=\"off\",method=~\"StandardRowReader.readRow\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])))",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "sum by (method) (last_over_time(jfr_method_invocations{mode=\"on\",method=~\"StandardRowReader.readRow\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])))",
+          "refId": "B",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "1000 * sum by (method) (last_over_time(jfr_method_time_total_seconds{mode=\"off\",method=~\"StandardRowReader.readRow\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])))",
+          "refId": "C",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "1000 * sum by (method) (last_over_time(jfr_method_time_total_seconds{mode=\"on\",method=~\"StandardRowReader.readRow\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])))",
+          "refId": "D",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "method",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true
+            },
+            "renameByName": {
+              "method": "메서드",
+              "Value #A": "off 호출/요청",
+              "Value #B": "on 호출/요청",
+              "Value #C": "off ms/요청",
+              "Value #D": "on ms/요청"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "off 호출/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on 호출/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "off ms/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on ms/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "countRows": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "off 호출/요청",
+            "on 호출/요청",
+            "off ms/요청",
+            "on ms/요청"
+          ]
+        }
+      },
+      "description": "범위 내 모든 런의 최종 누적값 합 ÷ 총 요청 수 = 요청당 값 (run 라벨 기반, 외삽 없음) — 범위 평균 행과 동일 의미론. 행 조립 창: 수신 버퍼에서 값 추출·String 디코딩·엔티티 채움(행당 1회). DB 대기와 절연된 순수 CPU 구간 — 인핸스먼트 절감의 본체. 기대: off/on 호출/요청 동일(≈행수), ms/요청만 감소."
+    },
+    {
+      "id": 39,
+      "type": "table",
+      "title": "읽기 — 혼합 창 executeQuery (대기 포함, 범위 평균·요청당)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "sum by (method) (last_over_time(jfr_method_invocations{mode=\"off\",method=\"DeferredResultSetAccess.executeQuery\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])))",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "sum by (method) (last_over_time(jfr_method_invocations{mode=\"on\",method=\"DeferredResultSetAccess.executeQuery\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])))",
+          "refId": "B",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "1000 * sum by (method) (last_over_time(jfr_method_time_total_seconds{mode=\"off\",method=\"DeferredResultSetAccess.executeQuery\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"off\"}[$__range])))",
+          "refId": "C",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "1000 * sum by (method) (last_over_time(jfr_method_time_total_seconds{mode=\"on\",method=\"DeferredResultSetAccess.executeQuery\"}[$__range])) / scalar(sum(last_over_time(request_count_total{uri=\"/admin/problem-sets/explanation-review\",mode=\"on\"}[$__range])))",
+          "refId": "D",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "method",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true
+            },
+            "renameByName": {
+              "method": "메서드",
+              "Value #A": "off 호출/요청",
+              "Value #B": "on 호출/요청",
+              "Value #C": "off ms/요청",
+              "Value #D": "on ms/요청"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "off 호출/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on 호출/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "off ms/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "on ms/요청"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "description": "혼합 창(경과시간, DB 대기 포함): DeferredResultSetAccess.executeQuery — SQL 전송 + MySQL 실행 대기 + 결과 전량 수신(TLS 복호화·패킷 파싱 포함), 쿼리당 1회(요청당 50쿼리 = 세트당 1쿼리). wall이므로 CPU가 아니라 '로딩 구간 절감'으로 읽는다 — off/on이 같은 DB라 차이값 비교는 유효. 조립 창(readRow, 순수 CPU)과 형제 관계라 중첩 오염 없음. 기대: 호출/요청 ≈ 51(세트 50 + 잡쿼리), off/on 동일."
+    },
+    {
+      "id": 33,
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "title": "▶ 측정 시드 — run.sh가 시딩한 합성 problem_quality_log 분포",
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "측정 시드 problem_quality_log 필드별 평균 크기 (KB) — x100 실측 분포 반영, null 제외",
+      "description": "run.sh가 시딩한 합성 세트(problem_set_id>9,000,000)의 컬럼별 평균 바이트/1024. 운영 실측(v1_question_json≈2.6KB 등)에 맞춰 보정. @LazyGroup(\"pass2\") 대상(v1/v2_question_json·feedback)이 ON에서 SELECT 제외되는 lazy 컬럼. 주의: 대상 범위(problem_set_id > 100000000)는 run.sh의 SET_BASE와 같아야 한다 — 어긋나면 시드가 아니라 실데이터 전체를 훑어 값도 틀리고 측정 중인 DB에 부하를 준다.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT 'v1_question_json' AS 필드, ROUND(AVG(LENGTH(v1_question_json))/1024,3) AS 평균_KB, COUNT(v1_question_json) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000 UNION ALL SELECT 'v1_explanation' AS 필드, ROUND(AVG(LENGTH(v1_explanation))/1024,3) AS 평균_KB, COUNT(v1_explanation) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000 UNION ALL SELECT 'v1_feedback' AS 필드, ROUND(AVG(LENGTH(v1_feedback))/1024,3) AS 평균_KB, COUNT(v1_feedback) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000 UNION ALL SELECT 'v2_question_json' AS 필드, ROUND(AVG(LENGTH(v2_question_json))/1024,3) AS 평균_KB, COUNT(v2_question_json) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000 UNION ALL SELECT 'v2_explanation' AS 필드, ROUND(AVG(LENGTH(v2_explanation))/1024,3) AS 평균_KB, COUNT(v2_explanation) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000 UNION ALL SELECT 'v2_feedback' AS 필드, ROUND(AVG(LENGTH(v2_feedback))/1024,3) AS 평균_KB, COUNT(v2_feedback) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000 UNION ALL SELECT 'review' AS 필드, ROUND(AVG(LENGTH(review))/1024,3) AS 평균_KB, COUNT(review) AS 값있는행 FROM problem_quality_log WHERE problem_set_id > 100000000",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "평균_KB"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 60,
+      "type": "stat",
+      "title": "요청 String 버퍼 HIGH — 대형 컬럼 materialize (off/on)",
+      "description": "mem_probe: memory/sql/String::value 의 부하 구간 HIGH_NUMBER_OF_BYTES_USED, 범위 내 런들의 mode별 평균. 대형 질문 JSON을 String으로 들고 있는 버퍼 — 인핸스먼트 ON이 지연로딩으로 이 할당을 피하므로 off > on 이 기대. 런/모드당 1행(단일 엔드포인트라 창=엔드포인트).",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN mode='off' THEN string_value_bytes END)) AS `off`,\n  ROUND(AVG(CASE WHEN mode='on' THEN string_value_bytes END)) AS `on`\nFROM mem_probe WHERE $__timeFilter(ts)"
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "type": "stat",
+      "title": "내부 임시테이블 HIGH — TempTable RAM+disk (off/on)",
+      "description": "mem_probe: memory/temptable/physical_ram + physical_disk 의 부하 구간 HIGH 합, 범위 내 런들의 mode별 평균. GROUP BY·DISTINCT·파생테이블이 쓰는 내부 임시테이블 메모리. 대형 컬럼이 임시테이블 셀로 들어가면 커진다.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 12,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN mode='off' THEN temptable_bytes END)) AS `off`,\n  ROUND(AVG(CASE WHEN mode='on' THEN temptable_bytes END)) AS `on`\nFROM mem_probe WHERE $__timeFilter(ts)"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "type": "stat",
+      "title": "정렬 버퍼 HIGH — filesort (off/on)",
+      "description": "mem_probe: memory/sql/Filesort_buffer::sort_keys 의 부하 구간 HIGH, 범위 내 런들의 mode별 평균. ORDER BY filesort가 쓰는 정렬 버퍼. 이 워크로드는 정렬이 적어 작을 수 있다(0 근처면 정렬 경로 없음).",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 12,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN mode='off' THEN filesort_bytes END)) AS `off`,\n  ROUND(AVG(CASE WHEN mode='on' THEN filesort_bytes END)) AS `on`\nFROM mem_probe WHERE $__timeFilter(ts)"
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "type": "stat",
+      "title": "총 메모리 피크 — MAX_TOTAL_MEMORY (off/on)",
+      "description": "mem_probe: 이 모드 요청 문장의 총 메모리 피크(MAX(MAX_TOTAL_MEMORY)) = memory/% 합, 범위 내 런들의 mode별 평균. 위 3계측기를 포함한 문장당 총 작업 메모리의 피크. query-tuning의 trace_snapshot.mem_bytes와 같은 공통 지표. off > on 이 인핸스먼트 효과.",
+      "datasource": {
+        "type": "mysql",
+        "uid": "qasker-mysql-x100"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "mysql",
+            "uid": "qasker-mysql-x100"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN mode='off' THEN total_bytes END)) AS `off`,\n  ROUND(AVG(CASE WHEN mode='on' THEN total_bytes END)) AS `on`\nFROM mem_probe WHERE $__timeFilter(ts)"
         }
       ]
     }
@@ -1357,131 +1764,7 @@
     "write"
   ],
   "templating": {
-    "list": [
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
-        },
-        "definition": "label_values(application)",
-        "includeAll": false,
-        "label": "application",
-        "multi": false,
-        "name": "application",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(application)",
-          "refId": "var"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
-        },
-        "definition": "label_values(http_server_requests_seconds_count{application=\"$application\"}, instance)",
-        "includeAll": false,
-        "label": "instance",
-        "multi": false,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(http_server_requests_seconds_count{application=\"$application\"}, instance)",
-          "refId": "var"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "text": "/problem-set/{id}",
-          "value": "/problem-set/{id}"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
-        },
-        "definition": "label_values(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}, uri)",
-        "includeAll": false,
-        "label": "uri",
-        "multi": false,
-        "name": "uri",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(http_server_requests_seconds_count{application=\"$application\", instance=\"$instance\"}, uri)",
-          "refId": "var"
-        },
-        "refresh": 2,
-        "regex": "",
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "text": "1783432152",
-          "value": "1783432152"
-        },
-        "hide": 0,
-        "label": "before 끝 epoch(s)",
-        "name": "before_end",
-        "options": [
-          {
-            "selected": true,
-            "text": "1783432152",
-            "value": "1783432152"
-          }
-        ],
-        "query": "1783432152",
-        "type": "textbox"
-      },
-      {
-        "current": {
-          "text": "1783432640",
-          "value": "1783432640"
-        },
-        "hide": 0,
-        "label": "after 끝 epoch(s)",
-        "name": "after_end",
-        "options": [
-          {
-            "selected": true,
-            "text": "1783432640",
-            "value": "1783432640"
-          }
-        ],
-        "query": "1783432640",
-        "type": "textbox"
-      },
-      {
-        "current": {
-          "text": "60s",
-          "value": "60s"
-        },
-        "hide": 0,
-        "label": "구간 길이",
-        "name": "win",
-        "options": [
-          {
-            "selected": true,
-            "text": "60s",
-            "value": "60s"
-          }
-        ],
-        "query": "60s",
-        "type": "textbox"
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-1h",
@@ -1491,7 +1774,7 @@
   "timezone": "browser",
   "title": "Q-Asker Enhancement — 읽기·쓰기 통합 before/after",
   "uid": "qasker-enh-rw",
-  "version": 1,
+  "version": 6,
   "weekStart": "",
   "id": null
 }

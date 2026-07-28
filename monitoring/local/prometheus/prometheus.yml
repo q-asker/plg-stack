@@ -18,7 +18,8 @@ scrape_configs:
   # Spring Boot가 localhost:8080에서 실행 중이어야 함
   - job_name: "spring-boot"
     metrics_path: /actuator/prometheus
-    scrape_interval: 5s   # 단명 loadtest 앱: 끝에 몰린 짧은 부하도 잡히게 촘촘히(다른 job은 15s)
+    scrape_interval: 1s   # 단명 loadtest 앱: 런(~20s)당 표본을 충분히 확보해 increase() 외삽 오차를
+                          # 억제(5s에선 표본 3~4개로 단일 런 pooled 값이 ±30% 왜곡됐음). 다른 job은 15s.
     static_configs:
       - targets: ["host.docker.internal:9090"]
         labels:
@@ -31,11 +32,6 @@ scrape_configs:
         target_label: rm
         replacement: ${1}.${2}
 
-  # ----- cAdvisor: 컨테이너 CPU/메모리 (q-asker-db 등) -----
-  - job_name: "cadvisor"
-    static_configs:
-      - targets: ["local-cadvisor:8080"]
-
   # ----- mysqld_exporter: MySQL 서버 메트릭 (전송량·InnoDB 카운터) -----
   - job_name: "mysql"
     static_configs:
@@ -46,6 +42,7 @@ scrape_configs:
   # ----- mysqld_exporter (seed별): 스케일 레벨별 digest 지표 (perf_schema.eventsstatements) -----
   # 각 시드 컨테이너(x1/x10/x100)에 붙은 exporter를 seed 라벨로 스크레이프 → seed축 bar chart 데이터
   - job_name: "mysql-seed"
+    scrape_interval: 2s   # 인핸스먼트 런(~20s)의 송신 바이트를 런 창 단위로 자를 수 있게 촘촘히
     static_configs:
       - targets: ["local-mysqld-exporter-x1:9104"]
         labels:
