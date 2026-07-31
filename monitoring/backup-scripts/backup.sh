@@ -116,6 +116,13 @@ backup_prometheus() {
 
     log INFO "===== Prometheus 백업 시작 (ts=${TIMESTAMP}) ====="
 
+    # 0) 누출 스냅샷 방어 청소
+    #    스냅샷 생성(1)~로컬 정리(4) 사이에 프로세스가 강제 종료(OOM·Ctrl-C·크래시)되면
+    #    스냅샷이 남아 이후 원본 블록의 retention 삭제를 하드링크로 붙들어 디스크가 안 비워진다.
+    #    1시간 이상 된 것만 지워 방금 다른 실행이 만든 스냅샷과의 레이스를 피한다(flock에 더한 이중 안전).
+    find /mnt/monitoring/prometheus/snapshots -mindepth 1 -maxdepth 1 -type d \
+        -mmin +60 -exec rm -rf {} + 2>/dev/null || true
+
     # 1) snapshot API 호출
     snap_json="$(curl -sf -X POST http://localhost:9090/api/v1/admin/tsdb/snapshot)"
     snap_id="$(echo "$snap_json" | jq -r '.data.name')"
