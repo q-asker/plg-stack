@@ -24,7 +24,7 @@ BUCKET="qasker-mysql-backup"
 DR_PROFILE="BACKUP_READER"            # DR 원본 읽기
 OCI_PROFILE="BACKUP_WRITER"           # 마스킹본 업로드
 MASKED_PREFIX="masked/"
-EXCLUDE="'flyway_schema_history','pii_classification'"   # 복제/마스킹 제외(메타)
+EXCLUDE="'flyway_schema_history','pii_classification'"   # 마스킹 제외(메타·PII 아님); 덤프엔 포함
 WORK_DIR="/tmp"
 OUT="/tmp/masked-$(date +%Y%m%dT%H%M%SZ).sql.gz"
 
@@ -93,9 +93,11 @@ apply_err="$(printf 'SET foreign_key_checks=0;\n%s\n' "$SQL" \
   || { log "[ERR] 마스킹 적용 실패:"; echo "$apply_err" | sed 's/^/    /' >&2; exit 12; }
 
 # ── [4/4] 덤프 + 업로드 ──
-log "[4/4] mysqldump → $OUT (pii_classification 제외)"
+# pii_classification 은 마스킹은 제외(메타·PII 아님)하되 덤프엔 포함한다 — 복원 대상(벤치 DB)이 이 테이블을
+# 갖고 있어야 이후 마이그레이션(pii_classification INSERT 하는 것들)이 실패하지 않는다. flyway_schema_history 와 동일.
+log "[4/4] mysqldump → $OUT (pii_classification 포함, 마스킹만 제외)"
 docker exec "$CONTAINER" mysqldump -uroot -p"$ROOT_PWD" --single-transaction --no-tablespaces \
-  --ignore-table="$DB.pii_classification" "$DB" 2>/dev/null | gzip > "$OUT" \
+  "$DB" 2>/dev/null | gzip > "$OUT" \
   || { log "[ERR] 덤프 실패"; exit 12; }
 NOW_UTC="$(date -u +%Y%m%dT%H%M%SZ)"; DATE_PREFIX="$(date -u +%Y/%m/%d)"
 OBJECT_KEY="${MASKED_PREFIX%/}/${DATE_PREFIX}/qasker-masked-${NOW_UTC}.sql.gz"

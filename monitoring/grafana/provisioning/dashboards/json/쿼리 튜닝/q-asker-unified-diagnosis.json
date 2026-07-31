@@ -96,8 +96,8 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sum by(seed)(last_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d])) / sum by(seed)(last_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\"}[30d])) * 1000",
-          "legendFormat": "{{seed}}",
+          "expr": "sum by(seed, phase)(last_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\", phase=~\"before|after\"}[30d])) / sum by(seed, phase)(last_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\", phase=~\"before|after\"}[30d])) * 1000",
+          "legendFormat": "{{seed}} · {{phase}}",
           "refId": "A",
           "instant": true
         }
@@ -239,10 +239,10 @@
     },
     {
       "datasource": {
-        "type": "mysql",
-        "uid": "bfrwvbnu3162ob"
+        "type": "datasource",
+        "uid": "-- Mixed --"
       },
-      "title": "엔드포인트별 요청당 비용 (탐지·랭킹)",
+      "title": "엔드포인트별 요청당 비용 (탐지·랭킹 · 전역)",
       "description": "컬럼 설명 — uri: 엔드포인트(HTTP메서드:경로템플릿) · queries_per_req: 요청당 쿼리수(전체÷고유요청수, >1이면 N+1) · examined_per_req: 요청당 스캔행수(SUM(examined)÷요청수, 클수록 풀스캔) · reqs: 고유 요청수(표본 크기). examined 내림차순 랭킹.",
       "type": "table",
       "gridPos": {
@@ -263,12 +263,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "uri"
+              "options": "endpoint"
             },
             "properties": [
               {
                 "id": "description",
-                "value": "엔드포인트 = HTTP메서드:경로템플릿 (예: GET:/history/{id}). 요청을 처리한 컨트롤러 매핑."
+                "value": "엔드포인트 = HTTP메서드:경로템플릿 (예: GET:/history/{id}). 같은 경로에 메서드가 여럿이면 |로 병기(힙은 경로 단위라 합산)."
               },
               {
                 "id": "displayName",
@@ -323,6 +323,26 @@
                 "value": "요청수(표본)"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "heap_per_req"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "요청당 힙(MB)"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "description",
+                "value": "요청당 앱 스레드 힙 할당(MB) — 내부쿼리(lazy-load·dirty-check) 포함. request_thread_allocated_bytes_total ÷ 요청수(Prometheus). uri는 메서드 제거로 조인(같은 경로 다중 메서드는 합산)."
+              }
+            ]
           }
         ]
       },
@@ -337,11 +357,59 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT uri, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req, COUNT(DISTINCT reqId) AS reqs FROM trace_snapshot WHERE repo='$repo' GROUP BY uri ORDER BY examined_per_req DESC",
-          "refId": "A"
+          "refId": "A",
+          "rawSql": "SELECT path AS uri, CONCAT(m,':',path) AS endpoint, ROUND(COUNT(*)/COUNT(DISTINCT reqId),1) AS queries_per_req, ROUND(SUM(examined)/COUNT(DISTINCT reqId)) AS examined_per_req, COUNT(DISTINCT reqId) AS reqs FROM (SELECT SUBSTRING_INDEX(uri,':',1) AS m, SUBSTRING_INDEX(uri,':',-1) AS path, reqId, examined FROM trace_snapshot) t GROUP BY m, path ORDER BY examined_per_req DESC"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "format": "table",
+          "instant": true,
+          "refId": "B",
+          "expr": "sum by (uri) (increase(request_thread_allocated_bytes_total[$__range])) / sum by (uri) (increase(request_count_total[$__range])) / 1048576"
         }
       ],
-      "pluginVersion": "13.1.0"
+      "pluginVersion": "13.1.0",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "uri",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "uri": true
+            },
+            "renameByName": {
+              "Value": "heap_per_req",
+              "Value #B": "heap_per_req"
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "type": "include",
+            "match": "all",
+            "filters": [
+              {
+                "fieldName": "reqs",
+                "config": {
+                  "id": "isNotNull",
+                  "options": {}
+                }
+              }
+            ]
+          }
+        }
+      ]
     },
     {
       "collapsed": false,
@@ -519,7 +587,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH per_req AS (SELECT reqId, uri, COUNT(*) cnt FROM trace_snapshot WHERE repo='$repo' GROUP BY reqId, uri), top AS (SELECT reqId, ROW_NUMBER() OVER (PARTITION BY uri ORDER BY cnt DESC, reqId) rn FROM per_req) SELECT ts.uri, ts.repo, ts.method, ts.sql_stripped, ts.ms, ts.examined, ts.no_index FROM trace_snapshot ts WHERE ts.repo='$repo' AND ts.reqId IN (SELECT reqId FROM top WHERE rn=1) ORDER BY ts.uri, ts.event_id LIMIT 500",
+          "rawSql": "WITH per_req AS (SELECT reqId, uri, COUNT(*) cnt FROM trace_snapshot WHERE repo='$repo' GROUP BY reqId, uri), top AS (SELECT reqId, ROW_NUMBER() OVER (PARTITION BY uri ORDER BY cnt DESC, reqId) rn FROM per_req) SELECT ts.uri, ts.repo, ts.method, ts.sql_stripped, ts.ms, ts.examined, ts.no_index FROM trace_snapshot ts WHERE ts.reqId IN (SELECT reqId FROM top WHERE rn=1) ORDER BY ts.uri, ts.event_id LIMIT 500",
           "refId": "A"
         }
       ],
@@ -814,7 +882,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT start_time, ROUND((TIME_TO_SEC(query_time)+MICROSECOND(query_time)/1e6)*1000,1) AS query_ms, rows_examined, rows_sent, SUBSTRING_INDEX(SUBSTRING_INDEX(CONVERT(sql_text USING utf8mb4),'uri=',-1),' ',1) AS uri, LEFT(TRIM(SUBSTRING_INDEX(CONVERT(sql_text USING utf8mb4),'*/',-1)),150) AS sql_stripped FROM mysql.slow_log ORDER BY query_time DESC LIMIT 200",
+          "rawSql": "SELECT start_time, ROUND((TIME_TO_SEC(query_time)+MICROSECOND(query_time)/1e6)*1000,1) AS query_ms, rows_examined, rows_sent, SUBSTRING_INDEX(SUBSTRING_INDEX(CONVERT(sql_text USING utf8mb4),'uri=',-1),' ',1) AS uri, LEFT(TRIM(SUBSTRING_INDEX(CONVERT(sql_text USING utf8mb4),'*/',-1)),150) AS sql_stripped FROM mysql.slow_log WHERE CONVERT(sql_text USING utf8mb4) LIKE '%uri=%' ORDER BY query_time DESC LIMIT 200",
           "refId": "A"
         }
       ],
@@ -1075,6 +1143,6 @@
   "timezone": "browser",
   "title": "[쿼리튜닝] 통합 진단 — 스케일 + traceId",
   "uid": "q-asker-unified-diagnosis",
-  "version": 5,
+  "version": 7,
   "weekStart": ""
 }
