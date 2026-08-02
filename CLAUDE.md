@@ -158,7 +158,7 @@ plg-stack/
 │   │       │       ├── Q-Asker API 서버/    ← HTTP, JVM, 서킷브레이커, 로그, 인프라 등
 │   │       │       ├── 데이터베이스/        ← HeatWave MySQL
 │   │       │       ├── 모니터링 서버/       ← Alloy, Prometheus, 노드 인프라
-│   │       │       ├── 백업 모니터링/       ← MySQL L2 + PLG 백업 통합 대시보드
+│   │       │       ├── 백업 모니터링/       ← MySQL L2 백업·PLG 백업 대시보드
 │   │       │       ├── 서킷브레이커 튜닝/
 │   │       │       └── 쿼리 튜닝/
 │   │       └── alerting/

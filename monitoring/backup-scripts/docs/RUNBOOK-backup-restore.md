@@ -27,7 +27,7 @@
 
 ### 1.1 Grafana 대시보드
 
-접속: <https://mon.q-asker.com> → **백업 모니터링** 폴더의 **백업 모니터링** 대시보드 (MySQL L2 + PLG 통합)
+접속: <https://mon.q-asker.com> → **백업 모니터링 / Q-Asker PLG 백업 (Prometheus·Loki)** (같은 폴더에 MySQL L2 백업 대시보드도 있음)
 
 핵심 확인 패널:
 - **q_asker_backup_last_success_timestamp{store}** — 마지막 백업 성공 이후 경과 시간
