@@ -13,7 +13,7 @@
 #   1) 사전 헬스 · Slack 무력화
 #   2) Prometheus 3회 반복 (restore.sh --target=prometheus --snapshot=<선택>)
 #   3) Loki 보조 1회
-#   4) 사후 헬스 · .bak 현황
+#   4) 사후 헬스 · 이번 실행 .bak 정리(헬스 정상 시 누적 0) · 남은 .bak 현황
 #   5) Slack 원복
 #   6) 최종 요약 (RUNBOOK §12에 이 블록을 그대로 붙여넣기)
 #
@@ -43,6 +43,7 @@ sed -i 's|^SLACK_BACKUP_WEBHOOK_URL=.*|SLACK_BACKUP_WEBHOOK_URL=|' "$ENV_FILE"
 grep '^SLACK_BACKUP_WEBHOOK_URL=' "$ENV_FILE"
 
 GAMEDAY_START_KST=$(TZ=Asia/Seoul date +%Y-%m-%dT%H:%M:%S)
+GAMEDAY_START_EPOCH=$(date +%s)   # 이 시각 이후 생성된 .bak = 이번 실행이 만든 것
 GIT_SHA=$(cd /home/ubuntu/plg-stack && git rev-parse --short HEAD)
 echo
 echo "=== GameDay 시작 ==="
@@ -70,11 +71,37 @@ echo "── Loki 보조 ── start=$LS end=$LF RTO=${LR}s exit=$LE"
 
 echo
 echo "=== 사후 헬스 ==="
-curl -sf http://localhost:9090/-/ready && echo prom-ok
-curl -sf http://localhost:3100/ready   && echo loki-ok
+POST_HEALTH_OK=1
+curl -sf http://localhost:9090/-/ready && echo prom-ok || { echo "prom-FAIL"; POST_HEALTH_OK=0; }
+curl -sf http://localhost:3100/ready   && echo loki-ok || { echo "loki-FAIL"; POST_HEALTH_OK=0; }
 
 echo
-echo "=== .bak 디렉토리 현황 ==="
+echo "=== .bak 정리 (이번 실행분, 사후 헬스 정상 시 누적 0) ==="
+# gameday는 복원마다 restore.sh가 <dir>.bak.<epoch>를 남긴다(회당 Prom 3 + Loki 1).
+# 리허설이라 이 .bak들은 즉시 무의미하다(라이브는 복원본으로 정상 동작, 백업은 OCI에 존재).
+# 사후 헬스 정상일 때만 "이번 실행이 만든 것"(epoch >= 시작)을 전부 정리 → 누적 0.
+# 이전 실행·수동 복원의 .bak(더 이른 epoch)은 안 건드린다(안전 경계).
+if (( POST_HEALTH_OK )); then
+    removed=0
+    for store in prometheus loki; do
+        for b in /mnt/monitoring/${store}.bak.*; do
+            [[ -d "$b" ]] || continue
+            ts="${b##*.bak.}"
+            [[ "$ts" =~ ^[0-9]+$ ]] || continue
+            if (( ts >= GAMEDAY_START_EPOCH )); then
+                sz=$(du -sh "$b" 2>/dev/null | cut -f1)
+                rm -rf "$b" && { echo "  삭제: $b ($sz)"; removed=$((removed + 1)); }
+            fi
+        done
+    done
+    (( removed == 0 )) && echo "  (이번 실행이 만든 .bak 없음)"
+    echo "  → ${removed}개 정리 (누적 0 정책). 이전 .bak은 보존 — 필요 시 수동 정리."
+else
+    echo "  사후 헬스 비정상 → .bak 정리 스킵 (롤백점 보존)"
+fi
+
+echo
+echo "=== 남은 .bak 현황 ==="
 ls -la /mnt/monitoring/ | grep -E '\.bak\.' || echo "(없음)"
 du -sh /mnt/monitoring/*.bak.* 2>/dev/null || true
 
