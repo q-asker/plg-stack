@@ -191,12 +191,10 @@ plg-stack/
 │   ├── restore.sh               ← 재해 복구 진입점 (원격 호스트용)
 │   ├── restore-local.sh         ← 로컬 Docker MySQL로 복원 (분석용)
 │   ├── masked-export.sh         ← 민감정보 마스킹 덤프
-│   ├── healthcheck.sh           ← baseline 기반 구조 확인 (스키마 수·대표 테이블 존재)
 │   ├── deploy.sh                ← 최초 전체 설치: 사용자·/opt·systemd·env (sudo)
 │   ├── update.sh                ← 코드 갱신 자동화: git pull 후 /opt 재배치 (sudo)
 │   ├── 런북.md                  ← 배포·갱신·검증·롤백·장애대응 런북
 │   ├── env.example              ← EnvironmentFile 템플릿
-│   ├── healthcheck.baseline.yml ← 헬스체크 기준선
 │   ├── lib/
 │   │   └── metrics.sh           ← Prometheus textfile 메트릭 갱신
 │   └── systemd/

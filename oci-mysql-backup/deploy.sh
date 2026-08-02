@@ -50,7 +50,6 @@ echo "▶ 2/6 스크립트 배치 → $INSTALL_DIR..."
 install -m 755 -d "$INSTALL_DIR" "$INSTALL_DIR/lib" "$INSTALL_DIR/systemd"
 install -m 755 "$SRC_DIR/backup.sh" "$INSTALL_DIR/backup.sh"
 install -m 755 "$SRC_DIR/restore.sh" "$INSTALL_DIR/restore.sh"
-install -m 755 "$SRC_DIR/healthcheck.sh" "$INSTALL_DIR/healthcheck.sh"
 install -m 644 "$SRC_DIR/lib/metrics.sh" "$INSTALL_DIR/lib/metrics.sh"
 install -m 644 "$SRC_DIR/lib/notify.sh" "$INSTALL_DIR/lib/notify.sh"
 
@@ -68,7 +67,7 @@ echo "▶ 4/6 Prometheus textfile 디렉터리 준비..."
 install -m 755 -d "$TEXTFILE_DIR"
 chown "$USER_NAME:$USER_NAME" "$TEXTFILE_DIR"
 
-echo "▶ 5/6 EnvironmentFile 템플릿 + 헬스체크 baseline..."
+echo "▶ 5/6 EnvironmentFile 템플릿..."
 install -m 755 -d "$CONFIG_DIR"
 if [[ ! -f "$CONFIG_DIR/env" ]]; then
   install -m 600 "$SRC_DIR/env.example" "$CONFIG_DIR/env"
@@ -76,13 +75,6 @@ if [[ ! -f "$CONFIG_DIR/env" ]]; then
   echo "   신규: $CONFIG_DIR/env (⚠️ 값 채우기 필요)"
 else
   echo "   기존 유지: $CONFIG_DIR/env"
-fi
-# T7 헬스체크 baseline (기존 있으면 덮어쓰지 않음 — 운영자가 갱신했을 수 있음)
-if [[ ! -f "$CONFIG_DIR/healthcheck.baseline.yml" ]]; then
-  install -m 644 "$SRC_DIR/healthcheck.baseline.yml" "$CONFIG_DIR/healthcheck.baseline.yml"
-  echo "   신규: $CONFIG_DIR/healthcheck.baseline.yml"
-else
-  echo "   기존 유지: $CONFIG_DIR/healthcheck.baseline.yml"
 fi
 
 echo "▶ 6/6 systemd unit 등록..."

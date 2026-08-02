@@ -21,9 +21,9 @@
 sudo /opt/oci-mysql-backup/restore.sh --latest
 ```
 
-가장 최근 백업을 자동 선택 → Docker mysql 컨테이너 생성 → 데이터 적재 → 헬스체크 → RTO 출력.
+가장 최근 백업을 자동 선택 → Docker mysql 컨테이너 생성 → 데이터 적재 → RTO 출력.
 
-성공 시 exit 0, 격리 컨테이너 이름·호스트 포트·헬스체크 JSON 경로가 stdout에 표시된다.
+성공 시 exit 0, 격리 컨테이너 이름·호스트 포트가 stdout에 표시된다.
 
 ## 사용법
 
@@ -68,8 +68,6 @@ sudo /opt/oci-mysql-backup/restore.sh 2026/06/29/qasker-mysql-20260629T060003Z.s
 | `DOCKER_IMAGE` | `mysql:8.0` | 격리 컨테이너 이미지 |
 | `LOCK_FILE` | `/var/lock/oci-mysql-backup.lock` | flock 공유 락 (backup과 동일) |
 | `WORK_BASE_DIR` | `/tmp` | 임시 작업 디렉터리 위치 |
-| `BASELINE_FILE` | `/etc/oci-mysql-backup/healthcheck.baseline.yml` | T7 헬스체크 규칙 |
-| `HEALTHCHECK_SCRIPT` | `/opt/oci-mysql-backup/healthcheck.sh` | T7 스크립트 |
 
 특별한 조정이 필요 없다면 기본값 그대로 사용.
 
@@ -93,20 +91,14 @@ oci --profile BACKUP_READER os ns get
 # → {"data": "axluufujp1xz"} 반환하면 OK
 ```
 
-### 4. healthcheck.baseline.yml 배포 확인
-```bash
-sudo cat /etc/oci-mysql-backup/healthcheck.baseline.yml | jq .schemas.expected
-# → 1 반환하면 OK
-```
-
-## 검증 사다리 — baseline 확인과 `--app-check`
+## 검증 — `--app-check`
 
 | 수준 | 방법 | 검증 범위 |
 |---|---|---|
-| 기본 | healthcheck.sh (baseline) | 스키마 수 + 대표 테이블 존재·비어있지 않음 (샘플) |
+| 기본 | 적재 무오류 완주 | 덤프가 문법 오류 없이 끝까지 적재됨 (`--force` 없음 — 절단·변질 시 즉시 실패) |
 | `--app-check` | 실제 앱(Spring Boot) 부팅 | **Flyway 마이그레이션 이력 + Hibernate `ddl-auto:validate`(앱이 쓰는 전체 엔티티↔스키마 대조) + actuator health UP** |
 
-`--app-check`는 복원 DB에 소비자(앱)를 직접 붙이는 최종 판정이다 — 검증 기준이 앱 코드와 함께 진화하므로 baseline처럼 낡지 않는다. 앱은 `local,mock` 프로필로 부팅해 외부 호출·실쓰기가 mock 처리되고, 검증 후 앱 컨테이너는 자동 정리된다 (MySQL 격리 컨테이너는 보존).
+`--app-check`는 복원 DB에 소비자(앱)를 직접 붙이는 최종 판정이다 — 검증 기준이 앱 코드와 함께 진화한다. 앱은 `local,mock` 프로필로 부팅해 외부 호출·실쓰기가 mock 처리되고, 검증 후 앱 컨테이너는 자동 정리된다 (MySQL 격리 컨테이너는 보존).
 
 ```bash
 # 요구: 앱 이미지 pull 가능 + Jasypt 복호화 키
@@ -128,10 +120,8 @@ sudo APP_IMAGE=qasker/api:1.2.3 JASYPT_ENCRYPTOR_PASSWORD='<키>' \
 | 1 | 사용법·환경변수 오류 | 무 |
 | 4 | OCI 다운로드 실패 | 무 |
 | 6 | 백업 객체 없음 (`--latest` 조회 실패) | 무 |
-| 10 | 헬스체크 FAIL | 무 (격리 컨테이너 안에만) |
 | 12 | Docker 실패 (pull/run/health) | 무 |
 | 13 | dump 적재 실패 | 무 (격리 컨테이너 안에만) |
-| 14 | healthcheck 스크립트 없음 | 무 |
 | 15 | 앱 부팅 검증 FAIL (`--app-check`) | 무 (앱 컨테이너 보존 — `docker logs`로 원인 분석) |
 
 **어떤 실패든 원본 MySQL 인스턴스는 무영향** (spec Edge Cases 명시).
@@ -139,7 +129,7 @@ sudo APP_IMAGE=qasker/api:1.2.3 JASYPT_ENCRYPTOR_PASSWORD='<키>' \
 ## RTO 측정 정책 (FR-019)
 
 - **시작 (START_TS)**: 다운로드 직전
-- **종료 (END_TS)**: 헬스체크 PASS 시점
+- **종료 (END_TS)**: 적재 완료 + (`--app-check` 시) 앱 부팅 완료 시점
 - **제외**: `docker pull` 시간 (START_TS 자동 보정)
 - **제외**: 격리 환경 정리 시간 (컨테이너 삭제는 훈련 후 수동)
 
@@ -171,13 +161,12 @@ docker ps -a --filter "name=mysql-restore-" --format "table {{.Names}}\t{{.Statu
   docker ps -aq --filter "name=mysql-restore-" | xargs -r docker rm -f
   ```
 
-## 실행 흐름 (내부 4단계)
+## 실행 흐름 (내부 3단계)
 
 ```
-[1/4] downloading dump                    (BACKUP_READER)
-[2/4] starting isolated container         (Docker health 대기 90s)
-[3/4] loading dump.sql.gz                 (zcat | docker exec mysql)
-[4/4] running healthcheck (T7)            (환경변수로 격리 접속 정보 주입)
+[1/3] downloading dump                    (BACKUP_READER)
+[2/3] starting isolated container         (Docker health 대기 90s)
+[3/3] loading dump.sql.gz                 (gzip -dc | mysql)
     ↓
 ═══════════════ 복구 완료 ═══════════════
   RTO: <초>  (SC-001 target ≤ 900s)
@@ -187,25 +176,13 @@ docker ps -a --filter "name=mysql-restore-" --format "table {{.Names}}\t{{.Statu
 
 ```
 [2026-07-01T14:30:12Z] [START] object_key=2026/07/01/qasker-mysql-20260701T134701Z.sql.gz container=mysql-restore-20260701T134701Z-1782913812
-[2026-07-01T14:30:12Z] [step 1/4] downloading dump...
-[2026-07-01T14:30:17Z] [step 1/4] downloaded
-[2026-07-01T14:30:17Z] [step 2/4] starting isolated container (mysql:8.0)...
-[2026-07-01T14:30:17Z] [step 2/4] container=mysql-restore-..., waiting for healthy...
-[2026-07-01T14:30:45Z] [step 2/4] container healthy, host_port=32789
-[2026-07-01T14:30:45Z] [step 3/4] loading dump.sql.gz...
-[2026-07-01T14:31:00Z] [step 3/4] dump loaded (15s)
-[2026-07-01T14:31:00Z] [step 4/4] running healthcheck (T7)...
-──── healthcheck 결과 ────
-{
-  "status": "PASS",
-  "checks": [
-    {"check": "schemas", "expected": 1, "actual": 1, "tolerance": 0, "status": "PASS"},
-    {"check": "user", "actual": 1523, "status": "PASS"},
-    {"check": "problem_set", "actual": 8210, "status": "PASS"},
-    {"check": "quiz_history", "actual": 45102, "status": "PASS"}
-  ]
-}
-──────────────────────
+[2026-07-01T14:30:12Z] [step 1/3] downloading dump...
+[2026-07-01T14:30:17Z] [step 1/3] downloaded
+[2026-07-01T14:30:17Z] [step 2/3] starting isolated container (mysql:8.0)...
+[2026-07-01T14:30:17Z] [step 2/3] container=mysql-restore-..., waiting for healthy...
+[2026-07-01T14:30:45Z] [step 2/3] container healthy, host_port=32789
+[2026-07-01T14:30:45Z] [step 3/3] loading dump.sql.gz...
+[2026-07-01T14:31:00Z] [step 3/3] dump loaded (15s)
 
 ═══════════════ 복구 완료 ═══════════════
   object_key:   2026/07/01/qasker-mysql-20260701T134701Z.sql.gz
@@ -214,8 +191,7 @@ docker ps -a --filter "name=mysql-restore-" --format "table {{.Names}}\t{{.Statu
   dump_size:    39022013 bytes
   load_time:    15s
   RTO:          48s  (SC-001 target ≤ 900s = 15분)
-  healthcheck:  PASS
-  hc_result:    /tmp/healthcheck-mysql-restore-20260701T134701Z-1782913812.json
+  app-check:    skip
 
 ▶ 격리 컨테이너는 유지됨 (FR-020). 분석 후 수동 정리:
     docker rm -f mysql-restore-20260701T134701Z-1782913812
@@ -238,7 +214,7 @@ mysql -h 127.0.0.1 -P $HOST_PORT -uroot qaskerdb -e 'SELECT COUNT(*) FROM user;'
 # password 필요 시 restore.sh 로그에서 확인 or 컨테이너 재검사
 ```
 
-**Tip**: restore.sh 로그·헬스체크 JSON을 GameDay 기록에 첨부 시 함께 남길 것.
+**Tip**: restore.sh 로그를 GameDay 기록에 첨부 시 함께 남길 것.
 
 ## 트러블슈팅
 
@@ -251,16 +227,6 @@ mysql -h 127.0.0.1 -P $HOST_PORT -uroot qaskerdb -e 'SELECT COUNT(*) FROM user;'
   docker rm -f mysql-restore-...   # 문제 컨테이너 정리
   ```
 - 재실행 전 `docker system df`로 여유 공간 확인
-
-### exit 10 (헬스체크 FAIL)
-- **원인**: 실제 복구 데이터가 기대값과 tolerance 초과 차이
-- **조치**:
-  ```bash
-  cat /tmp/healthcheck-<컨테이너>.json | jq
-  # 어느 check가 FAIL인지 확인
-  # baseline.yml의 tolerance 조정 필요할지 판단
-  ```
-- 컨테이너 유지되므로 수동 SQL 조사 가능
 
 ### exit 4 (다운로드 실패)
 - **원인**: BACKUP_READER 프로필 문제, 네트워크, 객체 키 오탈자
@@ -349,7 +315,7 @@ oci mysql db-system get --db-system-id <NEW_OCID> \
 ```bash
 sshmon
 sudo /opt/oci-mysql-backup/restore.sh --latest
-# healthcheck: PASS 확인 후 진행
+# exit 0 (복구 완료) 확인 후 진행
 ```
 
 FAIL 나오면 이전 백업으로 재시도:
@@ -413,23 +379,20 @@ MYSQL_PWD="$ADMIN_PWD" zcat /tmp/prod-restore.sql.gz | \
 
 39 MB급 dump 기준 약 15~20초 소요.
 
-#### Step 4 · 새 endpoint 헬스체크 (권장)
+#### Step 4 · 새 endpoint 확인 (권장)
 
-`healthcheck.sh`를 새 HeatWave endpoint에 대해 직접 실행:
+새 HeatWave endpoint에서 핵심 테이블이 실재하는지 직접 확인:
 
 ```bash
-BASELINE_FILE=/etc/oci-mysql-backup/healthcheck.baseline.yml \
-RESTORED_HOST="$NEW_ENDPOINT" \
-RESTORED_PORT=3306 \
-RESTORED_USER=admin \
-RESTORED_PASSWORD="$ADMIN_PWD" \
-RESTORED_DATABASE=qaskerdb \
-/opt/oci-mysql-backup/healthcheck.sh
+MYSQL_PWD="$ADMIN_PWD" mysql \
+    -h "$NEW_ENDPOINT" -u admin --protocol=tcp qaskerdb \
+    -e "SHOW TABLES;
+        SELECT COUNT(*) AS quiz_history_rows FROM quiz_history;"
 ```
 
 **판정**:
-- exit 0 (PASS) → Part 3 endpoint 전환으로 진행
-- exit 10 (FAIL) → 다른 백업 시점으로 재시도
+- 테이블 목록·행 수 정상 → Part 3 endpoint 전환으로 진행
+- 이상 → 다른 백업 시점으로 재시도
 
 ---
 
@@ -487,7 +450,6 @@ RESTORED_DATABASE=qaskerdb \
 | 백업 목록 | `sudo /opt/oci-mysql-backup/restore.sh --list` |
 | 컨테이너 목록 | `docker ps -a --filter name=mysql-restore-` |
 | 컨테이너 정리 | `docker rm -f <컨테이너명>` |
-| 헬스체크 재실행 | (직접 healthcheck.sh 환경변수 주입) |
 | 이미지 사전 캐시 | `sudo docker pull mysql:8.0` |
 
 ---
