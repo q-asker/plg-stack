@@ -28,7 +28,6 @@
 : "${TEXTFILE_DIR:=/var/lib/node_exporter/textfile_collector}"
 : "${OCI_RETRY_MAX:=3}"
 : "${OCI_RETRY_BASE_SLEEP:=5}"
-: "${LOKI_DOWNTIME_LIMIT_SEC:=60}"
 
 # ═══════════════════════════════════════════════════════════
 # ① 로깅

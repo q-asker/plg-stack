@@ -178,42 +178,47 @@ backup_prometheus() {
 
 backup_loki() {
     local store="loki"
-    local start_ts stop_ts start_time_ts hardlink_dir tar_file key size downtime
+    local start_ts stage_dir tar_file key size loki_dir
     start_ts=$SECONDS
 
     log INFO "===== Loki 백업 시작 (ts=${TIMESTAMP}) ====="
 
-    # 1) flush API 로 인메모리 청크를 disk로 밀어냄
+    loki_dir="/mnt/monitoring/loki"
+
+    # 1) flush — 인메모리 청크를 read-only 청크 파일로 봉인.
+    #    이후 chunks/는 write-once(불변)이므로 정지 없이 라이브로 떠도 안전하다.
     curl -sf -X POST http://localhost:3100/flush >/dev/null \
         || log WARN "Loki flush API 응답 이상, 계속 진행"
     sleep 3
 
-    # 2) 최단 정지 → cp -al hardlink → 재시작
-    hardlink_dir="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}"
-    log INFO "Loki 정지 → hardlink copy → 재시작"
-
-    stop_ts=$SECONDS
-    docker compose -f "$COMPOSE_FILE" stop loki >/dev/null
-    cp -al /mnt/monitoring/loki "$hardlink_dir"
-    docker compose -f "$COMPOSE_FILE" start loki >/dev/null
-    start_time_ts=$SECONDS
-
-    downtime=$(( start_time_ts - stop_ts ))
-    STORE_DOWNTIME[$store]=$downtime
-    log INFO "Loki 정지 시간: ${downtime}s"
-
-    if (( downtime > LOKI_DOWNTIME_LIMIT_SEC )); then
-        log ERROR "Loki 정지 시간 ${downtime}s > ${LOKI_DOWNTIME_LIMIT_SEC}s (SC-005 위반)"
-        notify_slack WARN "loki-downtime" "정지 ${downtime}s (한계 ${LOKI_DOWNTIME_LIMIT_SEC}s 초과)"
-        # 정지 시간이 길어도 백업 자체는 완료했으니 계속 진행
+    # 2) 불변 오브젝트 스토어만 하드링크 staging (정지 없음 = 다운타임 0)
+    #    chunks/ = 청크 데이터 + shipped tsdb 인덱스(chunks/index/) — 전부 write-once.
+    #    wal/·tsdb-shipper-active/·compactor/(가변)는 제외: 복원 시 Loki가 shipped
+    #    인덱스로부터 재생성한다. rules/(ruler 규칙)는 있으면 포함.
+    #    (가변 WAL을 통째로 뜨던 옛 방식의 정합성 함정을 제거 → 정지 불필요.)
+    stage_dir="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}"
+    rm -rf "$stage_dir"; mkdir -p "$stage_dir"
+    if ! cp -al "${loki_dir}/chunks" "${stage_dir}/chunks"; then
+        log ERROR "Loki chunks staging(cp -al) 실패"
+        rm -rf "$stage_dir"
+        return 1
     fi
+    [[ -d "${loki_dir}/rules" ]] && cp -al "${loki_dir}/rules" "${stage_dir}/rules"
 
-    # 3) tar+gzip (실패 시 명시적 return 1 — if ! 문맥에서 set -e가 꺼지므로)
+    # 2') 나이 기반 배제 — 쓰기 중일 수 있는 최신 청크 제거.
+    #    Loki filesystem 클라이언트는 청크를 제자리(O_CREATE|O_TRUNC)로 써 원자적이지
+    #    않다 → 라이브 캡처가 반쯤 쓰인 청크를 잡으면 복원 후 "invalid chunk checksum"
+    #    으로 쿼리가 깨질 수 있다. 청크는 write-once라 쓰기가 밀리초면 끝나므로
+    #    "1분 이상 미수정 = 완성 확정". 최근 1분 내 수정분을 staging에서 빼면
+    #    torn-chunk를 정지 없이 provable 0으로 만든다(제외분은 다음 회차 + WAL에 존재).
+    find "$stage_dir" -type f -mmin -1 -delete 2>/dev/null || true
+
+    # 3) tar+gzip (staging을 압축 — 라이브 Loki와 무관. 실패 시 명시적 return 1)
     tar_file="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}.tar.gz"
     log INFO "tar+gzip: ${tar_file}"
     if ! tar -czf "$tar_file" -C "$BACKUP_TMP_DIR" "loki-${TIMESTAMP}"; then
         log ERROR "Loki tar 생성 실패"
-        rm -rf "$hardlink_dir"; rm -f "$tar_file"
+        rm -rf "$stage_dir"; rm -f "$tar_file"
         return 1
     fi
 
@@ -227,21 +232,22 @@ backup_loki() {
         log WARN "[DRY-RUN] upload 스킵: ${key}"
     elif ! upload_object "$WRITER" "$BUCKET" "$key" "$tar_file"; then
         log ERROR "Loki 업로드 실패: ${key}"
-        rm -rf "$hardlink_dir"; rm -f "$tar_file"
+        rm -rf "$stage_dir"; rm -f "$tar_file"
         return 1
     fi
 
-    # 5) 로컬 cleanup (hardlink dir은 inode 참조라 원본 손상 없음)
-    rm -rf "$hardlink_dir"
+    # 5) 로컬 cleanup (staging은 하드링크라 원본 손상 없음)
+    rm -rf "$stage_dir"
     rm -f "$tar_file"
     log INFO "로컬 정리 완료"
 
-    # 6) 결과 기록
+    # 6) 결과 기록 (라이브 백업 — 다운타임 0)
     STORE_STATUS[$store]=1
     STORE_SIZE[$store]=$size
+    STORE_DOWNTIME[$store]=0
     STORE_DURATION[$store]=$(( SECONDS - start_ts ))
 
-    log INFO "===== Loki 백업 완료 (${STORE_DURATION[$store]}s, downtime ${downtime}s) ====="
+    log INFO "===== Loki 백업 완료 (${STORE_DURATION[$store]}s, 다운타임 0) ====="
     return 0
 }
 

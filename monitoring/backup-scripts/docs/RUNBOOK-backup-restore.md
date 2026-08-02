@@ -33,7 +33,7 @@
 - **q_asker_backup_last_success_timestamp{store}** — 마지막 백업 성공 이후 경과 시간
 - **q_asker_backup_duration_seconds{store}** — 백업 소요 시간 추이
 - **q_asker_backup_size_bytes{store}** — 백업 크기 변화 (증가율 모니터링)
-- **q_asker_backup_loki_downtime_seconds** — Loki 정지 시간 (SC-005 60초 감시)
+- **q_asker_backup_loki_downtime_seconds** — Loki 백업 다운타임 (불변 오브젝트 스토어만 라이브 백업하므로 상시 0)
 - **q_asker_backup_storage_usage_ratio** — 저장소 사용률 (80% 조기·90% 임박 2단계 경고 기준, §9.2)
 
 ### 1.2 매일 아침 확인 절차 (60초)
@@ -466,7 +466,6 @@ sudo tail -100 /var/log/q-asker-backup.log
 |-----------|------|------|
 | `admin APIs disabled` | admin API 미활성 (T1 미적용) | `docker compose up -d --force-recreate prometheus` |
 | `필수 명령 미설치: jq` | 의존성 부재 | `sudo apt install -y jq` |
-| `Loki 정지 시간 X > 60s` | 대용량 Loki + SC-005 위반 | Loki 크기 확인, 로그 다이어트 검토 |
 | `OCI ... 401/403/NotAuthorized` | 자격 증명 문제 | `~/.oci/config` 프로필 재점검 |
 
 수동 재실행:
@@ -505,16 +504,6 @@ oci --profile BACKUP_MON_READER os object list \
 2. **정상 성장**: 오래된 월간 아카이브 정리(§7-B.4) 또는 유료 전환 판단 (무료 20GB는 Standard+Archive 합산이라 Archive 전환은 이득 없음)
 3. **retention 미동작**: `/var/log/q-asker-backup.log`에서 retention_cleanup 로그 확인
 4. **테스트 잔여물**: GameDay/디버깅 산출물 삭제
-
-### 9.3 `⚠️ [q-asker-backup] WARN — loki-downtime`
-
-**Loki 정지 시간 60초 초과 (SC-005 위반)**.
-
-- 원인: 대용량 chunks + 파일 개수 증가로 `cp -al` 오래 걸림
-- 대응:
-  1. Loki 데이터 크기 확인: `sudo du -sh /mnt/monitoring/loki`
-  2. 초기라면 재실행으로 정상 확인
-  3. 지속 시 로그 카디널리티 정리 (Alloy relabel drop)
 
 ---
 
