@@ -232,17 +232,15 @@ if ! docker run -d \
   fail "docker-run" 12
 fi
 
-# healthy 대기 (최대 90초)
+# healthy 대기 (3초 × 30회 = 최대 90초)
 log "[step 2/4] container=$CONTAINER_NAME, waiting for healthy..."
-STATUS="unknown"
-for _ in $(seq 1 30); do
-  STATUS=$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "unknown")
+for _ in {1..30}; do
+  STATUS=$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null)
   [[ "$STATUS" == "healthy" ]] && break
   sleep 3
 done
-
-if [[ "$STATUS" != "healthy" ]]; then
-  log "[FAIL] container not healthy after 90s (status=$STATUS)"
+if [[ "${STATUS:-}" != "healthy" ]]; then
+  log "[FAIL] container not healthy after 90s (status=${STATUS:-unknown})"
   log "       container 보존: $CONTAINER_NAME (docker logs $CONTAINER_NAME 로 진단)"
   fail "container-unhealthy" 12
 fi
