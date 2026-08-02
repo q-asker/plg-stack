@@ -284,8 +284,8 @@ curl -sf http://localhost:3100/ready
 # 사용 가능한 라벨
 curl -sf 'http://localhost:3100/loki/api/v1/labels' | jq -r '.data[]'
 
-# 특정 라벨의 로그가 있는지 (백업 시점 이전 범위)
-curl -sf --data-urlencode 'query={job="loki"}' \
+# 과거 로그가 있는지 (백업 시점 이전 범위 — 라벨은 service_name 사용)
+curl -sf --data-urlencode 'query={service_name=~".+"}' \
   'http://localhost:3100/loki/api/v1/query_range?start='$(date -d '2 hours ago' +%s000000000) \
   | jq -r '.data.result | length'
 # 0 이상이면 정상 (백업 시점 이전 로그 확인됨)
