@@ -83,7 +83,7 @@ require_env \
     OCI_WRITER_PROFILE \
     BACKUP_RETENTION_DAYS
 
-require_cmd oci curl jq tar gzip awk
+require_cmd oci curl jq tar gzip awk rsync
 
 ensure_tmp_dir
 
@@ -178,15 +178,22 @@ backup_prometheus() {
 
 backup_loki() {
     local store="loki"
-    local start_ts stage_dir tar_file key size loki_dir
+    local start_ts stage_dir tar_file key size loki_dir rc
     start_ts=$SECONDS
 
     log INFO "===== Loki 백업 시작 (ts=${TIMESTAMP}) ====="
 
     loki_dir="/mnt/monitoring/loki"
 
-    # 1) flush — 인메모리 청크를 read-only 청크 파일로 봉인.
-    #    이후 chunks/는 write-once(불변)이므로 정지 없이 라이브로 떠도 안전하다.
+    # 0) 누출 staging 방어 청소 — 이전 실행이 중단돼 남은 하드링크 staging은 chunks
+    #    retention을 붙들어 디스크를 안 비운다(1시간+ 된 것만, flock 이중 안전).
+    find "$BACKUP_TMP_DIR" -mindepth 1 -maxdepth 1 -type d -name 'loki-*' \
+        -mmin +60 -exec rm -rf {} + 2>/dev/null || true
+
+    # 1) flush — 인메모리 청크를 디스크의 read-only 청크 파일로 봉인.
+    #    봉인된 청크는 write-once라 불변. 단 Loki는 계속 수집하므로 "아직 쓰이는 중인
+    #    새 청크"가 chunks/에 있을 수 있다(fs 클라이언트는 비원자적 제자리 쓰기).
+    #    그 in-flight 청크는 3)의 나이 기반 배제로 뺀다 — flush만으로는 안전하지 않다.
     curl -sf -X POST http://localhost:3100/flush >/dev/null \
         || log WARN "Loki flush API 응답 이상, 계속 진행"
     sleep 3
@@ -195,25 +202,34 @@ backup_loki() {
     #    chunks/ = 청크 데이터 + shipped tsdb 인덱스(chunks/index/) — 전부 write-once.
     #    wal/·tsdb-shipper-active/·compactor/(가변)는 제외: 복원 시 Loki가 shipped
     #    인덱스로부터 재생성한다. rules/(ruler 규칙)는 있으면 포함.
-    #    (가변 WAL을 통째로 뜨던 옛 방식의 정합성 함정을 제거 → 정지 불필요.)
+    #    rsync --link-dest로 하드링크(cp -al과 동일, mtime 보존). 단 라이브 compactor가
+    #    retention으로 청크를 삭제하는 중이면 원본이 사라질 수 있는데, rsync는 이를
+    #    관대히 넘기고(exit 24 = vanished, 무해 — 어차피 만료 대상) 나머지를 계속 처리한다.
     stage_dir="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}"
-    rm -rf "$stage_dir"; mkdir -p "$stage_dir"
-    if ! cp -al "${loki_dir}/chunks" "${stage_dir}/chunks"; then
-        log ERROR "Loki chunks staging(cp -al) 실패"
+    rm -rf "$stage_dir"; mkdir -p "${stage_dir}/chunks"
+    rc=0
+    rsync -a --link-dest="${loki_dir}/chunks/" "${loki_dir}/chunks/" "${stage_dir}/chunks/" || rc=$?
+    if (( rc != 0 && rc != 24 )); then
+        log ERROR "Loki chunks staging(rsync) 실패 (rc=${rc})"
         rm -rf "$stage_dir"
         return 1
     fi
-    [[ -d "${loki_dir}/rules" ]] && cp -al "${loki_dir}/rules" "${stage_dir}/rules"
+    if [[ -d "${loki_dir}/rules" ]]; then
+        mkdir -p "${stage_dir}/rules"
+        rsync -a --link-dest="${loki_dir}/rules/" "${loki_dir}/rules/" "${stage_dir}/rules/" || true
+    fi
 
-    # 2') 나이 기반 배제 — 쓰기 중일 수 있는 최신 청크 제거.
+    # 3) 나이 기반 배제 — 쓰기 중일 수 있는 최신 청크 제거.
     #    Loki filesystem 클라이언트는 청크를 제자리(O_CREATE|O_TRUNC)로 써 원자적이지
     #    않다 → 라이브 캡처가 반쯤 쓰인 청크를 잡으면 복원 후 "invalid chunk checksum"
     #    으로 쿼리가 깨질 수 있다. 청크는 write-once라 쓰기가 밀리초면 끝나므로
     #    "1분 이상 미수정 = 완성 확정". 최근 1분 내 수정분을 staging에서 빼면
     #    torn-chunk를 정지 없이 provable 0으로 만든다(제외분은 다음 회차 + WAL에 존재).
     find "$stage_dir" -type f -mmin -1 -delete 2>/dev/null || true
+    # 배제로 비게 된 디렉토리 정리 (staging 루트는 -mindepth 1로 보존)
+    find "$stage_dir" -mindepth 1 -type d -empty -delete 2>/dev/null || true
 
-    # 3) tar+gzip (staging을 압축 — 라이브 Loki와 무관. 실패 시 명시적 return 1)
+    # 4) tar+gzip (staging을 압축 — 라이브 Loki와 무관. 실패 시 명시적 return 1)
     tar_file="${BACKUP_TMP_DIR}/loki-${TIMESTAMP}.tar.gz"
     log INFO "tar+gzip: ${tar_file}"
     if ! tar -czf "$tar_file" -C "$BACKUP_TMP_DIR" "loki-${TIMESTAMP}"; then
@@ -333,7 +349,7 @@ emit_metrics() {
     content+="# TYPE q_asker_backup_duration_seconds gauge"$'\n'
     content+="# HELP q_asker_backup_size_bytes Backup tar.gz size bytes"$'\n'
     content+="# TYPE q_asker_backup_size_bytes gauge"$'\n'
-    content+="# HELP q_asker_backup_loki_downtime_seconds Loki container downtime during backup"$'\n'
+    content+="# HELP q_asker_backup_loki_downtime_seconds Loki backup downtime seconds (always 0 — live backup)"$'\n'
     content+="# TYPE q_asker_backup_loki_downtime_seconds gauge"$'\n'
     content+="# HELP q_asker_backup_storage_usage_bytes Bucket usage in bytes"$'\n'
     content+="# TYPE q_asker_backup_storage_usage_bytes gauge"$'\n'
