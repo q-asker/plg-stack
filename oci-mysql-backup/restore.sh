@@ -8,7 +8,7 @@
 #   3. Docker mysql 컨테이너 생성 (시각 기반 유니크 이름, FR-020)
 #   4. dump 적재
 #   5. T7 healthcheck.sh 호출 (baseline 기반 구조 확인)
-#   6. RTO 측정 (헬스체크 PASS 시점, FR-019)
+#   6. RTO 측정 — 복구 종료 = 헬스체크 PASS + (--app-check 시) 앱 부팅 완료까지
 #   7. (--app-check) 실제 앱 부팅 검증 — 복원 DB에 Spring Boot를 붙여
 #      Flyway 이력 검증 + Hibernate ddl-auto:validate(전체 엔티티↔스키마 대조) +
 #      actuator/health UP까지 확인. 소비자 관점의 최종 판정.
@@ -308,10 +308,6 @@ if [[ $HC_EXIT -ne 0 ]]; then
   fail "healthcheck-fail" 10
 fi
 
-# ─── RTO 종료 (헬스체크 PASS 시점, FR-019) ───
-END_TS=$(date +%s)
-RTO=$((END_TS - START_TS))
-
 # ─── (선택) 앱 부팅 검증: 소비자 관점 최종 판정 ───
 # 복원 DB에 실제 앱을 붙여 부팅한다. 부팅 성공 = Flyway 마이그레이션 이력 검증 +
 # Hibernate ddl-auto:validate(앱이 쓰는 전체 엔티티↔스키마 대조) + health UP.
@@ -372,6 +368,10 @@ if [[ $APP_CHECK -eq 1 ]]; then
   log "[app-check] PASS — Flyway 이력·Hibernate 스키마 검증·health UP"
   docker rm -f "$APP_NAME" >/dev/null 2>&1 || true
 fi
+
+# ─── RTO 종료 (복구 완료 = 헬스체크 PASS + (--app-check 시) 앱 부팅까지) ───
+END_TS=$(date +%s)
+RTO=$((END_TS - START_TS))
 
 DUMP_SIZE=$(stat -c%s "$DUMP_FILE" 2>/dev/null || stat -f%z "$DUMP_FILE")
 
