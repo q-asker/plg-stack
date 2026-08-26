@@ -96,7 +96,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sum by(seed, phase)(last_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\", phase=~\"before|after\"}[30d])) / sum by(seed, phase)(last_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\", phase=~\"before|after\"}[30d])) * 1000",
+          "expr": "sum by(seed, phase)(last_over_time(spring_data_repository_invocations_seconds_sum{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\", phase=~\"$phase\"}[30d])) / sum by(seed, phase)(last_over_time(spring_data_repository_invocations_seconds_count{repository=\"$repo\", method=\"$method\", seed=~\"x1|x10|x100\", phase=~\"$phase\"}[30d])) * 1000",
           "legendFormat": "{{seed}} · {{phase}}",
           "refId": "A",
           "instant": true
@@ -1130,6 +1130,36 @@
         },
         "options": [],
         "hide": 2
+      },
+      {
+        "name": "phase",
+        "label": "튜닝 전/후",
+        "type": "custom",
+        "query": "전체 : before|after, OFF(튜닝 전) : before, ON(튜닝 후) : after",
+        "current": {
+          "text": "전체",
+          "value": "before|after"
+        },
+        "options": [
+          {
+            "text": "전체",
+            "value": "before|after",
+            "selected": true
+          },
+          {
+            "text": "OFF(튜닝 전)",
+            "value": "before",
+            "selected": false
+          },
+          {
+            "text": "ON(튜닝 후)",
+            "value": "after",
+            "selected": false
+          }
+        ],
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
       }
     ]
   },
