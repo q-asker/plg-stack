@@ -54,6 +54,18 @@ sudo ./monitoring/backup-scripts/backup.sh --target=both
 sudo ./monitoring/backup-scripts/restore.sh --target=prometheus --snapshot=YYYYMMDD-HHMM
 ```
 
+### 헬스체크 (대시보드 + 일일 Slack 리포트)
+
+스택 전체의 정상 여부를 한 화면(`q-asker-health-overview`)에서 보고, 매일 KST 09:00 같은 판정을 Slack으로 받는다. 이상이 없어도 매일 발송한다 — 리포트가 오지 않는 것 자체가 이상 신호다.
+
+- **판정 항목·임계값·배포·장애 대응**: [monitoring/healthcheck/README.md](monitoring/healthcheck/README.md)
+- **스크립트**: `monitoring/healthcheck/daily-health-report.sh`
+
+```bash
+./monitoring/healthcheck/daily-health-report.sh --dry-run   # 발송 없이 본문만 확인
+sudo ./monitoring/healthcheck/daily-health-report.sh        # 수동 1회 발송
+```
+
 ### 대시보드
 
 - Grafana: `https://mon.q-asker.com` (또는 `http://<OCI-3 IP>:3000`)
@@ -67,6 +79,7 @@ sudo ./monitoring/backup-scripts/restore.sh --target=prometheus --snapshot=YYYYM
 ✓ Grafana:    curl -sf http://localhost:3000/api/health
 ✓ Alloy:      curl -sf http://localhost:12345/metrics | grep loki_write
 ✓ Backup:     curl -sf 'http://localhost:9090/api/v1/query?query=time()-q_asker_backup_last_success_timestamp' | jq
+✓ Health:     curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_health_overall_status' | jq
 ```
 
 ---

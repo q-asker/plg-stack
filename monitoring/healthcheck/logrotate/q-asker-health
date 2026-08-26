@@ -1,0 +1,24 @@
+# =============================================================
+# q-asker 헬스 리포트 로그 로테이션
+# =============================================================
+# 배포 방법 (OCI-3 호스트에서):
+#   sudo cp monitoring/healthcheck/logrotate/q-asker-health /etc/logrotate.d/q-asker-health
+#   sudo chown root:root /etc/logrotate.d/q-asker-health
+#   sudo chmod 644     /etc/logrotate.d/q-asker-health
+#
+# 검증:
+#   sudo logrotate -d /etc/logrotate.d/q-asker-health
+#
+# 정책: 월 1회 회전, 최대 6개월 보존 (하루 한 번 실행이라 로그량이 적다)
+
+/var/log/q-asker-health.log {
+    monthly
+    rotate 6
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 root root
+    dateext
+    dateformat -%Y%m%d
+}

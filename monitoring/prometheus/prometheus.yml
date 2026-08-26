@@ -67,3 +67,21 @@ scrape_configs:
         labels:
           # 인스턴스 위치
           instance: "monitoring"
+
+  # ----- #4 Loki (로그 저장소 자체 상태) -----
+  # 헬스체크 대시보드가 up{job="loki"}로 가동 여부를 판정하기 위한 scrape.
+  # Loki는 /metrics에 자체 메트릭(ingester, distributor 등)을 노출한다.
+  - job_name: "loki"
+    static_configs:
+      - targets: ["loki:3100"]
+        labels:
+          instance: "monitoring"
+
+  # ----- #5 Grafana (시각화 서버 자체 상태) -----
+  # 헬스체크 대시보드가 up{job="grafana"}로 가동 여부를 판정하기 위한 scrape.
+  # /metrics는 인증 없이 노출되며 컨테이너 내부 포트 3000으로 접근한다.
+  - job_name: "grafana"
+    static_configs:
+      - targets: ["grafana:3000"]
+        labels:
+          instance: "monitoring"

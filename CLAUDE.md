@@ -65,6 +65,22 @@ curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_last_success_t
 curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_backup_storage_usage_ratio' | jq
 ```
 
+### 헬스체크 (대시보드 + 일일 Slack 리포트)
+
+"지금 살아있는가"는 Grafana 대시보드 `q-asker-health-overview`가, "지난 하루가 정상이었는가"는 매일 KST 09:00 Slack 리포트가 답한다. 리포트가 판정한 20개 항목을 textfile 메트릭(`q_asker_health_*`)으로 노출해 대시보드가 같은 값을 읽으므로 두 경로의 판정 기준이 갈라지지 않는다. 즉시성이 필요한 장애 알림은 Grafana 알림 규칙(`#알림-에러`)이 따로 담당한다. 배포·검증·임계값 조정은 [monitoring/healthcheck/README.md](monitoring/healthcheck/README.md) 참고.
+
+```bash
+# 발송 없이 리허설 (본문만 stdout)
+./monitoring/healthcheck/daily-health-report.sh --dry-run
+
+# 수동 발송 (cron이 매일 KST 09:00 자동 실행, root 필요 — textfile 메트릭 기록)
+sudo ./monitoring/healthcheck/daily-health-report.sh
+
+# 헬스 판정 관측
+curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_health_overall_status' | jq
+curl -sf 'http://localhost:9090/api/v1/query?query=q_asker_health_check_status' | jq
+```
+
 ### 백업 주기 재조정 (저장소 압박 시)
 
 `set-backup-schedule.sh`(레포 루트)가 MySQL(systemd timer)·PLG(cron) 주기를 **라이브로** 바꾼다. git 레포는 건드리지 않고, MySQL은 systemd drop-in override(`*.timer.d/10-schedule.conf`, update.sh 재배포에도 유지), PLG는 `/etc/cron.d/q-asker-backup` in-place 수정으로 반영한다. OCI-3에서 sudo로 실행:
@@ -159,11 +175,17 @@ plg-stack/
 │   │       │       ├── 데이터베이스/        ← HeatWave MySQL
 │   │       │       ├── 모니터링 서버/       ← Alloy, Prometheus, 노드 인프라
 │   │       │       ├── 백업 모니터링/       ← MySQL L2 백업·PLG 백업 대시보드
+│   │       │       ├── 헬스체크/          ← 스택 전체 종합 헬스 (일일 리포트와 판정 공유)
 │   │       │       ├── 서킷브레이커 튜닝/
 │   │       │       └── 쿼리 튜닝/
 │   │       └── alerting/
 │   ├── alloy/
 │   │   └── config.alloy         ← MySQL exporter + textfile collector 설정
+│   ├── healthcheck/             ← 헬스체크 일일 리포트 (Slack + textfile 메트릭)
+│   │   ├── daily-health-report.sh  ← 매일 KST 09:00 20개 항목 판정·발송
+│   │   ├── cron/                   ← /etc/cron.d/ 배포 참조본 (CRON_TZ=Asia/Seoul)
+│   │   ├── logrotate/              ← /etc/logrotate.d/ 배포 참조본 (monthly × 6)
+│   │   └── README.md               ← 판정 항목·임계값·배포·장애 대응
 │   ├── backup-scripts/          ← 백업·복구 관련 일체 (spec 001)
 │   │   ├── backup.sh            ← 매일 KST 03:00 자동 백업 진입점
 │   │   ├── restore.sh           ← 재해 복구 진입점 (부분 복원 지원)
@@ -269,6 +291,7 @@ GRAFANA_ADMIN_PASSWORD=<secure>
 MYSQL_DSN=user:password@tcp(heawave-host:3306)/db
 SLACK_ERROR_WEBHOOK_URL=https://hooks.slack.com/services/...   # Grafana 에러 알림 전용 채널
 SLACK_BACKUP_WEBHOOK_URL=https://hooks.slack.com/services/...  # PLG 백업 성공/실패 + MySQL 백업 알림 공용 (별도 백업 채널)
+SLACK_HEALTH_WEBHOOK_URL=https://hooks.slack.com/services/...  # 일일 헬스 리포트 (미설정 시 SLACK_BACKUP_WEBHOOK_URL로 폴백)
 
 # 백업·복구 (spec 001, monitoring/.env)
 OCI_BUCKET_NAME=qasker-monitoring-backup      # T2 Terraform 산출물

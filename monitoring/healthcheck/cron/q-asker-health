@@ -1,0 +1,25 @@
+# =============================================================
+# q-asker 일일 헬스 리포트 cron 스케줄
+# =============================================================
+# 배포 방법 (OCI-3 호스트에서):
+#   sudo cp monitoring/healthcheck/cron/q-asker-health /etc/cron.d/q-asker-health
+#   sudo chown root:root /etc/cron.d/q-asker-health
+#   sudo chmod 644     /etc/cron.d/q-asker-health
+#
+# 로그 확인:
+#   sudo tail -f /var/log/q-asker-health.log
+#
+# CRON_TZ=Asia/Seoul로 스케줄 시각을 KST 기준으로 확정한다.
+#   ※ TZ= 는 잡의 환경변수일 뿐 스케줄 해석 시각대를 바꾸지 않는다.
+#     스케줄을 KST로 평가하려면 반드시 CRON_TZ 를 써야 한다(Vixie/Ubuntu cron).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=Asia/Seoul
+TZ=Asia/Seoul
+
+# ─── 일일 헬스 리포트: 매일 KST 09:00 ───
+# 업무 시작 시각에 "지난 하루가 정상이었는가"를 Slack으로 받는다.
+# 이상이 없어도 매일 발송한다 — 리포트가 오지 않는 것 자체가 이상 신호가 되도록.
+# 백업(KST 03:00)·MySQL L2 백업(KST 03:00 회차)이 끝난 뒤라 백업 항목까지 당일 결과로 판정된다.
+0 9 * * * root /home/ubuntu/plg-stack/monitoring/healthcheck/daily-health-report.sh >> /var/log/q-asker-health.log 2>&1
