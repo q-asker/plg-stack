@@ -122,3 +122,62 @@ groups:
           summary: "{{ $labels.error_msg }}"
           log_query: "{level=\"ERROR\"}"
           dashboard_url: "https://mon.q-asker.com/explore?schemaVersion=1&panes=%7B%22a%22:%7B%22datasource%22:%22P8E80F9AEF21F6940%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22%7Blevel%3D%5C%22ERROR%5C%22%7D%22%7D%5D%7D%7D&orgId=1"
+
+  # ═══════════════════════════════════════════════════════════
+  # ④ Alert Rule: DB 커넥션 풀 고갈 (MySQL 접속 불가)
+  # 로그가 아니라 풀 상태를 직접 본다 — ③은 ERROR 로그를 모두 한 제목으로
+  # 묶어 보내므로 DB 장애가 "Unexpected error occurred in scheduled task"로
+  # 도착해 원인이 드러나지 않는다. 여기서는 원인이 제목에 실린다.
+  # ═══════════════════════════════════════════════════════════
+  - orgId: 1
+    name: infra-alerts
+    folder: Q-Asker Alerts
+    # 평가 주기: 1분마다 Prometheus에 쿼리 실행
+    interval: 1m
+    rules:
+      - uid: db-connection-pool-empty
+        title: DB 커넥션 풀 고갈
+        # 평가 조건: refId B (Threshold)의 결과를 사용
+        condition: B
+        data:
+          # A: HikariPool이 보유한 총 커넥션 수.
+          #    정상 10(= minimumIdle), MySQL 접속 불가 시 0으로 떨어진다.
+          #    폐기된 커넥션을 재생성하지 못해 0에 머무는 상태가 곧 "DB에 못 붙는다".
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              expr: max(hikaricp_connections{pool="HikariPool-1"})
+              # Threshold 표현식은 단일 값이 필요 (③의 queryType: instant와 같은 이유).
+              # Prometheus 쿼리는 instant/range 두 플래그를 쓰므로 range도 명시적으로 끈다 —
+              # 빠뜨리면 시계열이 넘어가 "only reduced data can be alerted on"으로 실패한다.
+              instant: true
+              range: false
+          # B: 커넥션이 하나도 없으면 발동
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+        # 메트릭 자체가 사라짐 = 앱이 죽어 scrape 불가 → 이것도 알려야 한다.
+        # (DB만 죽으면 앱은 살아 있어 값 0으로 관측된다 — 위 조건이 담당)
+        noDataState: Alerting
+        # 순간 0이나 scrape 1회 누락으로 흘리지 않도록 2분 지속 시에만 발동.
+        # 실제 장애(2026-09-02)는 13분이라 충분히 포착된다.
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DB 커넥션 풀이 비었습니다 (HikariPool-1) — MySQL 접속 불가"
