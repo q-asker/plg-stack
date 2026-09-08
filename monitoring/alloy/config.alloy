@@ -142,7 +142,9 @@ prometheus.exporter.mysql "heatwave" {
 // exporter가 생성한 /metrics 엔드포인트에서 메트릭 수집
 prometheus.scrape "mysql_metrics" {
   // Step 1에서 생성한 exporter의 타겟들
-  // Alloy가 localhost:9104 (MySQL exporter 포트)에 HTTP GET 요청
+  // exporter 컴포넌트가 내보내는 타겟은 Alloy 내부(in-memory) 주소를 가리킨다.
+  // 독립 실행형 mysqld_exporter처럼 호스트 포트(:9104)를 열지 않으므로,
+  // 이 scrape는 네트워크를 타지 않고 같은 프로세스 안에서 끝난다.
   targets    = prometheus.exporter.mysql.heatwave.targets
 
   // 다음 단계로 전달: 라벨 추가 단계
