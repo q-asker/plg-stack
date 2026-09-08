@@ -1,6 +1,6 @@
 # =============================================================
 # #2 Spring Boot 인스턴스 - Alloy 에이전트
-# OCI ARM 2 OCPU / 8GB | Spring Boot + JODConverter 로그 수집
+# OCI ARM 2 OCPU / 10GB | Spring Boot + JODConverter 로그 수집
 # Spring Boot / LibreOffice는 별도 컨테이너에서 실행
 # Alloy는 Docker 소켓으로 컨테이너 stdout/stderr 수집
 # =============================================================
